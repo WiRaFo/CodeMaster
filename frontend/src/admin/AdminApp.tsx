@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { AdminApiError, adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
+import { FeedbackAdminPage } from './FeedbackAdminPage.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 import { DocumentEditPage } from './DocumentEditPage.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
@@ -159,6 +160,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {catalog ? <AdminNavItem to="/admin/documents" label="Документы" /> : null}
             {catalog ? <AdminNavItem to="/admin/hierarchy" label="Фонды, описи, дела" /> : null}
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
+            {can('feedback:read') ? <AdminNavItem to="/admin/feedback" label="Отзывы" /> : null}
             {can('audit:read') ? <AdminNavItem to="/admin/audit" label="Журнал действий" /> : null}
             <li>
               <a className="admin-nav-link" href="/ru">Открыть сайт</a>
@@ -176,6 +178,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="exhibitions" element={exhibitions ? <ExhibitionsAdminPage /> : <NoAccess />} />
           <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
+          <Route path="feedback" element={can('feedback:read') ? <FeedbackAdminPage /> : <NoAccess />} />
           <Route path="audit" element={can('audit:read') ? <AuditPage /> : <NoAccess />} />
           <Route path="*" element={<AdminHeading title="Раздел не найден" />} />
         </Routes>

@@ -270,3 +270,28 @@ export type AssistantAnswer =
       documents: AssistantDocument[];
       suggestions: Array<{ reason: 'withCopy' | 'prevDecade' | 'nextDecade' | 'allTypes'; query: string }>;
     };
+
+/** ЭТАП 7. Публикация цифровой истории региона (GET /history, /history/:slug; ТЗ §5.6). */
+export interface PublicationSummary extends Localized {
+  slug: string;
+  kind: string;
+  title: string | null;
+  lead: string | null;
+  periodText: string | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+  publishedAt: string;
+  topics: Array<{ slug: string; name: string | null }>;
+  settlements: Array<{ slug: string; name: string | null }>;
+}
+export interface PublicationList extends Paged<PublicationSummary> {
+  topics: Array<{ slug: string; name: string | null; count: number }>;
+}
+export interface PublicationDetail extends PublicationSummary {
+  bodyText: string | null;
+  sourceNote: string | null;
+  authorship: string | null;
+  sourceUrl: string | null;
+  document: { id: string; title: string | null; access: 'open' | 'restricted'; code: { formatted: string } } | null;
+  related: PublicationSummary[];
+}

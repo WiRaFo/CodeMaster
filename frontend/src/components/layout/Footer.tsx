@@ -75,6 +75,7 @@ export function Footer() {
               <li key={s.key}><Link to={sectionHref(lang, s.path)}>{t(`nav.${s.key}`)}</Link></li>
             ))}
             <li><Link to={`/${lang}/accessibility`}>{t('nav.accessibility')}</Link></li>
+            <li><Link to={`/${lang}/feedback`}>{t('nav.feedback')}</Link></li>
           </ul>
         </nav>
 

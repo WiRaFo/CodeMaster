@@ -20,7 +20,8 @@
     "branches": "Branches and contacts",
     "faq": "Questions and answers",
     "assistant": "AI assistant",
-    "accessibility": "Accessibility"
+    "accessibility": "Accessibility",
+    "feedback": "Feedback and suggestions"
   },
   "header": {
     "searchLabel": "Search the site",
@@ -420,5 +421,83 @@
       "readingRoom": "In the reading room you can work with original documents and copies that are not published on the site. The address and hours are in “Branches and contacts”.",
       "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one."
     }
+  },
+  "history": {
+    "lead": "The “Great Archive of Memory”: stories about the region's history based on archival records.",
+    "topics": "Themes",
+    "soon": "coming soon",
+    "period": "Historical period",
+    "any": "All",
+    "apply": "Show",
+    "reset": "Reset",
+    "empty": "No stories match these conditions yet.",
+    "found": "Stories: {{count}}",
+    "years": "Years: {{years}}",
+    "breadcrumbs": "You are here",
+    "topic": "Theme",
+    "settlements": "Places",
+    "document": "Catalog record",
+    "authorship": "Author",
+    "source": "Source",
+    "sourceUrl": "Source link",
+    "related": "More on this theme"
+  },
+  "feedback": {
+    "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",
+    "notAppeal": "This form is for feedback about the website only. It is not an official request or application, and a reply is not guaranteed. To contact the archive, use:",
+    "topic": "Topic",
+    "chooseTopic": "Choose a topic",
+    "topics": {
+      "site": "How the site works",
+      "catalog": "E-catalogue",
+      "accessibility": "Accessibility",
+      "content": "Materials and texts",
+      "suggestion": "Suggestion",
+      "other": "Other"
+    },
+    "message": "Message",
+    "messageHint": "10 to 2,000 characters. Please do not include personal data.",
+    "email": "Email (optional)",
+    "emailHint": "Only so we can ask for details if needed.",
+    "consent": "I agree to my email address being used to contact me about this feedback.",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Thank you! Your feedback has been sent.",
+    "failed": {
+      "invalid": "Please check the form:",
+      "tooMany": "Too many messages. Please try again later.",
+      "network": "Could not send. Please try again later."
+    },
+    "errors": {
+      "topic": "Choose a topic.",
+      "message": "The message must be at least 10 characters long.",
+      "email": "Check the email address.",
+      "consent": "If you give an email, please agree to its use."
+    }
+  },
+  "faq": {
+    "lead": "Frequently asked questions about the website.",
+    "demoNote": "The answers were prepared by the development team and will be agreed with the archive.",
+    "more": "Didn't find an answer? Ask the assistant or leave feedback:"
+  },
+  "visitors": {
+    "lead": "How to prepare for a visit to the archive.",
+    "infoOnly": "This website is for information only: it does not accept applications, requests or orders.",
+    "stepsTitle": "Before you visit",
+    "steps": {
+      "find": "Find the documents you need in the e-catalogue in advance.",
+      "code": "Write down the reference code of each document: it is how the document is found.",
+      "access": "Check the access conditions on the document's record card.",
+      "contact": "Confirm the opening hours by phone: the details are still being verified."
+    },
+    "contactsTitle": "Address and opening hours",
+    "allBranches": "All branches and contacts",
+    "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions."
+  },
+  "about": {
+    "lead": "State Archive of East Kazakhstan Region.",
+    "contactsTitle": "Archive contacts",
+    "moreTitle": "Site sections",
+    "pending": "Information about the archive's history, structure and management will be published once the archive provides the texts."
   }
 }
