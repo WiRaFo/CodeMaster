@@ -183,6 +183,79 @@ async function main() {
     }
 
     {
+      // Сценарий 13 (ЭТАП 11a): переключение языка ведёт на ту же страницу с теми же фильтрами; интерфейс полностью переведён.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru/catalog?q=маслозавод&hasDigitalCopy=true', {});
+      await page.getByRole('navigation', { name: 'Язык сайта' }).getByRole('link', { name: 'KZ' }).click();
+      await page.waitForURL(/\/kk\/catalog\?/);
+      const kkUrl = new URL(page.url());
+      check(kkUrl.searchParams.get('q') === 'маслозавод' && kkUrl.searchParams.get('hasDigitalCopy') === 'true', `сценарий 13: запрос и фильтр сохранились при смене языка (${kkUrl.search})`);
+      const kkFound = await page.getByText(/«маслозавод» сұрауы бойынша \d+ құжат табылды/).waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(kkFound, 'сценарий 13: выдача на казахском');
+      check((await page.evaluate(() => document.documentElement.lang)) === 'kk', 'сценарий 13: lang="kk" после переключения');
+      await page.getByRole('article').first().getByRole('link').click();
+      await page.waitForURL(/\/kk\/catalog\/documents\//);
+      await page.locator('.document-meta').waitFor();
+      check(await page.getByText('Мұрағаттық шифр', { exact: true }).isVisible(), 'сценарий 13: подписи карточки на казахском');
+      check(await page.getByText(/^Қ\. TEST-1\. Тізб\. 1\. Іс 1\./).first().isVisible(), 'сценарий 13: шифр с казахскими сокращениями');
+      await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'EN' }).click();
+      await page.waitForURL(/\/en\/catalog\/documents\//);
+      await page.getByText('Archive reference', { exact: true }).waitFor();
+      check(await page.getByText(/^F\. TEST-1\. Inv\. 1\. File 1\./).first().isVisible(), 'сценарий 13: шифр с английскими сокращениями');
+      await page.goto(BASE + '/');
+      await page.waitForURL(/\/en$/);
+      check(new URL(page.url()).pathname === '/en', 'сценарий 13: корень сайта открывает последний выбранный язык');
+
+      // Каждая P0-страница на каждом языке: верный lang, нет сырых ключей словаря, в оболочке английской версии нет кириллицы.
+      const p0 = ['', '/catalog?q=маслозавод', OPEN_DOC.replace(/^\/ru/, ''), RESTRICTED_DOC.replace(/^\/kk/, ''), '/news', '/accessibility', '/no-such-page'];
+      for (const lang of ['kk', 'ru', 'en']) {
+        for (const path of p0) {
+          await page.goto(`${BASE}/${lang}${path}`);
+          await page.locator('h1').waitFor();
+          await page.waitForLoadState('networkidle');
+          const info = await page.evaluate(() => {
+            const chrome = [...document.querySelectorAll('header, footer, nav, h1, dt, label, button')].map((e) => (e as HTMLElement).innerText).join('\n');
+            return { lang: document.documentElement.lang, body: document.body.innerText, chrome };
+          });
+          const where = `/${lang}${path.split('?')[0]}`;
+          check(info.lang === lang, `сценарий 13: ${where} lang="${info.lang}"`);
+          const raw = /\b(site|nav|header|lang|theme|a11y|footer|home|catalog|document|news|origin|content|common|notFound|search|stub|accessibilityPage|catalogSearch)\.[a-zA-Z]+/.exec(info.body);
+          check(!raw, `сценарий 13: ${where} без сырых ключей словаря${raw ? ` (${raw[0]})` : ''}`);
+          if (lang === 'en') {
+            // Самоназвания языков в переключателе (Қазақша, Русский) — в атрибуте title, не в тексте.
+            const cyr = /[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі][^\n]*/.exec(info.chrome);
+            check(!cyr, `сценарий 13: ${where} оболочка без кириллицы${cyr ? ` («${cyr[0].slice(0, 40)}»)` : ''}`);
+          }
+        }
+      }
+      await page.close();
+    }
+
+    {
+      // Сценарии 14–15: тема и настройки доступности сохраняются при переходах, смене языка и перезагрузке.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      await openWithPrefs(page, '/kk', {});
+      await page.getByRole('button', { name: 'Қараңғы тақырыпты қосу' }).click();
+      check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'сценарий 14: тёмная тема включается без перезагрузки');
+      await page.getByRole('button', { name: 'Қолжетімділік', exact: true }).click();
+      const panel = page.getByRole('dialog', { name: 'Қолжетімділік баптаулары' });
+      await panel.getByRole('checkbox', { name: 'Жоғары контраст' }).check();
+      await page.keyboard.press('Escape');
+      await page.getByRole('banner').getByRole('link', { name: 'Электрондық каталог' }).first().click();
+      await page.waitForURL(/\/kk\/catalog/);
+      await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'RU' }).click();
+      await page.waitForURL(/\/ru\/catalog/);
+      await page.reload();
+      await page.locator('h1').waitFor();
+      const state = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, contrast: document.documentElement.dataset.contrast, lang: document.documentElement.lang }));
+      check(state.theme === 'dark', `сценарий 14: тема сохранилась после перехода, смены языка и перезагрузки (${state.theme})`);
+      check(state.contrast === 'high', `сценарий 15: высокая контрастность сохранилась (${state.contrast})`);
+      check(state.lang === 'ru', 'сценарий 15: язык сменился, настройки остались');
+      check(await page.getByRole('button', { name: 'Включить светлую тему' }).isVisible(), 'сценарий 14: кнопка темы подписана на новом языке');
+      await page.close();
+    }
+
+    {
       // Сценарий 1 (docs/development-roadmap.md, ЭТАП 4): с главной только клавиатурой найти документ в каталоге.
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/ru', {});
