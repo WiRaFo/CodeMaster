@@ -2,7 +2,19 @@ import type { FastifyError, FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 
 /** Коды ошибок API (docs/api-design.md §2). Текст для пользователя клиент берёт по коду из словаря i18n. */
-export type ErrorCode = 'VALIDATION_FAILED' | 'NOT_FOUND' | 'INTERNAL';
+export type ErrorCode =
+  | 'VALIDATION_FAILED'
+  | 'NOT_FOUND'
+  | 'INTERNAL'
+  | 'UNAUTHENTICATED'
+  | 'INVALID_CREDENTIALS'
+  | 'FORBIDDEN'
+  | 'CSRF_FAILED'
+  | 'TOO_MANY_ATTEMPTS'
+  | 'INVALID_STATUS_TRANSITION'
+  | 'INCOMPLETE_RECORD'
+  | 'CONFIRMATION_REQUIRED'
+  | 'CONFLICT';
 
 export class ApiError extends Error {
   constructor(

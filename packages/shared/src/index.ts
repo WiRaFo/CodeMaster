@@ -3,3 +3,4 @@ export * from './workflow.ts';
 export * from './archive-code.ts';
 export * from './permissions.ts';
 export * from './api.ts';
+export * from './admin.ts';
