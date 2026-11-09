@@ -235,8 +235,8 @@ function syntheticPageSvg(code: string, page: number, pages: number, title: stri
 <rect x="60" y="60" width="${PAGE_WIDTH - 120}" height="${PAGE_HEIGHT - 120}" fill="none" stroke="#b9a77f" stroke-width="4"/>
 <text x="120" y="190" font-size="56" font-weight="700" fill="#8a1c1c" font-family="DejaVu Sans, Arial, sans-serif">ТЕСТОВЫЕ ДАННЫЕ · TEST DATA</text>
 <text x="120" y="260" font-size="34" fill="#5a4a2a" font-family="DejaVu Sans, Arial, sans-serif">Синтетическая страница, не архивный документ</text>
-<text x="120" y="380" font-size="44" font-weight="700" fill="#2b2b2b">${xml(title)}</text>
-<text x="120" y="450" font-size="34" fill="#5a4a2a">Ф. ${xml(code)} · Л. ${page}</text>
+<text x="120" y="380" font-size="44" font-weight="700" fill="#2b2b2b"${title.length > 40 ? ` textLength="${PAGE_WIDTH - 240}" lengthAdjust="spacingAndGlyphs"` : ''}>${xml(title)}</text>
+<text x="120" y="450" font-size="34" fill="#5a4a2a">${xml(code)} · Л. ${page}</text>
 ${body}
 <text x="${PAGE_WIDTH / 2}" y="${PAGE_HEIGHT - 120}" font-size="34" text-anchor="middle" fill="#5a4a2a">— ${page} / ${pages} —</text>
 </svg>
@@ -384,7 +384,7 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
           const pageCount = d.copy.pages ?? 1;
           for (let page = 1; page <= pageCount; page++) {
             const storageKey = `synthetic/${docKey}/page-${page}.svg`;
-            const svg = syntheticPageSvg(`${f.number}. ${f.inventory.number}. ${c.number}. ${d.number}`, page, pageCount, d.title.ru, d.transcription?.ru);
+            const svg = syntheticPageSvg(`Ф. ${f.number}. Оп. ${f.inventory.number}. Д. ${c.number}. Док. ${d.number}`, page, pageCount, d.title.ru, d.transcription?.ru);
             await storage.write(SYNTHETIC_BUCKET, storageKey, svg);
             const assetData = {
               kind: 'scan_page' as const,

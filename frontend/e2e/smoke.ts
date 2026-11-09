@@ -69,6 +69,16 @@ async function main() {
   const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' });
   try {
     await waitForServer(BASE);
+    // id документов создаёт база при заполнении, поэтому берём их из API, а не из констант.
+    const found = (await (await fetch(`${BASE}/api/v1/catalog/documents?q=${encodeURIComponent('маслозавод')}&lang=ru&pageSize=50`)).json()) as {
+      items: Array<{ id: string; title: string; access: string; hasDigitalCopy: boolean }>;
+    };
+    const openDoc = found.items.find((d) => d.access === 'open' && d.hasDigitalCopy);
+    const restrictedDoc = found.items.find((d) => d.access === 'restricted');
+    if (!openDoc || !restrictedDoc) throw new Error('в базе нет синтетических документов: выполните npm run db:seed');
+    const OPEN_DOC = `/ru/catalog/documents/${openDoc.id}`;
+    const RESTRICTED_DOC = `/kk/catalog/documents/${restrictedDoc.id}`;
+    PAGES.push(OPEN_DOC, RESTRICTED_DOC, `/en/catalog/documents/${openDoc.id}`);
     const browser = await chromium.launch();
 
     for (const [name, prefs] of THEMES) {
@@ -82,7 +92,7 @@ async function main() {
     }
 
     for (const width of WIDTHS) {
-      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo']) {
+      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC]) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         await openWithPrefs(page, path, {});
         const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -238,6 +248,76 @@ async function main() {
       await dialog.getByRole('button', { name: /^Показать/ }).click();
       check(!(await dialog.isVisible()), 'кнопка «Показать» закрывает диалог фильтров');
       check(await page.getByRole('button', { name: 'Фильтры: выбран 1' }).evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку фильтров');
+      await page.close();
+    }
+
+    {
+      // Сценарий 4: открыть карточку из выдачи и скопировать шифр.
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
+      const page = await context.newPage();
+      await openWithPrefs(page, '/ru/catalog?q=маслозавод&hasDigitalCopy=true', {});
+      await page.getByRole('article').first().getByRole('link').click();
+      await page.waitForURL(/\/ru\/catalog\/documents\//);
+      const h1 = page.getByRole('heading', { level: 1 });
+      await h1.waitFor();
+      check(/Протокол заседания/.test((await h1.textContent()) ?? ''), `сценарий 4: открыта карточка (${await h1.textContent()})`);
+      check(await page.getByText('Тестовые данные').first().isVisible(), 'сценарий 4: синтетический документ помечен');
+      await page.getByRole('button', { name: 'Скопировать шифр' }).click();
+      await page.getByTestId('copy-notice').waitFor();
+      const clip = await page.evaluate(() => navigator.clipboard.readText());
+      check(clip === 'Ф. TEST-1. Оп. 1. Д. 1.', `сценарий 4: в буфере шифр (${clip})`);
+      // Announcer ставит текст через 50 мс после очистки, поэтому ждём его, а не читаем сразу.
+      const announced = await page.getByTestId('announcer').filter({ hasText: 'скопирован' }).waitFor({ timeout: 3000 }).then(() => true, () => false);
+      check(announced, 'сценарий 4: копирование объявлено диктору');
+      await context.close();
+    }
+
+    {
+      // Сценарий 5: листать и масштабировать цифровую копию только клавиатурой; картинка реально загружается.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, OPEN_DOC, {});
+      const img = page.locator('.viewer-image');
+      await img.waitFor();
+      await page.waitForFunction(() => {
+        const i = document.querySelector<HTMLImageElement>('.viewer-image');
+        return i?.complete && i.naturalWidth > 0;
+      });
+      check((await img.evaluate((el: Element) => (el as HTMLImageElement).naturalWidth)) > 0, 'сценарий 5: изображение страницы загружено');
+      const counter = page.getByTestId('viewer-counter');
+      await page.getByRole('region', { name: 'Изображение страницы' }).focus();
+      await page.keyboard.press('ArrowRight');
+      check((await counter.textContent()) === 'Страница 2 из 3 (лист 2)', `сценарий 5: стрелка вправо (${await counter.textContent()})`);
+      check(/\/pages\/2\/image$/.test((await img.getAttribute('src')) ?? ''), 'сценарий 5: показана страница 2');
+      const before = await img.evaluate((el: Element) => el.getBoundingClientRect().width);
+      await page.keyboard.press('+');
+      await page.keyboard.press('+');
+      const after = await img.evaluate((el: Element) => el.getBoundingClientRect().width);
+      check(after > before * 1.4, `сценарий 5: масштаб «+» увеличивает страницу (${before} → ${after})`);
+      const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      check(scroll <= client, `сценарий 5: увеличенная страница не растягивает сайт (${scroll} > ${client})`);
+      await page.keyboard.press('0');
+      check((await page.getByRole('status', { name: 'Масштаб' }).textContent()) === '100%', 'сценарий 5: «0» возвращает масштаб');
+      const status = await page.evaluate(async (u) => (await fetch(u)).headers.get('content-security-policy'), (await img.getAttribute('src')) ?? '');
+      check(/sandbox/.test(status ?? ''), 'сценарий 5: изображение отдаётся с CSP sandbox');
+      await page.close();
+    }
+
+    {
+      // Сценарий 18 (U14): документ с ограниченным доступом — только условия доступа, копии нет, страницы не отдаются.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      const requests: string[] = [];
+      page.on('request', (r) => requests.push(r.url()));
+      await openWithPrefs(page, `/ru/catalog/documents/${restrictedDoc.id}`, {});
+      await page.getByTestId('restricted-notice').waitFor();
+      check(await page.getByRole('heading', { name: 'Доступ ограничен' }).isVisible(), 'сценарий 18: виден блок «Доступ ограничен»');
+      check((await page.locator('.document-viewer, img').count()) === 0, 'сценарий 18: нет просмотрщика и изображений');
+      check(!requests.some((u) => u.includes('/pages')), 'сценарий 18: страница не запрашивает список страниц');
+      const direct = await page.evaluate(async (id) => [(await fetch(`/api/v1/catalog/documents/${id}/pages`)).status, (await fetch(`/api/v1/catalog/documents/${id}/pages/1/image`)).status], restrictedDoc.id);
+      check(direct[0] === 404 && direct[1] === 404, `сценарий 18: прямые запросы страниц и изображения дают 404 (${direct.join(', ')})`);
+      await openWithPrefs(page, '/ru/catalog/documents/00000000-0000-4000-8000-000000000000', {});
+      const notFound = page.getByRole('heading', { level: 1, name: 'Страница не найдена' });
+      await notFound.waitFor();
+      check(await notFound.isVisible(), 'сценарий 18: несуществующий документ — страница 404');
       await page.close();
     }
 

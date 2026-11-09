@@ -312,4 +312,41 @@ a:hover {
   .filter-chip:hover {
     background: var(--color-surface-2);
   }
+
+  /* Карточка документа: подписи над значениями, чтобы длинные значения переносились и на 320 px. */
+  .document-meta > div {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .document-meta dt {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .document-meta dd {
+    overflow-wrap: anywhere;
+  }
+  .document-viewer {
+    border: 2px solid var(--color-border);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+  }
+  /* Увеличенная страница прокручивается внутри области, а не растягивает страницу сайта. */
+  .viewer-stage {
+    max-height: 80vh;
+    overflow: auto;
+    background: var(--color-surface-2);
+    padding: 0.5rem;
+  }
+  .viewer-stage:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+  }
+  .viewer-image {
+    display: block;
+    max-width: none;
+    height: auto;
+    margin-inline: auto;
+    background: #fff;
+  }
 }

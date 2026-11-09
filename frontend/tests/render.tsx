@@ -70,10 +70,81 @@ export const FIXTURES = {
   },
 };
 
+const SYN = { dataOrigin: 'synthetic', contentLang: 'ru', translationStatus: 'reviewed' } as const;
+const CARD_COMMON = {
+  ...SYN,
+  availableLanguages: ['kk', 'ru', 'en'],
+  archiveCode: { fond: 'TEST-1', inventory: '1', case: '1', formatted: 'Ф. TEST-1. Оп. 1. Д. 1.' },
+  date: { from: '1956-01-01', to: '1956-12-31', precision: 'year' },
+  period: { slug: '1946-1991', name: '1946–1991 годы' },
+  type: { code: 'organization_record', name: 'Документы организаций и предприятий' },
+  originalLanguages: ['ru'],
+  sheetCount: 24,
+  author: null,
+  organization: null,
+  storage: { branch: { slug: 'main', name: 'ГА ВКО' }, location: null },
+  hierarchy: {
+    fond: { id: 'aa3dabb1-8b10-4815-8e7c-273b96318ab7', number: 'TEST-1', title: '[Синтетика] Маслозавод (тестовый фонд)' },
+    inventory: { id: 'a6e225c4-f537-48e2-b191-270a5bd04cc1', number: '1', title: '[Синтетика] Опись дел постоянного хранения' },
+    case: { id: '63d720d0-900d-4692-ad7a-c81cbe7fc1a4', number: '1', title: '[Синтетика] Протоколы заседаний правления' },
+  },
+  historicalNote: null,
+  sourceNote: 'Синтетическая запись для разработки и тестов, не является архивным документом.',
+  updatedAt: '2026-11-09T17:21:03.929Z',
+};
+
+/** Карточки документов по реальным ответам API (backend/tests/api-access.test.ts). */
+export const DOCUMENTS = {
+  open: {
+    ...CARD_COMMON,
+    id: '6b8741a3-8fc6-40af-9408-21b6f9709b6f',
+    title: '[Синтетика] Протокол заседания правления маслозавода',
+    description: 'Обсуждение плана выпуска сливочного масла и ремонта цеха.',
+    documentNumber: '1',
+    settlements: [{ slug: 'ust-kamenogorsk', name: 'Усть-Каменогорск' }],
+    topics: [{ slug: 'industry', kind: 'history_topic', name: 'История промышленных предприятий' }],
+    access: 'open',
+    accessConditions: null,
+    digitalCopy: { availableOnline: true, pageCount: 3 },
+    transcription: 'Слушали: о ремонте сепаратора.',
+  },
+  restricted: {
+    ...CARD_COMMON,
+    id: 'bf573051-5308-494c-b872-4b9c06887d00',
+    title: '[Синтетика] Личные дела работников маслозавода',
+    description: null,
+    documentNumber: '2',
+    settlements: [],
+    topics: [],
+    access: 'restricted',
+    accessConditions: 'Документ содержит персональные данные. Ознакомление в читальном зале по письменному запросу; цифровая копия не публикуется.',
+    digitalCopy: { availableOnline: false },
+  },
+  pages: {
+    items: [1, 2, 3].map((n) => ({
+      pageNumber: n,
+      sheetLabel: String(n),
+      assetId: `00000000-0000-4000-8000-00000000000${n}`,
+      kind: 'scan_page',
+      mimeType: 'image/svg+xml',
+      width: 1240,
+      height: 1754,
+      hasTextLayer: false,
+      downloadAllowed: false,
+      alt: `Синтетическая страница ${n} из 3`,
+      altLang: 'ru',
+      derivatives: [],
+    })),
+  },
+};
+
 /** Подменяет fetch: известные пути API отвечают фикстурами, остальные — 404 как у backend. */
 export function apiMock(overrides: Record<string, unknown> = {}) {
   const table: Array<[string, unknown]> = [
     ...Object.entries(overrides),
+    [`/api/v1/catalog/documents/${DOCUMENTS.open.id}/pages?`, DOCUMENTS.pages],
+    [`/api/v1/catalog/documents/${DOCUMENTS.open.id}?`, DOCUMENTS.open],
+    [`/api/v1/catalog/documents/${DOCUMENTS.restricted.id}?`, DOCUMENTS.restricted],
     ['/api/v1/branches/main', MAIN_BRANCH],
     ['/api/v1/branches?', FIXTURES.branches],
     ['/api/v1/home?', FIXTURES.home],
