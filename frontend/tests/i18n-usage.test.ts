@@ -108,7 +108,7 @@ function flat(obj: unknown, prefix = ''): Record<string, string> {
 describe('качество переводов', () => {
   /** Совпадения с русским, которые верны: самоназвания языков и слова, одинаковые в казахском. */
   const SAME_AS_RU: Record<'kk' | 'en', string[]> = {
-    kk: ['lang.kk', 'lang.ru', 'lang.en', 'a11y.motion', 'footer.phone', 'origin.demo', 'exhibitions.itemCount_one'],
+    kk: ['lang.kk', 'lang.ru', 'lang.en', 'a11y.motion', 'footer.phone', 'origin.demo', 'exhibitions.itemCount_one', 'branches.phone', 'branches.website'],
     en: ['lang.kk', 'lang.ru', 'lang.en'],
   };
 

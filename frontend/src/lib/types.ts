@@ -85,14 +85,38 @@ export interface HomeData {
   };
 }
 
-export interface BranchSummary {
+/** Подразделение архива (GET /branches). coordinates есть, только если они заполнены и подразделение показывается на карте. */
+export interface BranchSummary extends Localized {
+  id: string;
   slug: string;
+  parentId: string | null;
   isMain: boolean;
+  type: { code: string; name: string | null };
   name: string | null;
   shortName: string | null;
   address: string | null;
+  settlement: { slug: string; name: string | null } | null;
   phone: string | null;
+  email: string | null;
+  coordinates: { lat: number; lng: number } | null;
   needsVerification: boolean;
+}
+
+/** Карточка подразделения (GET /branches/:slug; ТЗ §5.5, с. 7). */
+export interface BranchDetail extends BranchSummary {
+  postalCode: string | null;
+  website: string | null;
+  scheduleText: string | null;
+  readingRoomSchedule: string | null;
+  description: string | null;
+  mainDirections: string | null;
+  competence: string | null;
+  serviceArea: string | null;
+  accessibilityInfo: string | null;
+  sourceUrl: string | null;
+  verifiedAt: string | null;
+  sites: BranchSummary[];
+  highlightedFonds: Array<{ id: string; number: string; title: string | null }>;
 }
 
 export interface FacetValue {
