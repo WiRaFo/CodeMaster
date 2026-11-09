@@ -59,6 +59,15 @@ export const FIXTURES = {
     page: 1, pageSize: 20, total: 2, totalPages: 1, interpretedCode: null,
   },
   news: { items: [], page: 1, pageSize: 10, total: 0, totalPages: 0 },
+  facets: {
+    types: [{ code: 'organization_record', name: 'Документы организаций и предприятий', count: 2 }, { code: 'photo', name: 'Фотодокументы', count: 1 }],
+    periods: [{ slug: '1946-1991', name: '1946–1991', count: 3 }],
+    branches: [{ slug: 'main', name: 'ГА ВКО', count: 3 }],
+    settlements: [{ slug: 'ridder', name: 'Риддер', count: 1 }, { slug: 'ust-kamenogorsk', name: 'Усть-Каменогорск', count: 2 }],
+    topics: [{ slug: 'industry', name: 'История промышленных предприятий', count: 2 }],
+    access: [{ value: 'open', count: 2 }, { value: 'restricted', count: 1 }],
+    hasDigitalCopy: { true: 1, false: 2 },
+  },
 };
 
 /** Подменяет fetch: известные пути API отвечают фикстурами, остальные — 404 как у backend. */
@@ -69,6 +78,7 @@ export function apiMock(overrides: Record<string, unknown> = {}) {
     ['/api/v1/branches?', FIXTURES.branches],
     ['/api/v1/home?', FIXTURES.home],
     ['/api/v1/catalog/documents?', FIXTURES.catalog],
+    ['/api/v1/catalog/facets?', FIXTURES.facets],
     ['/api/v1/news?', FIXTURES.news],
   ];
   return async (input: RequestInfo | URL): Promise<Response> => {

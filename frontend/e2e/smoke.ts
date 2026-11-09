@@ -1,7 +1,7 @@
 /**
  * Сквозная проверка каркаса в настоящем браузере (Chromium через Playwright):
  * axe (включая контраст) на страницах во всех темах, отсутствие горизонтальной прокрутки на 10 ширинах,
- * текст 200 % с интервалами WCAG 1.4.12 на 320 px, клавиатура и мобильное меню, сценарий 1 (главная → поиск → выдача).
+ * текст 200 % с интервалами WCAG 1.4.12 на 320 px, клавиатура и мобильное меню, сценарии 1 (главная → поиск → выдача), 2 (поиск по словам и шифру), 3 (фильтры и ссылка на выдачу).
  * Запуск: npm run e2e -w frontend (собирает и поднимает vite preview). Нужен API на :3000 с сидами migrated, synthetic, demo.
  */
 import { spawn } from 'node:child_process';
@@ -13,7 +13,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -82,7 +82,7 @@ async function main() {
     }
 
     for (const width of WIDTHS) {
-      for (const path of ['/kk', '/ru/accessibility']) {
+      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo']) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         await openWithPrefs(page, path, {});
         const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -173,6 +173,71 @@ async function main() {
       await page.goBack();
       await page.locator('h1').waitFor();
       check(page.url().endsWith('/ru'), 'сценарий 1: «Назад» возвращает на главную');
+      await page.close();
+    }
+
+    {
+      // Сценарий 2: найти документ по словам и по архивному шифру; закрытые документы в выдаче не появляются.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru/catalog', {});
+      const box = page.getByRole('searchbox', { name: 'Поиск в электронном каталоге' });
+      await box.fill('маслозавод');
+      await box.press('Enter');
+      await page.getByText(/По запросу «маслозавод» найдено/).waitFor();
+      const titles = await page.getByRole('article').getByRole('link').allTextContents();
+      check(titles.length >= 2 && titles.every((x) => x.includes('[Синтетика]')), `сценарий 2: выдача по словам (${titles.join(' | ')})`);
+      check(!(await page.getByText('Закрытый документ').count()), 'сценарий 2: закрытый документ не найден');
+      await box.fill('Ф. TEST-1, Оп. 1, Д. 1');
+      await box.press('Enter');
+      await page.getByText('Запрос распознан как архивный шифр: Ф. TEST-1. Оп. 1. Д. 1.').waitFor();
+      check((await page.getByRole('article').count()) === 3, `сценарий 2: по шифру найдено ${await page.getByRole('article').count()} (ожидалось 3 публичных документа дела)`);
+      await page.close();
+    }
+
+    {
+      // Сценарий 3: сузить выдачу несколькими фильтрами и поделиться ссылкой.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru/catalog', {});
+      const aside = page.getByRole('complementary', { name: 'Фильтры' });
+      await aside.getByRole('checkbox', { name: /Усть-Каменогорск/ }).click();
+      await page.waitForURL(/settlement=ust-kamenogorsk/);
+      await aside.getByRole('checkbox', { name: /Есть электронная копия/ }).click();
+      await page.waitForURL(/hasDigitalCopy=true/);
+      await page.getByText('Найден 1 документ').waitFor();
+      const count = await page.getByRole('article').count();
+      check(count === 1, `сценарий 3: два фильтра (город и наличие копии) дают 1 документ (получено ${count})`);
+      const shared = page.url();
+      const other = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(other, shared.replace(BASE, ''), {});
+      await other.getByText('Найден 1 документ').waitFor();
+      check((await other.getByRole('article').count()) === count, 'сценарий 3: ссылка на выдачу воспроизводит результат');
+      check(await other.getByRole('complementary', { name: 'Фильтры' }).getByRole('checkbox', { name: /Усть-Каменогорск/ }).isChecked(), 'сценарий 3: по ссылке фильтр отмечен');
+      check(await other.getByRole('button', { name: /Убрать фильтр «Населённый пункт: Усть-Каменогорск»/ }).isVisible(), 'сценарий 3: выбранный фильтр виден кнопкой');
+      await other.close();
+      await page.goBack();
+      await page.waitForURL((u) => !u.search.includes('hasDigitalCopy'));
+      const copyBox = page.getByRole('complementary', { name: 'Фильтры' }).getByRole('checkbox', { name: /Есть электронная копия/ });
+      check(!(await copyBox.isChecked()) && page.url().includes('settlement=ust-kamenogorsk'), 'сценарий 3: «Назад» снимает только последний фильтр');
+      await page.close();
+    }
+
+    {
+      // Сценарий 3 на телефоне: фильтры в диалоге, «Показать N документов», Esc и возврат фокуса.
+      const page = await browser.newPage({ viewport: { width: 360, height: 780 } });
+      await openWithPrefs(page, '/ru/catalog?q=маслозавод', {});
+      const open = page.getByRole('button', { name: 'Фильтры' });
+      await open.click();
+      const dialog = page.getByRole('dialog', { name: 'Фильтры' });
+      await dialog.getByRole('checkbox', { name: /Фото/ }).first().click();
+      await page.waitForURL(/type=/);
+      await page.waitForLoadState('networkidle');
+      const violations = await axe(page);
+      check(violations.length === 0, `axe диалог фильтров: ${violations.join('; ')}`);
+      const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      check(scroll <= client, `диалог фильтров без горизонтальной прокрутки: ${scroll} > ${client}`);
+      await dialog.getByRole('button', { name: /^Показать/ }).click();
+      check(!(await dialog.isVisible()), 'кнопка «Показать» закрывает диалог фильтров');
+      check(await page.getByRole('button', { name: 'Фильтры: выбран 1' }).evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку фильтров');
       await page.close();
     }
 

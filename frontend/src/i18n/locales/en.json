@@ -158,11 +158,46 @@
     "interpretedCode": "The query was recognised as a reference code: {{code}}",
     "nothingFound": "Nothing found. Check the spelling or shorten the query.",
     "restricted": "Restricted access",
-    "filtersLater": "Filters by branch, period, document type and settlement will be added at the next stage.",
     "pagination": "Result pages",
     "prev": "Previous page",
     "next": "Next page",
-    "pageOf": "Page {{page}} of {{total}}"
+    "pageOf": "Page {{page}} of {{total}}",
+    "filtersTitle": "Filters",
+    "filtersHint": "Filters apply immediately; the number of documents found is shown on the button below.",
+    "filtersButtonCount_one": "Filters: {{count}} selected",
+    "filtersButtonCount_other": "Filters: {{count}} selected",
+    "showResults": "Show results",
+    "showCount_one": "Show {{count}} document",
+    "showCount_other": "Show {{count}} documents",
+    "clearAll": "Clear all filters",
+    "activeFilters": "Selected filters",
+    "removeFilter": "Remove filter “{{label}}”",
+    "sortLabel": "Sort by",
+    "sort": {
+      "relevance": "Relevance",
+      "code": "Reference code",
+      "date_asc": "Earliest first",
+      "date_desc": "Latest first"
+    },
+    "accessValue": {
+      "open": "Open access",
+      "restricted": "Restricted access"
+    },
+    "filter": {
+      "branch": "Archive or branch",
+      "type": "Document type",
+      "period": "Historical period",
+      "settlement": "Settlement",
+      "topic": "Topic",
+      "access": "Access level",
+      "hasDigitalCopy": "Digital copy available",
+      "years": "Years",
+      "yearFrom": "From year",
+      "yearTo": "To year",
+      "apply": "Apply",
+      "yearInvalid": "Enter a four-digit year between 1000 and 2100.",
+      "yearOrder": "The start year must not be later than the end year."
+    }
   },
   "news": {
     "empty": "No news yet.",

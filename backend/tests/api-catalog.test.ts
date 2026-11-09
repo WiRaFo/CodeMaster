@@ -128,7 +128,7 @@ describe('фасеты каталога (ЭТАП 5, F-031)', () => {
     // Фасет типов учитывает выбранный город, но не выбранный тип.
     const types = counts(res.body['types'] as Facet, 'code');
     expect(types['photo']).toBeUndefined();
-    expect(Object.values(types).reduce((a, b) => a + b, 0)).toBe(1);
+    expect(Object.values(types).reduce((a: number, b) => a + Number(b), 0)).toBe(1);
     const docs = await t.get('/api/v1/catalog/documents?settlement=ridder&type=photo');
     expect(docs.body['total']).toBe(0);
   });

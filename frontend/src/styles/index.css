@@ -279,4 +279,37 @@ a:hover {
     border-color: var(--color-primary);
     text-decoration: underline;
   }
+  /* Значение фасета: вся строка — цель нажатия не меньше 44 px; число документов справа. */
+  .facet-option {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+  .facet-option:hover {
+    background: var(--color-surface-2);
+  }
+  .facet-option input {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    accent-color: var(--color-primary);
+  }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid var(--color-primary);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .filter-chip:hover {
+    background: var(--color-surface-2);
+  }
 }
