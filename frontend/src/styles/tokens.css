@@ -1,0 +1,108 @@
+/*
+ * Дизайн-токены цветов (docs/accessibility.md §2). Единственный источник цветов интерфейса.
+ * Каждая пара «текст/фон» проверяется тестом tests/contrast.test.ts:
+ * 4.5:1 для текста, 3:1 для границ полей и индикатора фокуса.
+ * Темы: light, dark, alt (тёплая схема), высокий контраст для светлой и тёмной.
+ */
+
+:root,
+:root[data-theme='light'] {
+  --color-bg: #f8f7f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #eeebe4;
+  --color-text: #1b1e22;
+  --color-text-muted: #4b525a;
+  --color-primary: #0b5361;
+  --color-primary-hover: #073f4a;
+  --color-on-primary: #ffffff;
+  --color-accent: #8a4a0b;
+  --color-border: #767e87;
+  --color-focus: #b04600;
+  --color-danger: #a1221b;
+  --color-warning-bg: #fff1cc;
+  --color-warning-text: #5c3d00;
+  --color-demo-bg: #e6e0f5;
+  --color-demo-text: #3e2a73;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #15181c;
+  --color-surface: #1d2126;
+  --color-surface-2: #262b31;
+  --color-text: #ebe8e4;
+  --color-text-muted: #b6bcc3;
+  --color-primary: #7fcbd8;
+  --color-primary-hover: #a6dde6;
+  --color-on-primary: #0c1417;
+  --color-accent: #f0b56f;
+  --color-border: #7c858f;
+  --color-focus: #ffcf5c;
+  --color-danger: #ff9b8f;
+  --color-warning-bg: #3a2e10;
+  --color-warning-text: #ffe39a;
+  --color-demo-bg: #2f2747;
+  --color-demo-text: #d9ccff;
+  color-scheme: dark;
+}
+
+:root[data-theme='alt'] {
+  --color-bg: #f5eedb;
+  --color-surface: #fbf6e9;
+  --color-surface-2: #ece2c8;
+  --color-text: #33240f;
+  --color-text-muted: #57452c;
+  --color-primary: #6a3a0c;
+  --color-primary-hover: #4f2a07;
+  --color-on-primary: #fbf6e9;
+  --color-accent: #7a4a10;
+  --color-border: #8a7253;
+  --color-focus: #1f5f6b;
+  --color-danger: #8f1f16;
+  --color-warning-bg: #fbe2a6;
+  --color-warning-text: #4a3000;
+  --color-demo-bg: #e5dbf0;
+  --color-demo-text: #3e2a73;
+  color-scheme: light;
+}
+
+:root[data-contrast='high'][data-theme='light'],
+:root[data-contrast='high'][data-theme='alt'] {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f0f0;
+  --color-text: #000000;
+  --color-text-muted: #1f1f1f;
+  --color-primary: #00354a;
+  --color-primary-hover: #001f2b;
+  --color-on-primary: #ffffff;
+  --color-accent: #5a2d00;
+  --color-border: #000000;
+  --color-focus: #c43d00;
+  --color-danger: #7a0000;
+  --color-warning-bg: #ffffff;
+  --color-warning-text: #000000;
+  --color-demo-bg: #ffffff;
+  --color-demo-text: #000000;
+  color-scheme: light;
+}
+
+:root[data-contrast='high'][data-theme='dark'] {
+  --color-bg: #0a0a0a;
+  --color-surface: #0a0a0a;
+  --color-surface-2: #1a1a1a;
+  --color-text: #ffffff;
+  --color-text-muted: #f0f0f0;
+  --color-primary: #8be9ff;
+  --color-primary-hover: #c4f4ff;
+  --color-on-primary: #000000;
+  --color-accent: #ffd28a;
+  --color-border: #ffffff;
+  --color-focus: #ffdd00;
+  --color-danger: #ffb3a8;
+  --color-warning-bg: #0a0a0a;
+  --color-warning-text: #ffffff;
+  --color-demo-bg: #0a0a0a;
+  --color-demo-text: #ffffff;
+  color-scheme: dark;
+}

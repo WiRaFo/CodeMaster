@@ -20,6 +20,7 @@
 ```
 packages/shared   общие типы, статусы согласования, разбор архивного шифра
 backend           Fastify + Prisma: схема БД, миграции, сиды (ЭТАП 1), публичный API каталога и филиалов (ЭТАП 2)
+frontend          React + Vite: каркас, KZ/RU/EN, темы, панель доступности (ЭТАП 3)
 infrastructure    Docker, Nginx, скрипты
 docs              проектная документация
 ```
@@ -49,3 +50,13 @@ curl -G http://127.0.0.1:3000/api/v1/catalog/documents --data-urlencode q=мас
 ```
 
 Маршруты и правила доступа — [docs/api-design.md §8](docs/api-design.md).
+
+## Интерфейс (ЭТАП 3)
+
+```bash
+npm run dev:api                   # API на :3000 (нужна БД)
+npm run dev:web                   # http://127.0.0.1:5173 → перенаправит на /kk
+npm run e2e                       # сборка + проверка в Chromium: axe во всех темах, 10 ширин экрана, клавиатура
+```
+
+Для `npm run e2e` нужен Chromium для Playwright 1.63 (`npx playwright install chromium`, если его нет).

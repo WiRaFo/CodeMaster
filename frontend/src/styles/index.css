@@ -1,0 +1,233 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Токены доступны в утилитах Tailwind: bg-bg, text-text, border-border и т. д. */
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-text: var(--color-text);
+  --color-muted: var(--color-text-muted);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-on-primary: var(--color-on-primary);
+  --color-accent: var(--color-accent);
+  --color-border: var(--color-border);
+  --color-focus: var(--color-focus);
+  --color-danger: var(--color-danger);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-warning-text: var(--color-warning-text);
+  --color-demo-bg: var(--color-demo-bg);
+  --color-demo-text: var(--color-demo-text);
+  --font-sans: var(--a11y-font);
+}
+
+/* Настройки панели доступности (docs/accessibility.md §5). Значения выставляет A11yProvider и скрипт в index.html. */
+:root {
+  --a11y-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif;
+  --a11y-line-height: 1.5;
+  --a11y-letter-spacing: normal;
+  --a11y-word-spacing: normal;
+  font-size: var(--a11y-font-size, 100%);
+}
+
+:root[data-font='readable'] {
+  /* Шрифты с крупным очком и различимыми I/l/1 из набора ОС; веб-шрифты не загружаются. */
+  --a11y-font: Verdana, Tahoma, 'DejaVu Sans', 'Noto Sans', sans-serif;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--a11y-font);
+  line-height: var(--a11y-line-height);
+  letter-spacing: var(--a11y-letter-spacing);
+  word-spacing: var(--a11y-word-spacing);
+  overflow-wrap: anywhere;
+}
+
+/* Единый индикатор фокуса: 3 px, отступ 2 px, контраст ≥ 3:1 к фону (§2). */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+a:hover {
+  color: var(--color-primary-hover);
+  text-decoration-thickness: 2px;
+}
+
+.visually-hidden:not(:focus):not(:active) {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Уменьшение движения: системная настройка или выбор в панели (§7). */
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Упрощённый режим: без декоративных блоков, одна колонка, крупнее ссылки. Содержимое не скрывается. */
+:root[data-simplified='on'] [data-decorative] {
+  display: none;
+}
+:root[data-simplified='on'] main a {
+  font-size: 1.125em;
+}
+
+/* Базовые компоненты дизайн-системы. Цели касания не меньше 44×44 px (docs/accessibility.md §1). */
+@layer components {
+  .btn-primary,
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: 2px solid var(--color-primary);
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
+  }
+  .btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 2px solid var(--color-border);
+  }
+  .btn-secondary:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 0.375rem;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .input {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--color-border);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+  .nav-link,
+  .lang-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  .nav-link:hover,
+  .lang-link:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+  }
+  /* Текущая страница и язык отмечены не только цветом: подчёркивание и жирный шрифт. */
+  .nav-link[aria-current='page'],
+  .lang-link[aria-current='true'] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 0.3em;
+    color: var(--color-primary);
+  }
+  .lang-link {
+    min-width: 2.75rem;
+    justify-content: center;
+    font-weight: 600;
+  }
+  .choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid var(--color-border);
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+  .choice:has(input:checked) {
+    border-color: var(--color-primary);
+    background: var(--color-surface-2);
+    font-weight: 600;
+  }
+  .choice input {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--color-primary);
+  }
+  .badge-warning {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    border: 1px solid var(--color-warning-text);
+    font-size: 0.875rem;
+  }
+  .prose-page {
+    max-width: 75ch;
+  }
+  .prose-page h2 {
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .prose-page p,
+  .prose-page ul {
+    margin-bottom: 1rem;
+  }
+  .prose-page ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+  }
+}
