@@ -1,0 +1,115 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import axe from 'axe-core';
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { apiMock, renderAt } from './render.tsx';
+
+let fetchMock: MockInstance<typeof fetch>;
+beforeEach(() => {
+  fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(apiMock());
+});
+
+async function axeViolations(container: HTMLElement) {
+  const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } });
+  return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+}
+
+describe('главная (ТЗ §5.1)', () => {
+  it('баннер с названием, четырьмя быстрыми переходами и ссылкой на выставки', async () => {
+    renderAt('/ru');
+    const banner = (await screen.findByRole('heading', { level: 1 })).closest('section');
+    expect(banner).not.toBeNull();
+    const b = within(banner as HTMLElement);
+    expect(b.getByRole('link', { name: 'Найти архивный документ' })).toHaveAttribute('href', '/ru/catalog');
+    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/visitors');
+    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/visitors');
+    expect(b.getByRole('link', { name: 'Найти филиал' })).toHaveAttribute('href', '/ru/branches');
+    expect(b.getByRole('link', { name: /онлайн-выставки/i })).toHaveAttribute('href', '/ru/exhibitions');
+  });
+
+  it('блоки из API: история в документах, выставки, филиалы, новости; демо и тестовые данные помечены', async () => {
+    renderAt('/ru');
+    const history = (await screen.findByRole('heading', { level: 2, name: 'История в документах' })).closest('section') as HTMLElement;
+    const h = within(history);
+    expect(h.getByRole('link', { name: '[Синтетика] Протокол заседания правления маслозавода' })).toHaveAttribute(
+      'href',
+      '/ru/catalog/documents/6b8741a3-8fc6-40af-9408-21b6f9709b6f',
+    );
+    expect(h.getByText('Ф. TEST-1. Оп. 1. Д. 1.')).toBeInTheDocument();
+    expect(h.getByText('Тестовые данные')).toBeInTheDocument();
+    expect(h.getByRole('link', { name: 'История семьи и поколений' })).toHaveAttribute('href', '/ru/history?topic=family');
+
+    const news = screen.getByRole('heading', { level: 2, name: 'Новости и события' }).closest('section') as HTMLElement;
+    expect(within(news).getByRole('link', { name: '[Демо] Прототип нового сайта архива' })).toHaveAttribute('href', '/ru/news/demo-new-site-prototype');
+    expect(within(news).getByText('Демо')).toBeInTheDocument();
+    expect(within(news).getByText('8 ноября 2026 г.')).toBeInTheDocument();
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Онлайн-выставки' })).toBeInTheDocument();
+    const branches = screen.getByRole('heading', { level: 2, name: 'Наши филиалы' }).closest('section') as HTMLElement;
+    expect(await within(branches).findByText('г. Усть-Каменогорск, ул. Головкова, 26/1')).toBeInTheDocument();
+    expect(within(branches).getByText(/уточняются/)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/home?lang=ru', expect.anything());
+  });
+
+  it('без данных пустые блоки не показываются, при ошибке — понятное сообщение', async () => {
+    fetchMock.mockImplementation(apiMock({ '/api/v1/home?': { news: [], exhibitions: [], history: { topics: [], publications: [], documents: [] } } }));
+    renderAt('/ru');
+    await screen.findByRole('heading', { level: 2, name: 'Наши филиалы' });
+    await waitFor(() => expect(document.querySelector('[data-load-state="loading"]')).toBeNull());
+    expect(screen.queryByRole('heading', { name: 'Новости и события' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'История в документах' })).toBeNull();
+  });
+
+  it('сообщает об ошибке загрузки', async () => {
+    fetchMock.mockImplementation(async () => new Response('', { status: 502 }));
+    renderAt('/ru');
+    expect((await screen.findAllByText(/Не удалось загрузить данные/)).length).toBeGreaterThan(0);
+  });
+
+  it('поиск в каталоге с главной ведёт на выдачу с запросом в адресе (e2e 1)', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt('/ru');
+    const form = await screen.findByRole('search', { name: 'Поиск в электронном каталоге' });
+    await user.type(within(form).getByRole('searchbox'), 'протокол заседания');
+    await user.click(within(form).getByRole('button', { name: 'Искать' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ru/catalog'));
+    expect(router.state.location.search).toBe('?q=%D0%BF%D1%80%D0%BE%D1%82%D0%BE%D0%BA%D0%BE%D0%BB%20%D0%B7%D0%B0%D1%81%D0%B5%D0%B4%D0%B0%D0%BD%D0%B8%D1%8F');
+    expect(await screen.findByText('По запросу «протокол заседания» найдено 2 документа')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/v1/catalog/documents?lang=ru&page=1&pageSize=20&q='), expect.anything());
+  });
+
+  it('нет нарушений axe на главной в трёх языках', async () => {
+    for (const lang of ['kk', 'ru', 'en']) {
+      const { container, unmount } = renderAt(`/${lang}`);
+      await screen.findByRole('heading', { level: 2, name: { kk: 'Құжаттардағы тарих', ru: 'История в документах', en: 'History in documents' }[lang] });
+      await waitFor(() => expect(container.querySelectorAll('[data-load-state="loading"]').length).toBe(0));
+      expect(await axeViolations(container)).toEqual([]);
+      unmount();
+    }
+  });
+});
+
+describe('выдача каталога', () => {
+  it('подсветка совпадений без внедрения HTML, пометка ограниченного доступа', async () => {
+    const { container } = renderAt('/ru/catalog?q=заседания');
+    const mark = await screen.findByText('заседания', { selector: 'mark' });
+    expect(mark.tagName).toBe('MARK');
+    expect(container.querySelector('script')).toBeNull();
+    expect(screen.getByText(/Протокол <script>/)).toBeInTheDocument();
+    expect(screen.getByText('Доступ ограничен')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Поиск в электронном каталоге' })).toHaveValue('заседания');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+
+describe('новости', () => {
+  it('несуществующая новость показывает страницу 404', async () => {
+    renderAt('/ru/news/no-such-news');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Страница не найдена' })).toBeInTheDocument();
+  });
+
+  it('пустая лента сообщает, что новостей нет', async () => {
+    renderAt('/ru/news');
+    expect(await screen.findByText('Новостей пока нет.')).toBeInTheDocument();
+  });
+});

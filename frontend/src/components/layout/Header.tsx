@@ -57,7 +57,7 @@ export function Header() {
       </div>
 
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 pb-3">
-        <form role="search" onSubmit={onSearch} className="flex min-w-0 flex-1 basis-64 gap-2">
+        <form role="search" aria-label={t('header.searchLabel')} onSubmit={onSearch} className="flex min-w-0 flex-1 basis-64 gap-2">
           <label htmlFor="site-search" className="visually-hidden">{t('header.searchLabel')}</label>
           <input id="site-search" type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder={t('header.searchPlaceholder')} maxLength={200} className="input min-w-0 flex-1" />

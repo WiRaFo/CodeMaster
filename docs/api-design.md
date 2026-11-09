@@ -250,7 +250,7 @@
 OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и публикуется только в dev (`/api/docs`). В prod спецификация собирается в `docs/api/openapi.json` на этапе сборки.
 
 
-## 8. Состояние реализации (ЭТАП 2, 2026-11-09)
+## 8. Состояние реализации (ЭТАПЫ 2 и 4, 2026-11-09)
 
 Код: `backend/src` (Fastify 5, Zod 4), схемы параметров — `packages/shared/src/api.ts`. Запуск: `npm run dev -w backend`.
 
@@ -267,6 +267,8 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 | `GET /api/v1/catalog/resolve-code?code=` | Разбор шифра и список совпадений (фонд, опись или дело) во всех подразделениях; непонятный шифр — 400 |
 | `GET /api/v1/branches`, `/branches/:slug`, `/branch-types` | Поиск по названию, адресу, текущему и историческому названию населённого пункта; `coordinates` только при заполненных координатах и `show_on_map`; `needsVerification` для несверенных данных |
 | `GET /api/v1/reference/document-types`, `/periods`, `/settlements`, `/topics?kind=` | Справочники для фильтров; добавлены вместо отдельных маршрутов `/history/topics` |
+| `GET /api/v1/news?rubric&page&pageSize&lang`, `/news/:slug` | ЭТАП 4. Только `published`, не удалённые, с наступившей `published_at`; черновик, запись на согласовании, будущая и удалённая новость дают 404. `pageSize` ≤ 50. Фильтры по филиалу и поиск — в разделе новостей |
+| `GET /api/v1/home?lang` | ЭТАП 4. `news` (3 последние, совпадают с началом ленты), `exhibitions` (до 3 опубликованных), `history.topics` (направления со счётчиком публикаций), `history.publications` (до 3), `history.documents` (до 4 документов только из `public_documents_v` с эффективным `open`). Хронология (F-018, P2) не включена |
 
 ### Правила доступа на сервере
 

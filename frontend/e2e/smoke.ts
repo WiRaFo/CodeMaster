@@ -1,8 +1,8 @@
 /**
  * Сквозная проверка каркаса в настоящем браузере (Chromium через Playwright):
  * axe (включая контраст) на страницах во всех темах, отсутствие горизонтальной прокрутки на 10 ширинах,
- * текст 200 % с интервалами WCAG 1.4.12 на 320 px, клавиатура и мобильное меню.
- * Запуск: npm run e2e -w frontend (собирает и поднимает vite preview; для контактов в подвале нужен API на :3000).
+ * текст 200 % с интервалами WCAG 1.4.12 на 320 px, клавиатура и мобильное меню, сценарий 1 (главная → поиск → выдача).
+ * Запуск: npm run e2e -w frontend (собирает и поднимает vite preview). Нужен API на :3000 с сидами migrated, synthetic, demo.
  */
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -13,7 +13,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog', '/kk/nonexistent'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -149,6 +149,30 @@ async function main() {
       await page.reload();
       await page.locator('h1').waitFor();
       check((await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)) === '24px', 'настройка сохраняется после перезагрузки');
+      await page.close();
+    }
+
+    {
+      // Сценарий 1 (docs/development-roadmap.md, ЭТАП 4): с главной только клавиатурой найти документ в каталоге.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru', {});
+      for (const block of ['Электронный каталог', 'История в документах', 'Онлайн-выставки', 'Наши филиалы', 'Новости и события']) {
+        check(await page.getByRole('heading', { level: 2, name: block }).isVisible(), `главная: блок «${block}»`);
+      }
+      check((await page.getByText('Демо', { exact: true }).count()) > 0, 'главная: демо-записи помечены');
+      const input = page.getByRole('searchbox', { name: 'Поиск в электронном каталоге' });
+      await input.focus();
+      await page.keyboard.type('протокол заседания');
+      await page.keyboard.press('Enter');
+      await page.waitForURL(/\/ru\/catalog\?q=/);
+      const status = page.getByText(/По запросу «протокол заседания» найден/);
+      await status.waitFor();
+      check(await status.isVisible(), 'сценарий 1: выдача показывает число найденных документов');
+      const first = page.getByRole('article').first().getByRole('link');
+      check(/Протокол заседания/.test((await first.textContent()) ?? ''), `сценарий 1: первый результат — протокол (${await first.textContent()})`);
+      await page.goBack();
+      await page.locator('h1').waitFor();
+      check(page.url().endsWith('/ru'), 'сценарий 1: «Назад» возвращает на главную');
       await page.close();
     }
 

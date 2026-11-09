@@ -118,12 +118,12 @@ export async function contentRoutes(app: FastifyInstance, opts: { db: PrismaClie
   });
 
   /**
-   * Агрегат главной (docs/api-design.md: GET /home): последние новости, «История в документах»
+   * Агрегат главной (docs/api-design.md: GET /home): последние новости, выставки, «История в документах»
    * (направления, публикации и открытые документы). Один запрос вместо нескольких.
    */
   app.get('/home', async (request, reply) => {
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
-    const [news, publications, topics, documents] = await Promise.all([
+    const [news, publications, topics, documents, exhibitions] = await Promise.all([
       db.$queryRaw<NewsRow[]>`${newsSelect(lang)} WHERE ${PUBLIC_NEWS} ORDER BY n.published_at DESC, n.slug LIMIT 3`,
       db.$queryRaw<PublicationRow[]>`
         SELECT p.slug, p.kind::text AS kind, p.period_text, p.year_from, p.year_to, p.published_at,
@@ -157,10 +157,28 @@ export async function contentRoutes(app: FastifyInstance, opts: { db: PrismaClie
         WHERE d.effective_access = 'open'
         ORDER BY d.is_featured DESC, d.has_digital_copy DESC, d.updated_at DESC, d.id
         LIMIT 4`,
+      db.$queryRaw<Array<{ slug: string; year_from: number | null; year_to: number | null; data_origin: string; title: string | null; lead: string | null; content_lang: string | null; translation_status: string | null }>>`
+        SELECT e.slug, e.year_from, e.year_to, e.data_origin::text AS data_origin,
+               t.title, t.lead, t.locale AS content_lang, t.translation_status
+        FROM exhibitions e ${bestTranslation('exhibition', 't', 'e.id', lang, ['title', 'lead'])}
+        WHERE e.publication_status = 'published' AND e.deleted_at IS NULL
+          AND (e.opens_at IS NULL OR e.opens_at <= current_date)
+        ORDER BY e.is_featured DESC, (e.closes_at IS NOT NULL AND e.closes_at < current_date), e.opens_at DESC NULLS LAST, e.slug
+        LIMIT 3`,
     ]);
 
     return {
       news: news.map(newsSummary),
+      exhibitions: exhibitions.map((e) => ({
+        slug: e.slug,
+        title: e.title,
+        lead: e.lead,
+        yearFrom: e.year_from,
+        yearTo: e.year_to,
+        dataOrigin: e.data_origin,
+        contentLang: e.content_lang,
+        translationStatus: e.translation_status,
+      })),
       history: {
         topics: topics.map((t) => ({ slug: t.slug, name: t.name, publicationCount: Number(t.publication_count) })),
         publications: publications.map((p) => ({

@@ -70,12 +70,14 @@ describe('главная: агрегат GET /home', () => {
   it('новости, направления «Истории в документах» и публикации', async () => {
     const res = await t.get('/api/v1/home?lang=ru');
     expect(res.status).toBe(200);
-    expect((res.body['news'] as Item[]).length).toBeLessThanOrEqual(3);
+    const feed = await t.get('/api/v1/news?lang=ru&pageSize=3');
+    expect(res.body['news']).toEqual(feed.body.items);
     const history = res.body['history'] as { topics: Item[]; publications: Item[]; documents: Item[] };
     expect(history.topics).toHaveLength(11);
     expect(history.topics.find((x) => x['slug'] === 'region')).toMatchObject({ publicationCount: 1 });
     expect(history.publications.map((p) => p['slug']).sort()).toEqual(['demo-how-to-read-archive-code', 'demo-reading-room-visit']);
     expect(history.publications.every((p) => p['dataOrigin'] === 'demo')).toBe(true);
+    expect((res.body['exhibitions'] as Item[]).map((e) => e['slug'])).toEqual(['demo-exhibition-example']);
   });
 
   it('в блок документов попадают только эффективно открытые документы', async () => {
