@@ -85,3 +85,9 @@ export const newsListSchema = z
   .object({ rubric: shortText(100).optional(), lang: langSchema.optional() })
   .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(10) }));
 export type NewsListQuery = z.infer<typeof newsListSchema>;
+
+/** ЭТАП 8. Онлайн-выставки (ТЗ §5.7, с. 9): фильтр по тематике и историческому периоду. */
+export const exhibitionListSchema = z
+  .object({ topic: shortText(100).optional(), period: shortText(100).optional(), lang: langSchema.optional() })
+  .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(12) }));
+export type ExhibitionListQuery = z.infer<typeof exhibitionListSchema>;

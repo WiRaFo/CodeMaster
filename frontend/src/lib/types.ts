@@ -167,3 +167,47 @@ export interface DocumentPageItem {
   altLang: string | null;
   downloadAllowed: boolean;
 }
+
+/** ЭТАП 8. Онлайн-выставки (ТЗ §5.7). */
+export interface ExhibitionTopic {
+  slug: string;
+  name: string | null;
+}
+
+export interface ExhibitionSummary extends Localized {
+  slug: string;
+  title: string | null;
+  lead: string | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+  topics: ExhibitionTopic[];
+  itemCount: number;
+  /** Номер экспоната, изображение которого служит обложкой. */
+  coverItem: number | null;
+}
+
+export interface ExhibitionList extends Paged<ExhibitionSummary> {
+  topics: Array<ExhibitionTopic & { count: number }>;
+}
+
+export interface ExhibitItem extends Omit<Localized, 'dataOrigin'> {
+  number: number;
+  title: string | null;
+  description: string | null;
+  sourceNote: string | null;
+  image: { alt: string | null; width: number | null; height: number | null } | null;
+  document: { id: string; title: string | null; access: 'open' | 'restricted'; code: { formatted: string } } | null;
+  fond: { id: string; number: string; title: string | null } | null;
+}
+
+export interface ExhibitionDetail extends Omit<ExhibitionSummary, 'itemCount' | 'coverItem'> {
+  description: string | null;
+  items: ExhibitItem[];
+}
+
+export interface PeriodRef {
+  slug: string;
+  name: string;
+  yearFrom: number | null;
+  yearTo: number | null;
+}

@@ -14,7 +14,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -79,9 +79,16 @@ async function openWithPrefs(page: Page, path: string, prefs: Record<string, unk
 async function axe(page: Page): Promise<string[]> {
   await page.addScriptTag({ path: AXE_PATH });
   return page.evaluate(async () => {
-    const w = window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: string[] }> }> }> } };
+    type Node = { target: string[]; any: Array<{ data?: { messageKey?: string } | null }> };
+    type Rule = { id: string; nodes: Node[] };
+    const w = window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Rule[]; incomplete: Rule[] }> } };
     const result = await w.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] } });
-    return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
+    // Текст цвета фона axe относит к «неполным» (возможно, скрытый текст), а не к нарушениям. Для нас это ошибка.
+    const sameColor = result.incomplete
+      .filter((r) => r.id === 'color-contrast')
+      .map((r) => ({ id: 'color-contrast-equal', nodes: r.nodes.filter((n) => n.any.some((c) => c.data?.messageKey === 'equalRatio')) }))
+      .filter((r) => r.nodes.length > 0);
+    return [...result.violations, ...sameColor].map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
   });
 }
 
@@ -252,6 +259,51 @@ async function main() {
       check(state.contrast === 'high', `сценарий 15: высокая контрастность сохранилась (${state.contrast})`);
       check(state.lang === 'ru', 'сценарий 15: язык сменился, настройки остались');
       check(await page.getByRole('button', { name: 'Включить светлую тему' }).isVisible(), 'сценарий 14: кнопка темы подписана на новом языке');
+      await page.close();
+    }
+
+    {
+      // Сценарий 7 (ЭТАП 8): пройти онлайн-выставку от первого до последнего экспоната, фильтр по тематике.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru/exhibitions', {});
+      await page.getByRole('heading', { level: 2, name: /Пример виртуальной выставки/ }).waitFor();
+      check((await page.getByRole('article').count()) === 2, 'сценарий 7: в списке две демо-выставки');
+      await page.getByRole('combobox', { name: 'Тематика' }).selectOption('culture_art');
+      await page.getByRole('button', { name: 'Показать' }).click();
+      await page.waitForURL(/topic=culture_art/);
+      const filtered = await page.waitForFunction(() => {
+        const cards = [...document.querySelectorAll('#main article')];
+        return cards.length === 1 && cards[0]?.textContent?.includes('Пример тематической подборки');
+      }, undefined, { timeout: 5000 }).then(() => true, () => false);
+      check(filtered, 'сценарий 7: фильтр по тематике оставляет одну выставку');
+      await page.getByRole('link', { name: 'Сбросить' }).click();
+      await page.getByRole('link', { name: /Пример виртуальной выставки/ }).click();
+      await page.getByRole('link', { name: 'Начать просмотр' }).waitFor();
+      check((await axe(page)).length === 0, `axe страница выставки: ${(await axe(page)).join('; ')}`);
+      await page.getByRole('link', { name: 'Начать просмотр' }).click();
+      await page.getByTestId('exhibit-counter').filter({ hasText: 'Экспонат 1 из 4' }).waitFor();
+      await page.waitForFunction(() => {
+        const i = document.querySelector<HTMLImageElement>('.exhibit-image');
+        return i?.complete && i.naturalWidth > 0;
+      });
+      check(true, 'сценарий 7: изображение первого экспоната загружено');
+      check((await axe(page)).length === 0, `axe экспонат: ${(await axe(page)).join('; ')}`);
+      // Клавиатура: увеличение и переход стрелкой из области изображения.
+      await page.getByRole('region', { name: 'Изображение экспоната' }).focus();
+      await page.keyboard.press('+');
+      check((await page.locator('output').textContent()) === '125%', 'сценарий 7: «+» увеличивает изображение');
+      await page.keyboard.press('ArrowRight');
+      await page.getByTestId('exhibit-counter').filter({ hasText: 'Экспонат 2 из 4' }).waitFor();
+      check(await page.getByRole('link', { name: /Ф\. TEST-1\. Оп\. 1\. Д\. 1\./ }).isVisible(), 'сценарий 7: экспонат ссылается на карточку документа с шифром');
+      for (const n of [3, 4]) {
+        await page.getByRole('link', { name: 'Следующий экспонат' }).focus();
+        await page.keyboard.press('Enter');
+        await page.getByTestId('exhibit-counter').filter({ hasText: `Экспонат ${n} из 4` }).waitFor();
+      }
+      check(!(await page.getByRole('link', { name: 'Следующий экспонат' }).count()), 'сценарий 7: у последнего экспоната нет «Следующий»');
+      await page.getByRole('link', { name: 'Вернуться к началу выставки' }).click();
+      await page.getByTestId('exhibit-counter').filter({ hasText: 'Экспонат 1 из 4' }).waitFor();
+      check(true, 'сценарий 7: с последнего экспоната можно вернуться к первому');
       await page.close();
     }
 
@@ -583,9 +635,50 @@ async function adminScenarios(browser: Browser) {
   await admin.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
   await admin.waitForURL(/\/admin\/documents$/);
 
+  // Выставка в панели (F-148): создать, добавить экспонат, пройти согласование, увидеть на сайте, снять и удалить.
+  const exSlug = `e2e-exhibition-${run.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+  await admin.goto(`${BASE}/admin/exhibitions/new`);
+  await admin.getByLabel(/^Адрес на сайте/).fill(exSlug);
+  await admin.getByRole('textbox', { name: 'Название (обязательно)' }).fill(`[Демо] e2e выставка ${run}`);
+  await admin.getByLabel(/^Описание \(обязательно/).first().fill('Описание выставки для проверки.');
+  await admin.getByRole('button', { name: 'Создать черновик' }).click();
+  await admin.waitForURL(/\/admin\/exhibitions\/[0-9a-f-]{36}$/);
+  await admin.getByTestId('ex-status').filter({ hasText: 'Черновик' }).waitFor();
+  check(await admin.getByTestId('ex-issues').getByText('Добавьте хотя бы один экспонат').isVisible(), 'выставка в панели: подсказка, чего не хватает до проверки');
+  await admin.getByRole('button', { name: 'Добавить экспонат' }).click();
+  const newItem = admin.getByRole('form', { name: 'Новый экспонат' });
+  await newItem.getByRole('textbox', { name: 'Название (обязательно)' }).fill('Первый экспонат');
+  await newItem.getByLabel(/^Источник/).first().fill('Демонстрационный источник');
+  await newItem.getByRole('button', { name: 'Добавить экспонат' }).click();
+  await admin.getByRole('heading', { level: 3, name: 'Экспонат 1' }).waitFor();
+  check((await axe(admin)).length === 0, `axe выставка в панели: ${(await axe(admin)).join('; ')}`);
+  for (const [button, status] of [['Отправить на проверку', 'На проверке'], ['Одобрить', 'Одобрено'], ['Опубликовать', 'Опубликовано']] as const) {
+    await admin.getByRole('button', { name: button }).click();
+    await admin.getByTestId('ex-status').filter({ hasText: status }).waitFor();
+  }
+  check(true, 'выставка в панели: черновик → проверка → одобрено → опубликовано');
+  const exSite = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await exSite.goto(`${BASE}/ru/exhibitions/${exSlug}/1`);
+  const exVisible = await exSite.getByRole('heading', { level: 1, name: 'Первый экспонат' }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+  check(exVisible, 'выставка в панели: опубликованная выставка открывается на сайте');
+  await exSite.close();
+  await admin.getByRole('button', { name: 'Снять с публикации' }).click();
+  await admin.getByRole('alertdialog').getByRole('button', { name: 'Снять с публикации' }).click();
+  await admin.getByTestId('ex-status').filter({ hasText: 'Архивировано' }).waitFor();
+  const exGone = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await exGone.goto(`${BASE}/ru/exhibitions/${exSlug}`);
+  check(await exGone.getByRole('heading', { level: 1, name: 'Страница не найдена' }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'выставка в панели: снятая выставка исчезла с сайта');
+  await exGone.close();
+  const exId = admin.url().split('/').pop() ?? '';
+  const deleted = await admin.evaluate(async (id) => {
+    const me = (await (await fetch('/api/v1/auth/me')).json()) as { csrfToken: string };
+    return (await fetch(`/api/v1/admin/exhibitions/${id}`, { method: 'DELETE', headers: { 'content-type': 'application/json', 'x-csrf-token': me.csrfToken }, body: JSON.stringify({ confirm: true }) })).status;
+  }, exId);
+  check(deleted === 204, `выставка в панели: удаление с подтверждением (${deleted})`);
+
   // Панель на 320 px: формы и дерево не шире экрана (без горизонтальной прокрутки).
   await admin.setViewportSize({ width: 320, height: 800 });
-  for (const path of ['/admin', '/admin/documents', '/admin/documents/new', '/admin/hierarchy', '/admin/audit']) {
+  for (const path of ['/admin', '/admin/documents', '/admin/documents/new', '/admin/hierarchy', '/admin/audit', '/admin/exhibitions', '/admin/exhibitions/new']) {
     await admin.goto(BASE + path);
     await admin.locator('#admin-main h1').waitFor();
     await admin.waitForLoadState('networkidle');

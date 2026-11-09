@@ -29,7 +29,7 @@ export async function runSeeds(db: PrismaClient, sets: SeedSet[], production: bo
   await seedReference(db);
   if (sets.includes('migrated')) await seedMigrated(db);
   if (sets.includes('synthetic')) await seedSynthetic(db, storage);
-  if (sets.includes('demo')) await seedDemo(db);
+  if (sets.includes('demo')) await seedDemo(db, storage);
 }
 
 async function main(): Promise<void> {

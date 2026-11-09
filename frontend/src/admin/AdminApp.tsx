@@ -6,6 +6,7 @@ import { AuditPage } from './AuditPage.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 import { DocumentEditPage } from './DocumentEditPage.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
+import { ExhibitionEditPage, ExhibitionsAdminPage, canSeeExhibitions } from './ExhibitionsAdmin.tsx';
 import { HierarchyPage } from './HierarchyPage.tsx';
 import { LoginPage } from './LoginPage.tsx';
 
@@ -127,6 +128,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
 
   const can = useCallback((p: string) => me.permissions.includes(p), [me.permissions]);
   const catalog = ['catalog:edit', 'catalog:submit', 'catalog:review', 'catalog:publish'].some(can);
+  const exhibitions = canSeeExhibitions(can);
 
   return (
     <AuthContext.Provider value={{ me, can, logout, refreshNotifications, unread }}>
@@ -156,6 +158,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             <AdminNavItem to="/admin" end label={unread ? `Обзор (${unread} новых)` : 'Обзор'} />
             {catalog ? <AdminNavItem to="/admin/documents" label="Документы" /> : null}
             {catalog ? <AdminNavItem to="/admin/hierarchy" label="Фонды, описи, дела" /> : null}
+            {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
             {can('audit:read') ? <AdminNavItem to="/admin/audit" label="Журнал действий" /> : null}
             <li>
               <a className="admin-nav-link" href="/ru">Открыть сайт</a>
@@ -170,6 +173,9 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="documents/new" element={can('catalog:edit') ? <DocumentEditPage /> : <NoAccess />} />
           <Route path="documents/:id" element={catalog ? <DocumentEditPage /> : <NoAccess />} />
           <Route path="hierarchy" element={catalog ? <HierarchyPage /> : <NoAccess />} />
+          <Route path="exhibitions" element={exhibitions ? <ExhibitionsAdminPage /> : <NoAccess />} />
+          <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
+          <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="audit" element={can('audit:read') ? <AuditPage /> : <NoAccess />} />
           <Route path="*" element={<AdminHeading title="Раздел не найден" />} />
         </Routes>

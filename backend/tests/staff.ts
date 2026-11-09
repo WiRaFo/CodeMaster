@@ -50,6 +50,7 @@ export async function cleanupStaff(db: PrismaClient): Promise<void> {
   const assets = await db.digitalAsset.findMany({ where: { createdById: { in: ids } }, select: { id: true } });
   await db.documentAsset.deleteMany({ where: { assetId: { in: assets.map((a) => a.id) } } });
   await db.digitalAsset.deleteMany({ where: { id: { in: assets.map((a) => a.id) } } });
+  await db.exhibition.deleteMany({ where: { createdById: { in: ids } } });
   await db.document.deleteMany({ where: { createdById: { in: ids } } });
   await db.case.deleteMany({ where: { createdById: { in: ids } } });
   await db.inventory.deleteMany({ where: { createdById: { in: ids } } });

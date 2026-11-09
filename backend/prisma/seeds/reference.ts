@@ -97,6 +97,8 @@ export async function seedReference(db: PrismaClient): Promise<void> {
 
   for (const [kind, list] of [
     ['history_topic', HISTORY_TOPICS],
+    // Тематики выставок совпадают с направлениями цифровой истории (ТЗ §5.6, §5.7).
+    ['exhibition_topic', HISTORY_TOPICS],
     ['news_rubric', NEWS_RUBRICS],
   ] as const) {
     for (const [i, [slug, texts]] of list.entries()) {

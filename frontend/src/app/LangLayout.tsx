@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import { isLocale } from '../i18n/index.ts';
@@ -7,6 +7,13 @@ import { preferredLocale, LANG_STORAGE_KEY } from './preferred-locale.ts';
 import { SkipLink } from '../components/accessibility/SkipLink.tsx';
 import { Header } from '../components/layout/Header.tsx';
 import { Footer } from '../components/layout/Footer.tsx';
+
+/**
+ * Адрес панели вида /admin/exhibitions/new совпадает с публичным /:lang/exhibitions/:slug (lang = «admin»),
+ * и этот маршрут длиннее, чем /admin/*. Тогда панель открывается отсюда: её внутренние маршруты
+ * считаются от /admin, как и при обычном входе через /admin/*.
+ */
+const AdminApp = lazy(async () => ({ default: (await import('../admin/AdminApp.tsx')).AdminApp }));
 
 /**
  * Каркас страницы с языковым префиксом /kk|ru|en (docs/architecture.md §7):
@@ -36,6 +43,13 @@ export function LangLayout() {
     h1?.focus();
   }, [pathname]);
 
+  if (lang === 'admin') {
+    return (
+      <Suspense fallback={null}>
+        <AdminApp />
+      </Suspense>
+    );
+  }
   if (!valid) return <Navigate to={`/${preferredLocale()}${pathname}${search}`} replace />;
 
   return (
