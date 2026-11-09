@@ -1,0 +1,20 @@
+# ЭТАП 1: только база данных. Остальные сервисы добавляются на ЭТАПЕ 2.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: archive
+      POSTGRES_PASSWORD: archive
+      POSTGRES_DB: archive_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infrastructure/docker/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archive -d archive_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  db-data:

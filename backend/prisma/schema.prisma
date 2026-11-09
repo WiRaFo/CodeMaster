@@ -1,0 +1,1715 @@
+// Схема БД сайта Государственного архива ВКО.
+// Проект модели: docs/database-design.md (v0.3). Требования: ТЗ §11, с. 21 (17 сущностей), §5–§7.
+//
+// Соглашения:
+// - таблицы и колонки в snake_case (@@map/@map), модели в PascalCase;
+// - первичные ключи uuid, генерация на стороне БД;
+// - переводимые поля в отдельных таблицах *_translations с PK (entity_id, locale);
+// - created_by_id / updated_by_id хранят id пользователя без внешнего ключа: авторитетная запись
+//   о действии — audit_logs, а удаление пользователя не должно ломать историю контента;
+// - то, что Prisma не умеет описать (триггеры, представления, CHECK, частичные индексы,
+//   NULLS NOT DISTINCT), лежит в ручных SQL-миграциях; см. prisma/migrations/*_access_search/.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, citext, unaccent, vector]
+}
+
+// ───────────────────────────── Перечисления ─────────────────────────────
+
+enum Locale {
+  kk
+  ru
+  en
+}
+
+/// ТЗ §6.7, с. 15
+enum PublicationStatus {
+  draft
+  in_review
+  needs_changes
+  approved
+  published
+  archived
+}
+
+/// ТЗ §5.3, с. 6; Q-05
+enum AccessLevel {
+  open
+  restricted
+  closed
+}
+
+/// Б§23; ТЗ §11
+enum DataOrigin {
+  verified
+  migrated
+  demo
+  synthetic
+}
+
+enum TranslationStatus {
+  missing
+  machine
+  reviewed
+}
+
+enum DatePrecision {
+  day
+  month
+  year
+  decade
+}
+
+/// ТЗ §5.3, с. 5: документы организаций / личного происхождения
+enum FondKind {
+  organization
+  personal
+  collection
+}
+
+enum AssetKind {
+  scan_page
+  image
+  pdf
+  video
+  audio
+  other
+}
+
+enum ProcessingStatus {
+  pending
+  ready
+  failed
+}
+
+enum AntivirusStatus {
+  pending
+  clean
+  infected
+}
+
+enum OcrStatus {
+  none
+  pending
+  done
+  failed
+}
+
+enum DocumentRelationType {
+  related
+  part_of
+  mentions
+  copy_of
+}
+
+enum CategoryKind {
+  catalog_topic
+  history_topic
+  news_rubric
+  exhibition_topic
+}
+
+/// ТЗ §5.6, с. 8
+enum PublicationKind {
+  article
+  photo_story
+  biography
+  memoir
+}
+
+enum CollectionItemType {
+  document
+  case
+  fond
+  publication
+  person
+  event
+  asset
+}
+
+enum LinkCategory {
+  legal
+  gov_resource
+  archive_resource
+  official_service
+}
+
+enum FeedbackStatus {
+  new
+  read
+  archived
+}
+
+enum MigrationDecision {
+  migrate
+  skip
+  needs_review
+}
+
+enum ImportStatus {
+  preview
+  committed
+  failed
+  cancelled
+}
+
+enum SearchSource {
+  catalog
+  site
+  assistant
+}
+
+// ───────────────────────────── Пользователи и права (ТЗ §6.1–6.2, §6.8) ─────────────────────────────
+
+model User {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String    @unique @db.Citext
+  passwordHash     String    @map("password_hash")
+  fullName         String    @map("full_name")
+  isActive         Boolean   @default(true) @map("is_active")
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt      DateTime? @map("last_login_at") @db.Timestamptz(6)
+  /// Перспектива: второй фактор (TOTP)
+  totpSecret       String?   @map("totp_secret")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  roles         UserRole[]
+  sessions      Session[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// super_admin, site_admin, editor, archivist, branch_admin, moderator, analyst
+  code        String   @unique
+  nameRu      String   @map("name_ru")
+  nameKk      String   @map("name_kk")
+  nameEn      String   @map("name_en")
+  description String?
+  /// Системные роли из ТЗ §6.1 нельзя удалить, только изменить права
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  permissions   RolePermission[]
+  users         UserRole[]
+  notifications Notification[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Формат resource:action, например documents:publish
+  code        String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Назначение роли; branch_id ограничивает область действия (администратор филиала).
+/// Уникальность (user_id, role_id, branch_id) с NULLS NOT DISTINCT — в SQL-миграции.
+model UserRole {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  branchId  String?  @map("branch_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  /// Для branch_id IS NULL уникальность обеспечивает частичный индекс user_roles_global_uidx (SQL-миграция)
+  @@unique([userId, roleId, branchId])
+  @@index([userId])
+  @@map("user_roles")
+}
+
+/// Серверные сессии (ТЗ §7.3: безопасная авторизация, автоматический выход)
+model Session {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  tokenHash     String   @unique @map("token_hash")
+  csrfTokenHash String   @map("csrf_token_hash")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  /// Абсолютный срок жизни
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz(6)
+  ip            String?
+  userAgent     String?  @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Журнал действий, ТЗ §6.8, с. 15. Приложение только добавляет строки.
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  userId     String?  @map("user_id") @db.Uuid
+  /// login, login_failed, logout, create, update, delete, status_change, access_change, permissions_change, settings_change, upload
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  /// Описание действия для человека
+  summary    String
+  changes    Json?
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  requestId  String?  @map("request_id")
+
+  @@index([entityType, entityId])
+  @@index([userId, occurredAt])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?   @map("user_id") @db.Uuid
+  roleId     String?   @map("role_id") @db.Uuid
+  type       String
+  entityType String    @map("entity_type")
+  entityId   String    @map("entity_id")
+  message    String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role? @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([roleId, readAt])
+  @@map("notifications")
+}
+
+/// Включённые языковые версии (ТЗ §6.2: настройка языковых версий)
+model LocaleSetting {
+  code      Locale  @id
+  name      String
+  isEnabled Boolean @default(true) @map("is_enabled")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  @@map("locales")
+}
+
+// ───────────────────────────── Справочники ─────────────────────────────
+
+model Settlement {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String   @unique
+  lat       Decimal? @db.Decimal(9, 6)
+  lng       Decimal? @db.Decimal(9, 6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  translations SettlementTranslation[]
+  names        SettlementName[]
+  branches     Branch[]
+  documents    DocumentSettlement[]
+  publications PublicationSettlement[]
+  events       HistoricalEvent[]
+
+  @@map("settlements")
+}
+
+model SettlementTranslation {
+  settlementId      String            @map("settlement_id") @db.Uuid
+  locale            Locale
+  name              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@id([settlementId, locale])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "settlement_translations_name_trgm_idx")
+  @@map("settlement_translations")
+}
+
+/// Исторические и альтернативные названия для поиска (Усть-Каменогорск / Өскемен, Лениногорск → Риддер)
+model SettlementName {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  settlementId String  @map("settlement_id") @db.Uuid
+  name         String
+  locale       Locale?
+  validFrom    Int?    @map("valid_from")
+  validTo      Int?    @map("valid_to")
+  note         String?
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@index([settlementId])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "settlement_names_name_trgm_idx")
+  @@map("settlement_names")
+}
+
+/// Фондообразователи и прочие организации
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String   @unique
+  yearFrom  Int?     @map("year_from")
+  yearTo    Int?     @map("year_to")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  translations OrganizationTranslation[]
+  fonds        Fond[]
+  documents    Document[]
+
+  @@map("organizations")
+}
+
+model OrganizationTranslation {
+  organizationId    String            @map("organization_id") @db.Uuid
+  locale            Locale
+  name              String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, locale])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "organization_translations_name_trgm_idx")
+  @@map("organization_translations")
+}
+
+model HistoricalPeriod {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String @unique
+  yearFrom  Int?   @map("year_from")
+  yearTo    Int?   @map("year_to")
+  sortOrder Int    @default(0) @map("sort_order")
+
+  translations HistoricalPeriodTranslation[]
+  documents    Document[]
+
+  @@map("historical_periods")
+}
+
+model HistoricalPeriodTranslation {
+  periodId          String            @map("period_id") @db.Uuid
+  locale            Locale
+  name              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  period HistoricalPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@id([periodId, locale])
+  @@map("historical_period_translations")
+}
+
+/// Тип документа = категория каталога ТЗ §5.3, с. 5 (фото, карты и чертежи, письменные источники…)
+model DocumentType {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String @unique
+  sortOrder Int    @default(0) @map("sort_order")
+
+  translations DocumentTypeTranslation[]
+  documents    Document[]
+
+  @@map("document_types")
+}
+
+model DocumentTypeTranslation {
+  documentTypeId    String            @map("document_type_id") @db.Uuid
+  locale            Locale
+  name              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  documentType DocumentType @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+
+  @@id([documentTypeId, locale])
+  @@map("document_type_translations")
+}
+
+model Category {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind      CategoryKind
+  slug      String
+  parentId  String?      @map("parent_id") @db.Uuid
+  sortOrder Int          @default(0) @map("sort_order")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  parent       Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]            @relation("CategoryTree")
+  translations CategoryTranslation[]
+  documents    DocumentCategory[]
+  publications PublicationCategory[]
+  exhibitions  ExhibitionCategory[]
+  news         News[]
+  events       HistoricalEvent[]
+
+  @@unique([kind, slug])
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  categoryId        String            @map("category_id") @db.Uuid
+  locale            Locale
+  name              String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, locale])
+  @@map("category_translations")
+}
+
+model Tag {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug String @unique
+
+  translations TagTranslation[]
+  documents    DocumentTag[]
+
+  @@map("tags")
+}
+
+model TagTranslation {
+  tagId             String            @map("tag_id") @db.Uuid
+  locale            Locale
+  name              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tagId, locale])
+  @@map("tag_translations")
+}
+
+// ───────────────────────────── Архив и филиалы (ТЗ §5.5, §6.4) ─────────────────────────────
+
+model BranchType {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// main_archive, branch, site (площадка)
+  code      String @unique
+  sortOrder Int    @default(0) @map("sort_order")
+
+  translations BranchTypeTranslation[]
+  branches     Branch[]
+
+  @@map("branch_types")
+}
+
+model BranchTypeTranslation {
+  branchTypeId      String            @map("branch_type_id") @db.Uuid
+  locale            Locale
+  name              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  branchType BranchType @relation(fields: [branchTypeId], references: [id], onDelete: Cascade)
+
+  @@id([branchTypeId, locale])
+  @@map("branch_type_translations")
+}
+
+model Branch {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  branchTypeId      String            @map("branch_type_id") @db.Uuid
+  /// Площадка подразделения (у основного архива две площадки по аудиту)
+  parentBranchId    String?           @map("parent_branch_id") @db.Uuid
+  /// Не более одной true — частичный уникальный индекс в SQL-миграции
+  isMain            Boolean           @default(false) @map("is_main")
+  settlementId      String?           @map("settlement_id") @db.Uuid
+  postalCode        String?           @map("postal_code")
+  lat               Decimal?          @db.Decimal(9, 6)
+  lng               Decimal?          @db.Decimal(9, 6)
+  phone             String?
+  email             String?
+  website           String?
+  photoAssetId      String?           @map("photo_asset_id") @db.Uuid
+  /// ТЗ §6.4: отображать или скрывать на карте
+  showOnMap         Boolean           @default(true) @map("show_on_map")
+  sortOrder         Int               @default(0) @map("sort_order")
+  /// Дата последней сверки реквизитов с архивом; NULL — «требует сверки»
+  verifiedAt        DateTime?         @map("verified_at") @db.Date
+  sourceUrl         String?           @map("source_url")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  branchType   BranchType          @relation(fields: [branchTypeId], references: [id], onDelete: Restrict)
+  parent       Branch?             @relation("BranchSites", fields: [parentBranchId], references: [id], onDelete: SetNull)
+  sites        Branch[]            @relation("BranchSites")
+  settlement   Settlement?         @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  photo        DigitalAsset?       @relation("BranchPhoto", fields: [photoAssetId], references: [id], onDelete: SetNull)
+  translations BranchTranslation[]
+  schedules    BranchSchedule[]
+  fonds        Fond[]
+  news         News[]
+  userRoles    UserRole[]
+
+  @@index([publicationStatus])
+  @@map("branches")
+}
+
+model BranchTranslation {
+  branchId            String            @map("branch_id") @db.Uuid
+  locale              Locale
+  fullName            String            @map("full_name")
+  shortName           String?           @map("short_name")
+  address             String?
+  scheduleText        String?           @map("schedule_text")
+  readingRoomSchedule String?           @map("reading_room_schedule")
+  description         String?
+  mainDirections      String?           @map("main_directions")
+  /// По каким вопросам обращаться (аудит Р7)
+  competence          String?
+  serviceArea         String?           @map("service_area")
+  accessibilityInfo   String?           @map("accessibility_info")
+  translationStatus   TranslationStatus @default(missing) @map("translation_status")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([branchId, locale])
+  @@map("branch_translations")
+}
+
+model BranchSchedule {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId String  @map("branch_id") @db.Uuid
+  /// 1 = понедельник … 7 = воскресенье
+  weekday  Int
+  /// office (приём) или reading_room (читальный зал)
+  kind     String  @default("office")
+  opens    String
+  closes   String
+  note     String?
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, kind, weekday])
+  @@map("branch_schedules")
+}
+
+// ───────────────────────────── Архивная иерархия (ТЗ §5.3, §6.3) ─────────────────────────────
+
+model Fond {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId          String            @map("branch_id") @db.Uuid
+  /// Строка: бывают префиксы и литеры (Р-123, П-5, 12а). Q-02
+  fondNumber        String            @map("fond_number")
+  /// Числовое ядро номера для сортировки
+  fondNumberSort    Int?              @map("fond_number_sort")
+  fondKind          FondKind          @default(organization) @map("fond_kind")
+  creatorOrgId      String?           @map("creator_org_id") @db.Uuid
+  yearFrom          Int?              @map("year_from")
+  yearTo            Int?              @map("year_to")
+  unitsCount        Int?              @map("units_count")
+  /// Показывать в карточке филиала как основной фонд (ТЗ §5.5)
+  isHighlighted     Boolean           @default(false) @map("is_highlighted")
+  accessLevel       AccessLevel       @default(closed) @map("access_level")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceNote        String?           @map("source_note")
+  sourceSystemId    String?           @map("source_system_id")
+  rawImport         Json?             @map("raw_import")
+  /// Дата среза импортированного перечня (например, 01.01.2018)
+  snapshotDate      DateTime?         @map("snapshot_date") @db.Date
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  creatorOrg   Organization?     @relation(fields: [creatorOrgId], references: [id], onDelete: SetNull)
+  translations FondTranslation[]
+  inventories  Inventory[]
+
+  @@unique([branchId, fondNumber])
+  @@index([fondNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "fonds_number_trgm_idx")
+  @@index([fondNumberSort])
+  @@index([publicationStatus, accessLevel])
+  @@map("fonds")
+}
+
+model FondTranslation {
+  fondId            String            @map("fond_id") @db.Uuid
+  locale            Locale
+  title             String
+  historyNote       String?           @map("history_note")
+  annotation        String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  fond Fond @relation(fields: [fondId], references: [id], onDelete: Cascade)
+
+  @@id([fondId, locale])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "fond_translations_title_trgm_idx")
+  @@map("fond_translations")
+}
+
+model Inventory {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fondId            String            @map("fond_id") @db.Uuid
+  inventoryNumber   String            @map("inventory_number")
+  yearFrom          Int?              @map("year_from")
+  yearTo            Int?              @map("year_to")
+  accessLevel       AccessLevel       @default(closed) @map("access_level")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceSystemId    String?           @map("source_system_id")
+  rawImport         Json?             @map("raw_import")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  fond         Fond                   @relation(fields: [fondId], references: [id], onDelete: Restrict)
+  translations InventoryTranslation[]
+  cases        Case[]
+
+  @@unique([fondId, inventoryNumber])
+  @@map("inventories")
+}
+
+model InventoryTranslation {
+  inventoryId       String            @map("inventory_id") @db.Uuid
+  locale            Locale
+  title             String
+  annotation        String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@id([inventoryId, locale])
+  @@map("inventory_translations")
+}
+
+/// Дело (единица хранения)
+model Case {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventoryId       String            @map("inventory_id") @db.Uuid
+  caseNumber        String            @map("case_number")
+  dateFrom          DateTime?         @map("date_from") @db.Date
+  dateTo            DateTime?         @map("date_to") @db.Date
+  datePrecision     DatePrecision     @default(year) @map("date_precision")
+  sheetCount        Int?              @map("sheet_count")
+  storageLocation   String?           @map("storage_location")
+  accessLevel       AccessLevel       @default(closed) @map("access_level")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceSystemId    String?           @map("source_system_id")
+  rawImport         Json?             @map("raw_import")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  inventory    Inventory          @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  translations CaseTranslation[]
+  documents    Document[]
+  relatedFrom  DocumentRelation[] @relation("RelationTargetCase")
+
+  @@unique([inventoryId, caseNumber])
+  @@index([caseNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "cases_number_trgm_idx")
+  @@map("cases")
+}
+
+model CaseTranslation {
+  caseId            String            @map("case_id") @db.Uuid
+  locale            Locale
+  title             String
+  annotation        String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@id([caseId, locale])
+  @@map("case_translations")
+}
+
+model Document {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId            String            @map("case_id") @db.Uuid
+  /// Не всегда есть подокументная нумерация (Q-04)
+  documentNumber    String?           @map("document_number")
+  /// Листы бывают с литерами: 12об, 15а
+  sheetsFrom        String?           @map("sheets_from")
+  sheetsTo          String?           @map("sheets_to")
+  sheetCount        Int?              @map("sheet_count")
+  dateFrom          DateTime?         @map("date_from") @db.Date
+  dateTo            DateTime?         @map("date_to") @db.Date
+  datePrecision     DatePrecision     @default(year) @map("date_precision")
+  periodId          String?           @map("period_id") @db.Uuid
+  documentTypeId    String            @map("document_type_id") @db.Uuid
+  /// Языки оригинала (BCP 47)
+  originalLanguages String[]          @default([]) @map("original_languages")
+  authorText        String?           @map("author_text")
+  organizationId    String?           @map("organization_id") @db.Uuid
+  storageLocation   String?           @map("storage_location")
+  accessLevel       AccessLevel       @default(closed) @map("access_level")
+  /// Поддерживается триггером по document_assets
+  hasDigitalCopy    Boolean           @default(false) @map("has_digital_copy")
+  isFeatured        Boolean           @default(false) @map("is_featured")
+  /// Обязателен для data_origin = verified (CHECK в SQL-миграции)
+  sourceNote        String?           @map("source_note")
+  sourceUrl         String?           @map("source_url")
+  sourceSystemId    String?           @map("source_system_id")
+  rawImport         Json?             @map("raw_import")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  case         Case                  @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  period       HistoricalPeriod?     @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  documentType DocumentType          @relation(fields: [documentTypeId], references: [id], onDelete: Restrict)
+  organization Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  translations DocumentTranslation[]
+  assets       DocumentAsset[]
+  relationsOut DocumentRelation[]    @relation("RelationSource")
+  relationsIn  DocumentRelation[]    @relation("RelationTargetDocument")
+  categories   DocumentCategory[]
+  settlements  DocumentSettlement[]
+  tags         DocumentTag[]
+  persons      DocumentPerson[]
+
+  @@unique([caseId, documentNumber])
+  @@index([documentTypeId])
+  @@index([periodId])
+  @@index([organizationId])
+  @@index([publicationStatus, accessLevel])
+  @@index([authorText(ops: raw("gin_trgm_ops"))], type: Gin, map: "documents_author_trgm_idx")
+  @@map("documents")
+}
+
+model DocumentTranslation {
+  documentId        String                   @map("document_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  historicalNote    String?                  @map("historical_note")
+  /// Условия доступа для restricted (ТЗ §5.3, с. 6)
+  accessConditions  String?                  @map("access_conditions")
+  transcription     String?
+  seoKeywords       String?                  @map("seo_keywords")
+  translationStatus TranslationStatus        @default(missing) @map("translation_status")
+  translatedById    String?                  @map("translated_by_id") @db.Uuid
+  reviewedById      String?                  @map("reviewed_by_id") @db.Uuid
+  reviewedAt        DateTime?                @map("reviewed_at") @db.Timestamptz(6)
+  /// Заполняется триггером document_translations_search_vector
+  searchVector      Unsupported("tsvector")? @map("search_vector")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, locale])
+  @@index([searchVector], type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "document_translations_title_trgm_idx")
+  @@map("document_translations")
+}
+
+/// Ровно одна цель: документ или дело (CHECK в SQL-миграции)
+model DocumentRelation {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceDocumentId String               @map("source_document_id") @db.Uuid
+  targetDocumentId String?              @map("target_document_id") @db.Uuid
+  targetCaseId     String?              @map("target_case_id") @db.Uuid
+  relationType     DocumentRelationType @default(related) @map("relation_type")
+  note             String?
+
+  source         Document  @relation("RelationSource", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  targetDocument Document? @relation("RelationTargetDocument", fields: [targetDocumentId], references: [id], onDelete: Cascade)
+  targetCase     Case?     @relation("RelationTargetCase", fields: [targetCaseId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceDocumentId, targetDocumentId, targetCaseId, relationType])
+  @@map("document_relations")
+}
+
+model DocumentCategory {
+  documentId String @map("document_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, categoryId])
+  @@index([categoryId])
+  @@map("document_categories")
+}
+
+model DocumentSettlement {
+  documentId   String @map("document_id") @db.Uuid
+  settlementId String @map("settlement_id") @db.Uuid
+
+  document   Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, settlementId])
+  @@index([settlementId])
+  @@map("document_settlements")
+}
+
+model DocumentTag {
+  documentId String @map("document_id") @db.Uuid
+  tagId      String @map("tag_id") @db.Uuid
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
+  @@index([tagId])
+  @@map("document_tags")
+}
+
+model DocumentPerson {
+  documentId String @map("document_id") @db.Uuid
+  personId   String @map("person_id") @db.Uuid
+
+  document Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  person   HistoricalPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, personId])
+  @@index([personId])
+  @@map("document_persons")
+}
+
+// ───────────────────────────── Цифровые файлы (ТЗ §7.7) ─────────────────────────────
+
+model DigitalAsset {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind             AssetKind
+  storageBucket    String           @map("storage_bucket")
+  storageKey       String           @map("storage_key")
+  originalFilename String           @map("original_filename")
+  /// Определён по сигнатуре файла, не по расширению
+  mimeType         String           @map("mime_type")
+  sizeBytes        BigInt           @map("size_bytes")
+  sha256           String
+  /// Перцептивный хеш для поиска дубликатов
+  phash            String?
+  width            Int?
+  height           Int?
+  durationSeconds  Int?             @map("duration_seconds")
+  /// Есть ли распознанный текстовый слой (не заявлять доступность скана без него)
+  hasTextLayer     Boolean          @default(false) @map("has_text_layer")
+  captionsUrl      String?          @map("captions_url")
+  /// Разрешено ли скачивание облегчённой копии. Мастер-копия публично не скачивается
+  downloadAllowed  Boolean          @default(false) @map("download_allowed")
+  rightsNote       String?          @map("rights_note")
+  sourceNote       String?          @map("source_note")
+  accessLevel      AccessLevel      @default(closed) @map("access_level")
+  processingStatus ProcessingStatus @default(pending) @map("processing_status")
+  antivirusStatus  AntivirusStatus  @default(pending) @map("antivirus_status")
+  ocrStatus        OcrStatus        @default(none) @map("ocr_status")
+  /// Черновик OCR до подтверждения сотрудником (ТЗ §5.8 Г)
+  ocrText          String?          @map("ocr_text")
+  dataOrigin       DataOrigin       @map("data_origin")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById      String?          @map("created_by_id") @db.Uuid
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  translations    AssetTranslation[]
+  derivatives     AssetDerivative[]
+  documentPages   DocumentAsset[]
+  branchPhotos    Branch[]           @relation("BranchPhoto")
+  exhibitionItems ExhibitionItem[]
+  galleryItems    GalleryItem[]
+
+  @@unique([storageBucket, storageKey])
+  @@index([sha256])
+  @@map("digital_assets")
+}
+
+model AssetTranslation {
+  assetId           String            @map("asset_id") @db.Uuid
+  locale            Locale
+  altText           String?           @map("alt_text")
+  caption           String?
+  longDescription   String?           @map("long_description")
+  transcript        String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  asset DigitalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, locale])
+  @@map("asset_translations")
+}
+
+/// Облегчённые копии в бакете public-media (WebP/AVIF, превью, DZI)
+model AssetDerivative {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId    String  @map("asset_id") @db.Uuid
+  /// thumb, preview, full, dzi
+  variant    String
+  format     String
+  storageKey String  @map("storage_key")
+  width      Int?
+  height     Int?
+  sizeBytes  BigInt? @map("size_bytes")
+
+  asset DigitalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, variant, format])
+  @@map("asset_derivatives")
+}
+
+/// Страницы цифровой копии документа
+model DocumentAsset {
+  documentId String  @map("document_id") @db.Uuid
+  assetId    String  @map("asset_id") @db.Uuid
+  pageNumber Int     @map("page_number")
+  /// Номер листа как в деле (12об)
+  sheetLabel String? @map("sheet_label")
+
+  document Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  asset    DigitalAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@id([documentId, assetId])
+  @@unique([documentId, pageNumber])
+  @@map("document_assets")
+}
+
+// ───────────────────────────── Архив памяти (ТЗ §5.6, §6.6) ─────────────────────────────
+
+model HistoricalPerson {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  birthYear         Int?              @map("birth_year")
+  deathYear         Int?              @map("death_year")
+  portraitAssetId   String?           @map("portrait_asset_id") @db.Uuid
+  sourceNote        String?           @map("source_note")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations HistoricalPersonTranslation[]
+  documents    DocumentPerson[]
+  publications PublicationPerson[]
+
+  @@map("historical_persons")
+}
+
+model HistoricalPersonTranslation {
+  personId          String            @map("person_id") @db.Uuid
+  locale            Locale
+  fullName          String            @map("full_name")
+  lifeYearsText     String?           @map("life_years_text")
+  biography         String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  person HistoricalPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([personId, locale])
+  @@map("historical_person_translations")
+}
+
+model HistoricalEvent {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  eventDate         DateTime?         @map("event_date") @db.Date
+  datePrecision     DatePrecision     @default(year) @map("date_precision")
+  year              Int
+  settlementId      String?           @map("settlement_id") @db.Uuid
+  categoryId        String?           @map("category_id") @db.Uuid
+  sourceNote        String?           @map("source_note")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  settlement   Settlement?                  @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  category     Category?                    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  translations HistoricalEventTranslation[]
+  publications PublicationEvent[]
+
+  @@index([year])
+  @@map("historical_events")
+}
+
+model HistoricalEventTranslation {
+  eventId           String            @map("event_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  event HistoricalEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, locale])
+  @@map("historical_event_translations")
+}
+
+model Publication {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  kind              PublicationKind   @default(article)
+  periodText        String?           @map("period_text")
+  yearFrom          Int?              @map("year_from")
+  yearTo            Int?              @map("year_to")
+  /// Обязателен при публикации (CHECK в SQL-миграции)
+  sourceNote        String?           @map("source_note")
+  authorship        String?
+  /// Ссылка на архивный документ, если применимо
+  documentId        String?           @map("document_id") @db.Uuid
+  coverAssetId      String?           @map("cover_asset_id") @db.Uuid
+  isFeatured        Boolean           @default(false) @map("is_featured")
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(6)
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceUrl         String?           @map("source_url")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations PublicationTranslation[]
+  categories   PublicationCategory[]
+  persons      PublicationPerson[]
+  events       PublicationEvent[]
+  settlements  PublicationSettlement[]
+
+  @@index([publicationStatus, publishedAt])
+  @@map("publications")
+}
+
+model PublicationTranslation {
+  publicationId     String                   @map("publication_id") @db.Uuid
+  locale            Locale
+  title             String
+  lead              String?
+  /// Санитизированный rich text (JSON-документ редактора)
+  body              Json?
+  bodyText          String?                  @map("body_text")
+  seoKeywords       String?                  @map("seo_keywords")
+  translationStatus TranslationStatus        @default(missing) @map("translation_status")
+  searchVector      Unsupported("tsvector")? @map("search_vector")
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, locale])
+  @@index([searchVector], type: Gin)
+  @@map("publication_translations")
+}
+
+model PublicationCategory {
+  publicationId String @map("publication_id") @db.Uuid
+  categoryId    String @map("category_id") @db.Uuid
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, categoryId])
+  @@map("publication_categories")
+}
+
+model PublicationPerson {
+  publicationId String @map("publication_id") @db.Uuid
+  personId      String @map("person_id") @db.Uuid
+
+  publication Publication      @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  person      HistoricalPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, personId])
+  @@map("publication_persons")
+}
+
+model PublicationEvent {
+  publicationId String @map("publication_id") @db.Uuid
+  eventId       String @map("event_id") @db.Uuid
+
+  publication Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  event       HistoricalEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, eventId])
+  @@map("publication_events")
+}
+
+model PublicationSettlement {
+  publicationId String @map("publication_id") @db.Uuid
+  settlementId  String @map("settlement_id") @db.Uuid
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  settlement  Settlement  @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, settlementId])
+  @@map("publication_settlements")
+}
+
+model Collection {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  coverAssetId      String?           @map("cover_asset_id") @db.Uuid
+  isFeatured        Boolean           @default(false) @map("is_featured")
+  sortOrder         Int               @default(0) @map("sort_order")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations CollectionTranslation[]
+  items        CollectionItem[]
+
+  @@map("collections")
+}
+
+model CollectionTranslation {
+  collectionId      String            @map("collection_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, locale])
+  @@map("collection_translations")
+}
+
+/// Полиморфный элемент коллекции; существование цели проверяет сервис
+model CollectionItem {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collectionId String             @map("collection_id") @db.Uuid
+  itemType     CollectionItemType @map("item_type")
+  itemId       String             @map("item_id") @db.Uuid
+  sortOrder    Int                @default(0) @map("sort_order")
+  note         String?
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, itemType, itemId])
+  @@index([itemType, itemId])
+  @@map("collection_items")
+}
+
+// ───────────────────────────── Онлайн-выставки (ТЗ §5.7, §6.5) ─────────────────────────────
+
+model Exhibition {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  coverAssetId      String?           @map("cover_asset_id") @db.Uuid
+  yearFrom          Int?              @map("year_from")
+  yearTo            Int?              @map("year_to")
+  opensAt           DateTime?         @map("opens_at") @db.Date
+  closesAt          DateTime?         @map("closes_at") @db.Date
+  isFeatured        Boolean           @default(false) @map("is_featured")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations ExhibitionTranslation[]
+  items        ExhibitionItem[]
+  categories   ExhibitionCategory[]
+
+  @@map("exhibitions")
+}
+
+model ExhibitionTranslation {
+  exhibitionId      String            @map("exhibition_id") @db.Uuid
+  locale            Locale
+  title             String
+  lead              String?
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  exhibition Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
+
+  @@id([exhibitionId, locale])
+  @@map("exhibition_translations")
+}
+
+model ExhibitionCategory {
+  exhibitionId String @map("exhibition_id") @db.Uuid
+  categoryId   String @map("category_id") @db.Uuid
+
+  exhibition Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([exhibitionId, categoryId])
+  @@map("exhibition_categories")
+}
+
+/// Экспонат; привязка к архивному документу или фонду (ТЗ §6.5)
+model ExhibitionItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exhibitionId String  @map("exhibition_id") @db.Uuid
+  sortOrder    Int     @map("sort_order")
+  assetId      String? @map("asset_id") @db.Uuid
+  documentId   String? @map("document_id") @db.Uuid
+  fondId       String? @map("fond_id") @db.Uuid
+
+  exhibition   Exhibition                  @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
+  asset        DigitalAsset?               @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  translations ExhibitionItemTranslation[]
+
+  @@unique([exhibitionId, sortOrder])
+  @@map("exhibition_items")
+}
+
+model ExhibitionItemTranslation {
+  itemId            String            @map("item_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  sourceNote        String?           @map("source_note")
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  item ExhibitionItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, locale])
+  @@map("exhibition_item_translations")
+}
+
+// ───────────────────────────── Новости (ТЗ §5.11) ─────────────────────────────
+
+model News {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  categoryId        String?           @map("category_id") @db.Uuid
+  branchId          String?           @map("branch_id") @db.Uuid
+  coverAssetId      String?           @map("cover_asset_id") @db.Uuid
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(6)
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceUrl         String?           @map("source_url")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  category     Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  branch       Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  translations NewsTranslation[]
+  relations    NewsRelation[]
+
+  @@index([publicationStatus, publishedAt])
+  @@map("news")
+}
+
+model NewsTranslation {
+  newsId            String                   @map("news_id") @db.Uuid
+  locale            Locale
+  title             String
+  lead              String?
+  body              Json?
+  bodyText          String?                  @map("body_text")
+  seoKeywords       String?                  @map("seo_keywords")
+  translationStatus TranslationStatus        @default(missing) @map("translation_status")
+  searchVector      Unsupported("tsvector")? @map("search_vector")
+
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([newsId, locale])
+  @@index([searchVector], type: Gin)
+  @@map("news_translations")
+}
+
+model NewsRelation {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  newsId     String             @map("news_id") @db.Uuid
+  targetType CollectionItemType @map("target_type")
+  targetId   String             @map("target_id") @db.Uuid
+  sortOrder  Int                @default(0) @map("sort_order")
+
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@unique([newsId, targetType, targetId])
+  @@map("news_relations")
+}
+
+// ───────────────────────────── Страницы, справка, меню (ТЗ §4, §5.2, §5.4) ─────────────────────────────
+
+model Page {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// about/history, help/catalog-structure, privacy, copyright …
+  key               String            @unique
+  parentId          String?           @map("parent_id") @db.Uuid
+  sortOrder         Int               @default(0) @map("sort_order")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceUrl         String?           @map("source_url")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  parent       Page?             @relation("PageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Page[]            @relation("PageTree")
+  translations PageTranslation[]
+
+  @@map("pages")
+}
+
+model PageTranslation {
+  pageId            String            @map("page_id") @db.Uuid
+  locale            Locale
+  title             String
+  lead              String?
+  body              Json?
+  bodyText          String?           @map("body_text")
+  seoKeywords       String?           @map("seo_keywords")
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, locale])
+  @@map("page_translations")
+}
+
+/// Сотрудники и контактные лица (ТЗ §5.2). Публикуются только служебные контакты
+model StaffContact {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId          String?           @map("branch_id") @db.Uuid
+  phone             String?
+  email             String?
+  sortOrder         Int               @default(0) @map("sort_order")
+  verifiedAt        DateTime?         @map("verified_at") @db.Date
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations StaffContactTranslation[]
+
+  @@map("staff_contacts")
+}
+
+model StaffContactTranslation {
+  staffContactId    String            @map("staff_contact_id") @db.Uuid
+  locale            Locale
+  fullName          String            @map("full_name")
+  position          String
+  department        String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  staffContact StaffContact @relation(fields: [staffContactId], references: [id], onDelete: Cascade)
+
+  @@id([staffContactId, locale])
+  @@map("staff_contact_translations")
+}
+
+model Gallery {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  sortOrder         Int               @default(0) @map("sort_order")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  sourceUrl         String?           @map("source_url")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations GalleryTranslation[]
+  items        GalleryItem[]
+
+  @@map("galleries")
+}
+
+model GalleryTranslation {
+  galleryId         String            @map("gallery_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@id([galleryId, locale])
+  @@map("gallery_translations")
+}
+
+model GalleryItem {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  galleryId String @map("gallery_id") @db.Uuid
+  assetId   String @map("asset_id") @db.Uuid
+  sortOrder Int    @map("sort_order")
+
+  gallery Gallery      @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  asset   DigitalAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([galleryId, sortOrder])
+  @@map("gallery_items")
+}
+
+model FaqItem {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sortOrder         Int               @default(0) @map("sort_order")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  translations FaqItemTranslation[]
+
+  @@map("faq_items")
+}
+
+model FaqItemTranslation {
+  faqItemId         String            @map("faq_item_id") @db.Uuid
+  locale            Locale
+  question          String
+  answer            String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  faqItem FaqItem @relation(fields: [faqItemId], references: [id], onDelete: Cascade)
+
+  @@id([faqItemId, locale])
+  @@map("faq_item_translations")
+}
+
+model GlossaryTerm {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String            @unique
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  translations GlossaryTermTranslation[]
+
+  @@map("glossary_terms")
+}
+
+model GlossaryTermTranslation {
+  termId            String            @map("term_id") @db.Uuid
+  locale            Locale
+  term              String
+  definition        String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  glossaryTerm GlossaryTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@id([termId, locale])
+  @@map("glossary_term_translations")
+}
+
+/// Ссылки справочного раздела (ТЗ §5.4, с. 7)
+model ExternalLink {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category           LinkCategory
+  url                String
+  approvedByCustomer Boolean      @default(false) @map("approved_by_customer")
+  sortOrder          Int          @default(0) @map("sort_order")
+  isActive           Boolean      @default(true) @map("is_active")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  translations ExternalLinkTranslation[]
+
+  @@map("external_links")
+}
+
+model ExternalLinkTranslation {
+  linkId            String            @map("link_id") @db.Uuid
+  locale            Locale
+  title             String
+  description       String?
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  link ExternalLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@id([linkId, locale])
+  @@map("external_link_translations")
+}
+
+/// Структура меню (ТЗ §4, с. 4; §6.2)
+model MenuItem {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentId   String? @map("parent_id") @db.Uuid
+  /// Внутренний маршрут (/catalog) или внешний URL
+  target     String
+  sortOrder  Int     @default(0) @map("sort_order")
+  /// Обязательные пункты ТЗ §4 нельзя удалить
+  isRequired Boolean @default(false) @map("is_required")
+  isVisible  Boolean @default(true) @map("is_visible")
+
+  parent       MenuItem?             @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     MenuItem[]            @relation("MenuTree")
+  translations MenuItemTranslation[]
+
+  @@map("menu_items")
+}
+
+model MenuItemTranslation {
+  menuItemId        String            @map("menu_item_id") @db.Uuid
+  locale            Locale
+  label             String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@id([menuItemId, locale])
+  @@map("menu_item_translations")
+}
+
+/// Настройки сайта: контакты, соцсети, режим работы, ссылки на гос. ресурсы. Секреты — только в env
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_settings")
+}
+
+// ───────────────────────────── Служебные: согласование, импорт, аналитика, отзывы, миграция ─────────────────────────────
+
+/// Редакции правок опубликованного материала (ТЗ §6.7)
+model ContentRevision {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityType  String            @map("entity_type")
+  entityId    String            @map("entity_id") @db.Uuid
+  data        Json
+  status      PublicationStatus @default(draft)
+  comment     String?
+  createdById String?           @map("created_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([entityType, entityId])
+  @@map("content_revisions")
+}
+
+/// Импорт CSV/XLSX с предпросмотром (ТЗ §6.3)
+model ImportJob {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityType  String       @map("entity_type")
+  fileAssetId String?      @map("file_asset_id") @db.Uuid
+  status      ImportStatus @default(preview)
+  totalRows   Int          @default(0) @map("total_rows")
+  okRows      Int          @default(0) @map("ok_rows")
+  errorRows   Int          @default(0) @map("error_rows")
+  errors      Json?
+  createdById String?      @map("created_by_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  committedAt DateTime?    @map("committed_at") @db.Timestamptz(6)
+
+  @@map("import_jobs")
+}
+
+/// Журнал поисковых запросов без ПДн (ТЗ §5.8 Д): нет IP и идентификаторов посетителя
+model SearchQuery {
+  id          BigInt       @id @default(autoincrement())
+  occurredAt  DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  queryText   String       @map("query_text")
+  locale      Locale
+  filters     Json?
+  resultCount Int          @map("result_count")
+  source      SearchSource
+
+  @@index([occurredAt])
+  @@index([resultCount])
+  @@map("search_queries")
+}
+
+/// Синонимы и варианты написания (ТЗ §5.8 Б)
+model SearchSynonym {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  term     String
+  variants String[]
+  locale   Locale?
+
+  @@index([term])
+  @@map("search_synonyms")
+}
+
+/// Отзывы и предложения (рекомендации организаторов). Не официальное обращение; IP не хранится
+model FeedbackMessage {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  topic         String
+  message       String
+  contactEmail  String?        @map("contact_email")
+  locale        Locale
+  pagePath      String?        @map("page_path")
+  status        FeedbackStatus @default(new)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  moderatedById String?        @map("moderated_by_id") @db.Uuid
+  moderatedAt   DateTime?      @map("moderated_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@map("feedback_messages")
+}
+
+/// Реестр миграции с текущего сайта (ТЗ §11; аудит, content-inventory.md)
+model MigrationItem {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  oldUrl           String            @unique @map("old_url")
+  oldId            String?           @map("old_id")
+  oldLocale        Locale?           @map("old_locale")
+  contentType      String            @map("content_type")
+  newEntityType    String?           @map("new_entity_type")
+  newEntityId      String?           @map("new_entity_id") @db.Uuid
+  translationGroup String?           @map("translation_group")
+  owner            String?
+  publishedAt      DateTime?         @map("published_at") @db.Date
+  checkedAt        DateTime?         @map("checked_at") @db.Date
+  sourceNote       String?           @map("source_note")
+  rightsNote       String?           @map("rights_note")
+  accessLevel      AccessLevel?      @map("access_level")
+  files            Json?
+  archiveCode      String?           @map("archive_code")
+  decision         MigrationDecision @default(needs_review)
+  decisionReason   String?           @map("decision_reason")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([decision])
+  @@map("migration_items")
+}
+
+model UrlRedirect {
+  oldPath    String   @id @map("old_path")
+  newPath    String   @map("new_path")
+  statusCode Int      @default(301) @map("status_code")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("url_redirects")
+}
