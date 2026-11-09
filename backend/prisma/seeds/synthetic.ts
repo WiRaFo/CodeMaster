@@ -22,6 +22,9 @@ interface DocSeed {
   transcription?: Tri<string>;
   /** Цифровая копия из одной страницы; antivirus по умолчанию clean. */
   copy?: { antivirus?: AntivirusStatus };
+  /** slug населённых пунктов и тематик (для фасетов каталога, ЭТАП 5). */
+  settlements?: string[];
+  topics?: string[];
 }
 
 interface CaseSeed {
@@ -69,6 +72,8 @@ const FONDS: FondSeed[] = [
             number: '1',
             access: 'open',
             year: 1956,
+            settlements: ['ust-kamenogorsk'],
+            topics: ['industry'],
             type: 'organization_record',
             title: tri('Протокол заседания правления маслозавода', 'Май зауыты басқармасы отырысының хаттамасы', 'Minutes of the creamery board meeting'),
             description: tri(
@@ -83,6 +88,8 @@ const FONDS: FondSeed[] = [
             number: '2',
             access: 'restricted',
             year: 1957,
+            settlements: ['ust-kamenogorsk'],
+            topics: ['people'],
             title: tri('Личные дела работников маслозавода', 'Май зауыты қызметкерлерінің жеке істері', 'Personnel files of creamery workers'),
             accessConditions: RESTRICTED_CONDITIONS,
             transcription: tri(
@@ -96,6 +103,8 @@ const FONDS: FondSeed[] = [
             number: '3',
             access: 'closed',
             year: 1958,
+            settlements: ['ridder'],
+            topics: ['military'],
             title: tri('Закрытый документ (не должен появляться публично)', 'Жабық құжат (жарияланбауы тиіс)', 'Closed document (must never be public)'),
             description: tri('Служебная переписка о проверке.', 'Тексеру туралы қызметтік хат алмасу.', 'Internal correspondence about an inspection.'),
           },
@@ -110,6 +119,8 @@ const FONDS: FondSeed[] = [
             number: '5',
             access: 'open',
             year: 1960,
+            settlements: ['ust-kamenogorsk'],
+            topics: ['industry'],
             type: 'photo',
             title: tri('Фотография коллектива маслозавода', 'Май зауыты ұжымының фотосуреті', 'Photograph of the creamery staff'),
             copy: { antivirus: 'pending' },
@@ -150,6 +161,8 @@ const FONDS: FondSeed[] = [
             number: '1',
             access: 'open',
             year: 1970,
+            settlements: ['ridder'],
+            topics: ['family'],
             title: tri('Открытый документ в ограниченном фонде', 'Шектеулі қордағы ашық құжат', 'Open document in a restricted fond'),
             accessConditions: RESTRICTED_CONDITIONS,
             copy: {},
@@ -221,6 +234,18 @@ export async function seedSynthetic(db: PrismaClient): Promise<void> {
 
   const branchIds = new Map((await db.branch.findMany({ select: { id: true, slug: true } })).map((b) => [b.slug, b.id]));
   const typeIds = new Map((await db.documentType.findMany()).map((t) => [t.code, t.id]));
+  const periods = await db.historicalPeriod.findMany();
+  const periodFor = (year: number) =>
+    periods.find((p) => (p.yearFrom === null || p.yearFrom <= year) && (p.yearTo === null || year <= p.yearTo))?.id ?? null;
+  const settlementIds = new Map((await db.settlement.findMany({ select: { id: true, slug: true } })).map((x) => [x.slug, x.id]));
+  const topicIds = new Map(
+    (await db.category.findMany({ where: { kind: 'history_topic' }, select: { id: true, slug: true } })).map((x) => [x.slug, x.id]),
+  );
+  const need = (map: Map<string, string>, key: string) => {
+    const id = map.get(key);
+    if (!id) throw new Error(`Нет справочной записи ${key}; сначала запустите справочники и набор migrated`);
+    return id;
+  };
 
   for (const f of FONDS) {
     const branchId = branchIds.get(f.branch);
@@ -292,6 +317,7 @@ export async function seedSynthetic(db: PrismaClient): Promise<void> {
           dateFrom: new Date(Date.UTC(d.year, 0, 1)),
           dateTo: new Date(Date.UTC(d.year, 11, 31)),
           datePrecision: 'year' as const,
+          periodId: periodFor(d.year),
           originalLanguages: ['ru'],
           accessLevel: d.access,
           publicationStatus: d.status ?? 'published',
@@ -316,6 +342,11 @@ export async function seedSynthetic(db: PrismaClient): Promise<void> {
             translationStatus: statusFor(locale),
           })),
         });
+
+        await db.documentSettlement.deleteMany({ where: { documentId: doc.id } });
+        await db.documentSettlement.createMany({ data: (d.settlements ?? []).map((x) => ({ documentId: doc.id, settlementId: need(settlementIds, x) })) });
+        await db.documentCategory.deleteMany({ where: { documentId: doc.id } });
+        await db.documentCategory.createMany({ data: (d.topics ?? []).map((x) => ({ documentId: doc.id, categoryId: need(topicIds, x) })) });
 
         if (d.copy) {
           const storageKey = `synthetic/${docKey}/page-1.jpg`;
