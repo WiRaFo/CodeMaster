@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { registerErrorHandling } from './http/errors.ts';
 import { branchRoutes } from './modules/branches/branches.routes.ts';
+import { contentRoutes } from './modules/content/content.routes.ts';
 import { catalogRoutes } from './modules/catalog/catalog.routes.ts';
 import { healthRoutes } from './modules/health/health.routes.ts';
 import { referenceRoutes } from './modules/reference/reference.routes.ts';
@@ -39,6 +40,7 @@ export async function buildApp({ db, logLevel = 'info' }: AppOptions): Promise<F
       await api.register(catalogRoutes, { db });
       await api.register(branchRoutes, { db });
       await api.register(referenceRoutes, { db });
+      await api.register(contentRoutes, { db });
     },
     { prefix: '/api/v1' },
   );
