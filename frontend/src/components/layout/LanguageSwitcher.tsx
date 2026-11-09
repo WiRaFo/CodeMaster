@@ -1,4 +1,4 @@
-import { LOCALES } from '@archive-vko/shared';
+import { LOCALES } from '@archive-vko/shared/enums';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useParams } from 'react-router';
 

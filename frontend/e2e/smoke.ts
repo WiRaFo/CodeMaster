@@ -6,7 +6,8 @@
  */
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { chromium, type Page } from 'playwright';
+import { readFileSync } from 'node:fs';
+import { chromium, type Browser, type Page } from 'playwright';
 
 const require = createRequire(import.meta.url);
 const AXE_PATH = require.resolve('axe-core/axe.min.js');
@@ -21,6 +22,25 @@ const THEMES: Array<[string, Record<string, unknown>]> = [
   ['high-contrast light', { scheme: 'light', highContrast: true }],
   ['high-contrast dark', { scheme: 'dark', highContrast: true }],
 ];
+
+/** Учётные записи для сценариев 9–12 берутся из backend/.env (сиды создают их с теми же паролями). */
+function staffCredentials() {
+  const env: Record<string, string> = {};
+  try {
+    for (const line of readFileSync(new URL('../../backend/.env', import.meta.url), 'utf8').split('\n')) {
+      const m = /^([A-Z_]+)=(.*)$/.exec(line.trim());
+      if (m?.[1] && m[2] !== undefined) env[m[1]] = m[2];
+    }
+  } catch {
+    // нет файла — берём только из окружения
+  }
+  const get = (k: string) => process.env[k] ?? env[k] ?? '';
+  return {
+    admin: { email: get('SEED_ADMIN_EMAIL'), password: get('SEED_ADMIN_PASSWORD') },
+    archivist: { email: 'archivist@archive.local', password: get('SEED_DEMO_STAFF_PASSWORD') },
+    moderator: { email: 'moderator@archive.local', password: get('SEED_DEMO_STAFF_PASSWORD') },
+  };
+}
 
 const failures: string[] = [];
 let checks = 0;
@@ -136,7 +156,7 @@ async function main() {
       const menuButton = page.getByRole('button', { name: 'Меню' });
       await menuButton.click();
       const dialog = page.getByRole('dialog', { name: 'Разделы сайта' });
-      check(await dialog.isVisible(), 'мобильное меню открывается');
+      check(await dialog.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
       check((await dialog.getByRole('link').count()) === 10, 'в мобильном меню 10 разделов');
       const violations = await axe(page);
       check(violations.length === 0, `axe мобильное меню: ${violations.join('; ')}`);
@@ -258,9 +278,10 @@ async function main() {
       await openWithPrefs(page, '/ru/catalog?q=маслозавод&hasDigitalCopy=true', {});
       await page.getByRole('article').first().getByRole('link').click();
       await page.waitForURL(/\/ru\/catalog\/documents\//);
-      const h1 = page.getByRole('heading', { level: 1 });
-      await h1.waitFor();
-      check(/Протокол заседания/.test((await h1.textContent()) ?? ''), `сценарий 4: открыта карточка (${await h1.textContent()})`);
+      // URL меняется раньше, чем заголовок каталога сменяется заголовком карточки, поэтому ждём нужный h1.
+      const h1 = page.getByRole('heading', { level: 1, name: /Протокол заседания/ });
+      const opened = await h1.waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(opened, `сценарий 4: открыта карточка (${await page.getByRole('heading', { level: 1 }).first().textContent()})`);
       check(await page.getByText('Тестовые данные').first().isVisible(), 'сценарий 4: синтетический документ помечен');
       await page.getByRole('button', { name: 'Скопировать шифр' }).click();
       await page.getByTestId('copy-notice').waitFor();
@@ -321,6 +342,8 @@ async function main() {
       await page.close();
     }
 
+    await adminScenarios(browser);
+
     await browser.close();
   } finally {
     server.kill();
@@ -331,6 +354,172 @@ async function main() {
     for (const f of failures) console.error(`  ✗ ${f}`);
     process.exit(1);
   }
+}
+
+async function signIn(browser: Browser, who: { email: string; password: string }): Promise<Page> {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`${BASE}/admin`);
+  await page.getByLabel('Email').fill(who.email);
+  await page.getByLabel('Пароль').fill(who.password);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await page.getByRole('heading', { level: 1, name: 'Обзор' }).waitFor();
+  return page;
+}
+
+/** Сценарии 9–12: вход, создание документа, цикл согласования двумя ролями, отказ без прав. */
+async function adminScenarios(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.admin.password || !staff.archivist.password) {
+    check(false, 'сценарии 9–12: нет SEED_ADMIN_PASSWORD или SEED_DEMO_STAFF_PASSWORD в backend/.env');
+    return;
+  }
+  const run = Date.now().toString(36).toUpperCase();
+  const title = `[Демо] E2E приказ ${run}`;
+
+  // Сценарий 9: вход и выход сотрудника.
+  const anon = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await anon.goto(`${BASE}/admin`);
+  await anon.getByRole('heading', { level: 1, name: 'Вход в панель управления' }).waitFor();
+  check((await axe(anon)).length === 0, `axe вход в панель: ${(await axe(anon)).join('; ')}`);
+  check((await anon.evaluate(async () => (await fetch('/api/v1/admin/documents')).status)) === 401, 'сценарий 9: анонимный запрос к API админки — 401');
+  await anon.getByLabel('Email').fill(staff.archivist.email);
+  await anon.getByLabel('Пароль').fill('неверный пароль');
+  await anon.getByRole('button', { name: 'Войти' }).click();
+  check((await anon.getByRole('alert').textContent()) === 'Неверный email или пароль.', 'сценарий 9: неверный пароль — понятная ошибка');
+  const cookieVisible = await anon.evaluate(() => document.cookie.includes('sid='));
+  check(!cookieVisible, 'сценарий 9: cookie сессии недоступна скрипту');
+  await anon.close();
+
+  const archivist = await signIn(browser, staff.archivist);
+  check((await axe(archivist)).length === 0, `axe обзор панели: ${(await axe(archivist)).join('; ')}`);
+  check(!(await archivist.evaluate(() => document.cookie.includes('sid='))), 'сценарий 9: cookie HttpOnly');
+  await archivist.getByRole('button', { name: 'Выйти' }).click();
+  await archivist.getByRole('heading', { level: 1, name: 'Вход в панель управления' }).waitFor();
+  await archivist.goto(`${BASE}/admin/documents`);
+  const relogin = archivist.getByRole('heading', { level: 1, name: 'Вход в панель управления' });
+  await relogin.waitFor();
+  check(await relogin.isVisible(), 'сценарий 9: после выхода раздел требует входа');
+  await archivist.close();
+
+  // Сценарий 10: архивист создаёт документ; неполная карточка не уходит на проверку.
+  const a = await signIn(browser, staff.archivist);
+  await a.getByRole('link', { name: 'Создать документ' }).first().click();
+  await a.getByRole('heading', { level: 1, name: 'Новый документ' }).waitFor();
+  await a.getByRole('option', { name: /Ф\. TEST-1\. Оп\. 1\. Д\. 1 —/ }).waitFor({ state: 'attached' });
+  const caseValue = await a.getByRole('option', { name: /Ф\. TEST-1\. Оп\. 1\. Д\. 1 —/ }).getAttribute('value');
+  await a.getByLabel(/^Дело/).selectOption(caseValue ?? '');
+  await a.getByLabel(/^Вид документа/).selectOption('organization_record');
+  await a.getByRole('textbox', { name: 'Название (обязательно)' }).fill(title);
+  await a.getByRole('radio', { name: /Ограниченный/ }).check();
+  await a.getByRole('button', { name: 'Сохранить черновик' }).click();
+  await a.waitForURL(/\/admin\/documents\/[0-9a-f-]{36}$/);
+  const docId = a.url().split('/').pop() ?? '';
+  await a.getByTestId('doc-status').waitFor();
+  check((await a.getByTestId('doc-status').textContent()) === 'Черновик', 'сценарий 10: создан черновик');
+  await a.getByRole('button', { name: 'Отправить на проверку' }).click();
+  const summary = a.locator('#form-errors');
+  await summary.waitFor();
+  check(await summary.getByRole('link', { name: 'Краткое описание (Русский): обязательное поле' }).isVisible(), 'сценарий 10: неполная карточка не отправляется, поля перечислены');
+  check((await axe(a)).length === 0, `axe карточка документа с ошибками: ${(await axe(a)).join('; ')}`);
+  await a.getByLabel(/^Дата \(/).fill('1962');
+  await a.getByRole('textbox', { name: /^Краткое описание/ }).first().fill('О премировании рабочих маслозавода.');
+  await a.getByRole('textbox', { name: /^Условия доступа/ }).first().fill('Только в читальном зале.');
+  await a.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await a.getByText('Изменения сохранены.').waitFor();
+  await a.getByRole('button', { name: 'Отправить на проверку' }).click();
+  await a.getByTestId('doc-status').filter({ hasText: 'На проверке' }).waitFor();
+  check((await a.getByTestId('doc-status').textContent()) === 'На проверке', 'сценарий 10: отправлено на проверку');
+
+  // Сценарий 11: модератор возвращает на доработку, архивист исправляет, модератор одобряет, администратор публикует.
+  const m = await signIn(browser, staff.moderator);
+  const note = m.getByRole('link', { name: new RegExp(`На проверку: «${title.replace(/[[\]]/g, '\\$&')}`) });
+  check(await note.waitFor({ timeout: 5000 }).then(() => true, () => false), 'сценарий 11: модератор получил уведомление о документе на проверке');
+  await note.click();
+  await m.getByRole('button', { name: 'Вернуть на доработку' }).click();
+  const dlg = m.getByRole('alertdialog', { name: 'Вернуть на доработку' });
+  check(await dlg.getByRole('button', { name: 'Вернуть на доработку' }).isDisabled(), 'сценарий 11: без комментария вернуть нельзя');
+  await dlg.getByLabel('Что нужно исправить').fill('Уточните дату документа.');
+  await dlg.getByRole('button', { name: 'Вернуть на доработку' }).click();
+  await m.getByTestId('doc-status').filter({ hasText: 'Требует доработки' }).waitFor();
+
+  await a.goto(`${BASE}/admin`);
+  const back = a.getByRole('link', { name: new RegExp(`Возвращено на доработку: .*${run}.*Уточните дату документа\\.`) });
+  await back.waitFor();
+  check(await back.isVisible(), 'сценарий 11: автор получил уведомление с комментарием');
+  await back.click();
+  await a.getByLabel(/^Дата \(/).fill('1962-04');
+  await a.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await a.getByText('Изменения сохранены.').waitFor();
+  await a.getByRole('button', { name: 'Отправить на проверку' }).click();
+  await a.getByTestId('doc-status').filter({ hasText: 'На проверке' }).waitFor();
+
+  await m.reload();
+  await m.getByRole('button', { name: 'Одобрить' }).click();
+  await m.getByTestId('doc-status').filter({ hasText: 'Одобрено' }).waitFor();
+  check((await m.getByRole('button', { name: 'Опубликовать' }).count()) === 0, 'сценарий 11: модератор не может опубликовать');
+
+  const publicPath = `/ru/catalog/documents/${docId}`;
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(BASE + publicPath);
+  await site.locator('h1').waitFor();
+  check((await site.locator('h1').textContent()) === 'Страница не найдена', 'сценарий 11: до публикации документа на сайте нет');
+
+  const admin = await signIn(browser, staff.admin);
+  await admin.goto(`${BASE}/admin/documents/${docId}`);
+  await admin.getByRole('button', { name: 'Опубликовать' }).click();
+  await admin.getByTestId('doc-status').filter({ hasText: 'Опубликовано' }).waitFor();
+  await site.goto(BASE + publicPath);
+  await site.locator('h1').waitFor();
+  await site.waitForLoadState('networkidle');
+  check((await site.locator('h1').textContent()) === title, `сценарий 11: после публикации документ на сайте (${await site.locator('h1').textContent()})`);
+  check(await site.getByTestId('restricted-notice').getByText('Только в читальном зале.').isVisible(), 'сценарий 11: на сайте условия доступа');
+  check(await site.getByText('Демо', { exact: true }).first().isVisible(), 'сценарий 11: демо-запись помечена на сайте');
+
+  // Сценарий 12: без прав действие недоступно и в интерфейсе, и на сервере.
+  await a.reload();
+  await a.getByTestId('doc-status').waitFor();
+  check((await a.getByRole('button', { name: /Опубликовать|Снять с публикации/ }).count()) === 0, 'сценарий 12: у архивиста нет кнопок публикации');
+  const direct = await a.evaluate(async (id) => {
+    const me = (await (await fetch('/api/v1/auth/me')).json()) as { csrfToken: string };
+    const r = await fetch(`/api/v1/admin/documents/${id}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrfToken }, body: JSON.stringify({ confirm: true }) });
+    const noCsrf = await fetch(`/api/v1/admin/documents/${id}/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    return [r.status, noCsrf.status, (await fetch('/api/v1/admin/audit-logs')).status];
+  }, docId);
+  check(direct[0] === 403, `сценарий 12: прямой запрос на снятие с публикации без права — 403 (${direct[0]})`);
+  check(direct[1] === 403, `сценарий 12: запрос без CSRF-токена — 403 (${direct[1]})`);
+  check(direct[2] === 403, `сценарий 12: журнал без права — 403 (${direct[2]})`);
+  await a.goto(`${BASE}/admin/audit`);
+  check(await a.getByRole('heading', { level: 1, name: 'Нет доступа' }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'сценарий 12: раздел журнала без права — «Нет доступа»');
+
+  // Журнал у главного администратора, снятие с публикации с подтверждением, удаление демо-документа.
+  await admin.goto(`${BASE}/admin/audit`);
+  await admin.getByRole('table').waitFor();
+  check((await admin.getByRole('cell', { name: new RegExp(`${run}.*на проверке → одобрено`) }).count()) >= 1, 'журнал: смена статуса записана');
+  check((await axe(admin)).length === 0, `axe журнал: ${(await axe(admin)).join('; ')}`);
+  await admin.goto(`${BASE}/admin/documents/${docId}`);
+  await admin.getByRole('button', { name: 'Снять с публикации' }).click();
+  await admin.getByRole('alertdialog').getByRole('button', { name: 'Снять с публикации' }).click();
+  await admin.getByTestId('doc-status').filter({ hasText: 'Архивировано' }).waitFor();
+  // Новая вкладка без кеша: публичные ответы API кешируются браузером до 60 секунд.
+  const fresh = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await fresh.goto(BASE + publicPath);
+  await fresh.locator('h1').waitFor();
+  check((await fresh.locator('h1').textContent()) === 'Страница не найдена', 'снятый с публикации документ исчез с сайта');
+  await fresh.close();
+  await admin.getByRole('button', { name: 'Удалить' }).click();
+  await admin.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await admin.waitForURL(/\/admin\/documents$/);
+
+  // Панель на 320 px: формы и дерево не шире экрана (без горизонтальной прокрутки).
+  await admin.setViewportSize({ width: 320, height: 800 });
+  for (const path of ['/admin', '/admin/documents', '/admin/documents/new', '/admin/hierarchy', '/admin/audit']) {
+    await admin.goto(BASE + path);
+    await admin.locator('#admin-main h1').waitFor();
+    await admin.waitForLoadState('networkidle');
+    const extra = await admin.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check(extra <= 0, `панель 320 px без горизонтальной прокрутки: ${path} (+${extra}px)`);
+  }
+  for (const p of [a, m, admin, site]) await p.close();
 }
 
 await main();

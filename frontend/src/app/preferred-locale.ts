@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, type Locale } from '@archive-vko/shared';
+import { DEFAULT_LOCALE, type Locale } from '@archive-vko/shared/enums';
 import { isLocale } from '../i18n/index.ts';
 import { readStorage } from '../lib/storage.ts';
 

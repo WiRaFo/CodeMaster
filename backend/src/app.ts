@@ -51,7 +51,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(referenceRoutes, { db });
       await api.register(contentRoutes, { db });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
-      await api.register(adminRoutes, { db, allowedOrigins });
+      await api.register(adminRoutes, { db, storage, allowedOrigins });
     },
     { prefix: '/api/v1' },
   );

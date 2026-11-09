@@ -22,6 +22,8 @@ import { ApiError, notFound } from '../../http/errors.ts';
 import { pageOf } from '../../http/pagination.ts';
 import { registerStaffGuard, requirePermission, staffOf, type Staff } from '../../http/staff.ts';
 import { hasGrant } from '../auth/session.ts';
+import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
+import { createHash, randomUUID } from 'node:crypto';
 import { writeAudit } from '../audit/audit.ts';
 import {
   branchOf,
@@ -55,14 +57,27 @@ const STATUS_RU: Record<string, string> = {
 
 export interface AdminOptions {
   db: PrismaClient;
+  storage: ObjectStorage;
   allowedOrigins: readonly string[];
+}
+
+/** Загружаемые сканы: только растровые форматы, тип определяется по сигнатуре файла, а не по имени (S-013). */
+const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+const UPLOAD_LIMIT = 20 * 1024 * 1024;
+const MASTER_BUCKET = 'archive-masters';
+
+function sniffImage(data: Buffer): (typeof UPLOAD_TYPES)[number] | null {
+  if (data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return 'image/jpeg';
+  if (data.length > 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (data.length > 12 && data.subarray(0, 4).toString('ascii') === 'RIFF' && data.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
+  return null;
 }
 
 /**
  * Административный API каталога (docs/api-design.md §5; ТЗ §6.3, §6.7, §6.8).
  * Каждый маршрут проверяет право на сервере; изменения и запись журнала — в одной транзакции.
  */
-export async function adminRoutes(app: FastifyInstance, { db, allowedOrigins }: AdminOptions): Promise<void> {
+export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOrigins }: AdminOptions): Promise<void> {
   app.decorateRequest('staff', null);
   registerStaffGuard(app, db, allowedOrigins);
 
@@ -333,6 +348,64 @@ export async function adminRoutes(app: FastifyInstance, { db, allowedOrigins }: 
       }
     });
     return { id, updatedAt: (await statusOf(db, 'documents', id)).updatedAt.toISOString() };
+  });
+
+  // Тело загрузки — сам файл (без multipart): тип проверяется по сигнатуре ниже.
+  app.addContentTypeParser([...UPLOAD_TYPES, 'application/octet-stream'], { parseAs: 'buffer', bodyLimit: UPLOAD_LIMIT }, (_request, body, done) => done(null, body));
+
+  /**
+   * Загрузка скана страницы (ТЗ §6.3; F-144). Файл сохраняется в закрытый бакет мастер-копий.
+   * Пока антивирус не подключён (ClamAV — ЭТАП 13), файл остаётся в статусе «ожидает проверки»
+   * и на сайте не показывается: публичное представление пропускает только проверенные файлы.
+   */
+  app.post('/admin/documents/:id/pages', async (request, reply) => {
+    const { id } = uuidParam.parse(request.params);
+    const branchId = await branchOf(db, 'documents', id);
+    if (!branchId) throw notFound();
+    const staff = requirePermission(request, 'assets:upload', branchId);
+    const current = await statusOf(db, 'documents', id);
+    if (!canEdit(staff, current.status, branchId)) throw new ApiError(403, 'FORBIDDEN', 'Editing in this status requires catalog:publish');
+    const data = request.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new ApiError(400, 'VALIDATION_FAILED', 'File is required', [{ path: ['file'], code: 'required' }]);
+    const mime = sniffImage(data);
+    if (!mime) throw new ApiError(415, 'VALIDATION_FAILED', 'Only JPEG, PNG and WebP images are accepted', [{ path: ['file'], code: 'unsupported_type' }]);
+    const rawName = request.headers['x-filename'];
+    const filename = (typeof rawName === 'string' ? decodeURIComponent(rawName) : 'scan').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(0, 200) || 'scan';
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mime];
+    const key = `documents/${id}/${randomUUID()}.${ext}`;
+    await storage.write(MASTER_BUCKET, key, data);
+    const doc = await db.document.findUniqueOrThrow({ where: { id }, select: { accessLevel: true, dataOrigin: true } });
+    const result = await db.$transaction(async (tx) => {
+      const last = await tx.documentAsset.aggregate({ where: { documentId: id }, _max: { pageNumber: true } });
+      const pageNumber = (last._max.pageNumber ?? 0) + 1;
+      const asset = await tx.digitalAsset.create({
+        data: {
+          kind: 'scan_page',
+          storageBucket: MASTER_BUCKET,
+          storageKey: key,
+          originalFilename: filename,
+          mimeType: mime,
+          sizeBytes: BigInt(data.length),
+          sha256: createHash('sha256').update(data).digest('hex'),
+          accessLevel: doc.accessLevel,
+          dataOrigin: doc.dataOrigin,
+          processingStatus: 'ready',
+          antivirusStatus: 'pending',
+          createdById: staff.session.userId,
+        },
+      });
+      await tx.documentAsset.create({ data: { documentId: id, assetId: asset.id, pageNumber } });
+      await writeAudit(tx, request, {
+        userId: staff.session.userId,
+        action: 'upload',
+        entityType: 'documents',
+        entityId: id,
+        summary: `Загружена страница ${pageNumber} («${filename}», ${mime}) к «${await labelOf(tx, 'documents', id)}»`,
+        changes: { assetId: asset.id, pageNumber, sizeBytes: data.length },
+      });
+      return { assetId: asset.id, pageNumber };
+    });
+    return reply.status(201).send({ ...result, mimeType: mime, antivirusStatus: 'pending' });
   });
 
   app.delete('/admin/documents/:id', async (request, reply) => {

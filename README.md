@@ -63,3 +63,15 @@ npm run e2e                       # сборка + проверка в Chromium:
 ```
 
 Для `npm run e2e` нужен Chromium для Playwright 1.63 (`npx playwright install chromium`, если его нет).
+
+## Панель управления (ЭТАП 10a)
+
+```bash
+npm run db:seed                   # создаёт главного администратора из SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
+npm run dev:api && npm run dev:web
+# http://127.0.0.1:5173/admin
+```
+
+Демо-сотрудники `archivist@archive.local` (сотрудник архива) и `moderator@archive.local` (модератор) создаются сидом, только если задан `SEED_DEMO_STAFF_PASSWORD` (не короче 12 символов), набор `demo` включён и `NODE_ENV` не `production`. Пароли берутся из `backend/.env` и в репозиторий не попадают. Сценарии 9–12 в `npm run e2e` читают те же переменные.
+
+Панель только на русском, закрыта от индексации; все проверки прав — на сервере ([docs/api-design.md §8](docs/api-design.md)). Загруженные сканы не видны на сайте до проверки антивирусом (ЭТАП 13).

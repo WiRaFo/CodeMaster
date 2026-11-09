@@ -291,6 +291,27 @@ describe('цикл согласования (ТЗ §6.7; F-144, F-146, F-150 –
     expect(await auditCount({ action: 'delete', entityId: docId })).toBe(1);
   });
 
+  it('загрузка скана: только изображения по сигнатуре; до проверки антивирусом файл не публикуется', async () => {
+    const created = await archivist.request('POST', '/api/v1/admin/documents', docInput({ documentNumber: `U-${suffix}` }));
+    const id = String(created.body['id']);
+    const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
+    const upload = (body: Buffer, type: string, c = archivist) =>
+      t.app.inject({ method: 'POST', url: `/api/v1/admin/documents/${id}/pages`, headers: { cookie: c.cookie, 'x-csrf-token': c.csrf, 'content-type': type, 'x-filename': encodeURIComponent('лист 1.png') }, payload: body });
+    const ok = await upload(png, 'image/png');
+    expect(ok.statusCode).toBe(201);
+    expect(ok.json()).toMatchObject({ pageNumber: 1, mimeType: 'image/png', antivirusStatus: 'pending' });
+    // SVG и HTML под видом картинки отклоняются: тип определяется по содержимому.
+    expect((await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), 'image/png')).statusCode).toBe(415);
+    expect((await upload(Buffer.from('<html></html>'), 'application/octet-stream')).statusCode).toBe(415);
+    expect((await upload(png, 'image/png', moderator)).statusCode).toBe(403);
+    const view = await archivist.request('GET', `/api/v1/admin/documents/${id}`);
+    expect(view.body['pages']).toEqual([expect.objectContaining({ pageNumber: 1, filename: 'лист 1.png', antivirusStatus: 'pending' })]);
+    const asset = await t.db.digitalAsset.findFirstOrThrow({ where: { documentPages: { some: { documentId: id } } } });
+    expect(asset.storageBucket).toBe('archive-masters');
+    expect(await auditCount({ action: 'upload', entityId: id })).toBe(1);
+    expect(await t.db.$queryRaw<unknown[]>`SELECT 1 FROM public_document_pages_v WHERE document_id = ${id}::uuid`).toHaveLength(0);
+  });
+
   it('журнал доступен главному администратору и содержит действия цикла', async () => {
     const log = await admin.request('GET', `/api/v1/admin/audit-logs?entityId=${docId}`);
     expect(log.status).toBe(200);
