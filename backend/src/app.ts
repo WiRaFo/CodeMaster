@@ -8,6 +8,7 @@ import { authRoutes } from './modules/auth/auth.routes.ts';
 import { branchRoutes } from './modules/branches/branches.routes.ts';
 import { contentRoutes } from './modules/content/content.routes.ts';
 import { exhibitionRoutes } from './modules/exhibitions/exhibitions.routes.ts';
+import { assistantRoutes } from './modules/assistant/assistant.routes.ts';
 import { catalogRoutes } from './modules/catalog/catalog.routes.ts';
 import { healthRoutes } from './modules/health/health.routes.ts';
 import { referenceRoutes } from './modules/reference/reference.routes.ts';
@@ -52,6 +53,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(referenceRoutes, { db });
       await api.register(contentRoutes, { db });
       await api.register(exhibitionRoutes, { db, storage });
+      await api.register(assistantRoutes);
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
       await api.register(adminRoutes, { db, storage, allowedOrigins });
     },

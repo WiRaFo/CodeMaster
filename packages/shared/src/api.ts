@@ -91,3 +91,7 @@ export const exhibitionListSchema = z
   .object({ topic: shortText(100).optional(), period: shortText(100).optional(), lang: langSchema.optional() })
   .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(12) }));
 export type ExhibitionListQuery = z.infer<typeof exhibitionListSchema>;
+
+/** ЭТАП 12. Архивный помощник на правилах (ТЗ §5.8 А, Б): вопрос до 300 символов. */
+export const assistantAskSchema = z.object({ q: shortText(300), lang: langSchema.optional() });
+export type AssistantAskQuery = z.infer<typeof assistantAskSchema>;

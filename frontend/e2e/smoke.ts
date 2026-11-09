@@ -14,7 +14,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -371,6 +371,34 @@ async function main() {
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.leaflet-popup') as Element).opacity === '1');
       const mapAxe = await axe(page);
       check(mapAxe.length === 0, `axe страница филиалов с картой: ${mapAxe.join('; ')}`);
+      await page.close();
+    }
+
+    {
+      // Сценарий 16 (ЭТАП 12): пример ТЗ §5.8 Б через помощника; вопрос о заявлении; термин на английском.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/kk/assistant', {});
+      await page.getByRole('button', { name: '1960 жылдардағы Өскемен фотосуреттері' }).click();
+      const answer = page.getByTestId('assistant-answer').last();
+      await answer.getByTestId('recognized').waitFor();
+      const chips = (await answer.getByTestId('recognized').innerText()).replace(/\s+/g, ' ');
+      check(chips.includes('1960–1969') && chips.includes('Өскемен') && chips.includes('Фотосуреттер'), `сценарий 16: распознаны годы, город и тип: ${chips}`);
+      const assistantAxe = await axe(page);
+      check(assistantAxe.length === 0, `axe ответ помощника: ${assistantAxe.join('; ')}`);
+      await answer.getByRole('link', { name: /Ф\.|Қ\./ }).first().click();
+      const opened = await page.locator('h1').filter({ hasText: /фотосурет/i }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(opened, 'сценарий 16: ссылка из ответа открывает карточку документа');
+      await page.goBack();
+      await openWithPrefs(page, '/ru/assistant', {});
+      await page.getByRole('textbox', { name: 'Ваш вопрос' }).fill('Хочу заказать копию документа');
+      await page.keyboard.press('Enter');
+      const service = page.getByTestId('assistant-answer').last();
+      await service.getByText(/не принимаются/).waitFor();
+      check((await service.locator('a[href*="/catalog/documents/"]').count()) === 0, 'сценарий 16: на просьбу о заказе нет ссылок на документы');
+      check(await service.getByRole('link', { name: 'Посетителям' }).isVisible(), 'сценарий 16: на просьбу о заказе — ссылка «Посетителям»');
+      await openWithPrefs(page, `/en/assistant?q=${encodeURIComponent('What is an inventory?')}`, {});
+      const term = await page.getByTestId('assistant-answer').getByText(/An inventory is a list/).waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(term, 'сценарий 16: термин объясняется на английском');
       await page.close();
     }
 
