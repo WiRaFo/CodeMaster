@@ -18,6 +18,8 @@ interface DocSeed {
   title: Tri<string>;
   description?: Tri<string>;
   accessConditions?: Tri<string>;
+  /** Расшифровка. У ограниченных документов она не публикуется и не участвует в поиске (тест ЭТАПА 2). */
+  transcription?: Tri<string>;
   /** Цифровая копия из одной страницы; antivirus по умолчанию clean. */
   copy?: { antivirus?: AntivirusStatus };
 }
@@ -74,6 +76,7 @@ const FONDS: FondSeed[] = [
               'Сары май шығару жоспары мен цехты жөндеуді талқылау. Мұрағат құжаттары.',
               'Discussion of the butter production plan and workshop repairs.',
             ),
+            transcription: tri('Слушали: о ремонте сепаратора.', 'Тыңдалды: сепараторды жөндеу туралы.', 'Heard: on the separator repair.'),
             copy: {},
           },
           {
@@ -82,6 +85,11 @@ const FONDS: FondSeed[] = [
             year: 1957,
             title: tri('Личные дела работников маслозавода', 'Май зауыты қызметкерлерінің жеке істері', 'Personnel files of creamery workers'),
             accessConditions: RESTRICTED_CONDITIONS,
+            transcription: tri(
+              'Ведомость начисления заработной платы работникам цеха.',
+              'Цех қызметкерлеріне жалақы есептеу ведомосі.',
+              'Payroll ledger for workshop employees.',
+            ),
             copy: {},
           },
           {
@@ -89,6 +97,7 @@ const FONDS: FondSeed[] = [
             access: 'closed',
             year: 1958,
             title: tri('Закрытый документ (не должен появляться публично)', 'Жабық құжат (жарияланбауы тиіс)', 'Closed document (must never be public)'),
+            description: tri('Служебная переписка о проверке.', 'Тексеру туралы қызметтік хат алмасу.', 'Internal correspondence about an inspection.'),
           },
           {
             number: '4',
@@ -302,6 +311,7 @@ export async function seedSynthetic(db: PrismaClient): Promise<void> {
             locale,
             title: prefixed(d.title)[locale],
             description: d.description?.[locale] ?? null,
+            transcription: d.transcription?.[locale] ?? null,
             accessConditions: d.accessConditions?.[locale] ?? null,
             translationStatus: statusFor(locale),
           })),
