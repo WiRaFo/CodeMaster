@@ -14,13 +14,14 @@
 | [docs/api-design.md](docs/api-design.md) | Карта REST API |
 | [docs/accessibility.md](docs/accessibility.md) | Архитектура доступности (WCAG 2.2 AA) |
 | [docs/development-roadmap.md](docs/development-roadmap.md) | План этапов |
+| [docs/handoff.md](docs/handoff.md) | Состояние проекта и инструкции для следующего разработчика или агента |
 
 ## Структура
 
 ```
 packages/shared   общие типы, статусы согласования, разбор архивного шифра
 backend           Fastify + Prisma: схема БД, миграции, сиды (ЭТАП 1), публичный API каталога и филиалов (ЭТАП 2)
-frontend          React + Vite: каркас, KZ/RU/EN, темы, панель доступности (ЭТАП 3)
+frontend          React + Vite: каркас, KZ/RU/EN, темы, панель доступности (ЭТАП 3), главная, выдача каталога, новости (ЭТАП 4)
 infrastructure    Docker, Nginx, скрипты
 docs              проектная документация
 ```
