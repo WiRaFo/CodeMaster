@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import type { ObjectStorage } from './infrastructure/storage/local-storage.ts';
 import { randomUUID } from 'node:crypto';
 import { registerErrorHandling } from './http/errors.ts';
 import { branchRoutes } from './modules/branches/branches.routes.ts';
@@ -10,11 +11,12 @@ import { referenceRoutes } from './modules/reference/reference.routes.ts';
 
 export interface AppOptions {
   db: PrismaClient;
+  storage: ObjectStorage;
   logLevel?: string;
 }
 
 /** Сборка приложения без запуска сервера (используется и в тестах через app.inject). */
-export async function buildApp({ db, logLevel = 'info' }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, storage, logLevel = 'info' }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel, redact: ['req.headers.cookie', 'req.headers.authorization'] },
     genReqId: () => randomUUID(),
@@ -37,7 +39,7 @@ export async function buildApp({ db, logLevel = 'info' }: AppOptions): Promise<F
   await app.register(healthRoutes, { db });
   await app.register(
     async (api) => {
-      await api.register(catalogRoutes, { db });
+      await api.register(catalogRoutes, { db, storage });
       await api.register(branchRoutes, { db });
       await api.register(referenceRoutes, { db });
       await api.register(contentRoutes, { db });

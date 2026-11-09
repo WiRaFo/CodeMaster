@@ -29,7 +29,7 @@ export async function publicDocKeys(db: PrismaClient | Prisma.TransactionClient)
 
 export async function publicPageKeys(db: PrismaClient | Prisma.TransactionClient): Promise<string[]> {
   const rows = await db.$queryRaw<Array<{ key: string }>>`
-    SELECT d.source_system_id AS key
+    SELECT DISTINCT d.source_system_id AS key
     FROM public_document_pages_v p JOIN documents d ON d.id = p.document_id
     ORDER BY 1`;
   return rows.map((r) => r.key);
@@ -39,13 +39,14 @@ export async function publicPageKeys(db: PrismaClient | Prisma.TransactionClient
 export async function testApp() {
   const { buildApp } = await import('../src/app.ts');
   const db = testDb();
-  const app = await buildApp({ db, logLevel: 'silent' });
+  const { LocalStorage } = await import('../src/infrastructure/storage/local-storage.ts');
+  const app = await buildApp({ db, storage: new LocalStorage(inject('testStorageDir')), logLevel: 'silent' });
   return {
     app,
     db,
     async get(url: string, headers: Record<string, string> = {}) {
       const res = await app.inject({ method: 'GET', url, headers });
-      return { status: res.statusCode, headers: res.headers, body: res.json() as Record<string, unknown> & { items?: Array<Record<string, unknown>> }, raw: res.body };
+      return { status: res.statusCode, headers: res.headers, rawPayload: res.rawPayload, body: res.json() as Record<string, unknown> & { items?: Array<Record<string, unknown>> }, raw: res.body };
     },
     async close() {
       await app.close();

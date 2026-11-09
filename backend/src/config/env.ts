@@ -6,6 +6,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  /** Папка файлового хранилища (сканы и производные). В production — MinIO, см. docs/architecture.md. */
+  STORAGE_DIR: z.string().min(1).default('storage'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 export type Env = z.infer<typeof envSchema>;

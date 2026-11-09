@@ -2,10 +2,11 @@ import 'dotenv/config';
 import { loadEnv } from './config/env.ts';
 import { buildApp } from './app.ts';
 import { createPrismaClient } from './infrastructure/database/client.ts';
+import { LocalStorage } from './infrastructure/storage/local-storage.ts';
 
 const env = loadEnv();
 const db = createPrismaClient(env.DATABASE_URL);
-const app = await buildApp({ db, logLevel: env.LOG_LEVEL });
+const app = await buildApp({ db, storage: new LocalStorage(env.STORAGE_DIR), logLevel: env.LOG_LEVEL });
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');

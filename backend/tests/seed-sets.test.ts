@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
+import { LocalStorage } from '../src/infrastructure/storage/local-storage.ts';
 import { parseSeedSets, runSeeds } from '../prisma/seeds/index.ts';
 import { testDb } from './helpers.ts';
 
@@ -11,9 +12,10 @@ describe('наборы сидов', () => {
 
   it('не загружает synthetic и demo в production', async () => {
     const db = testDb();
+    const storage = new LocalStorage(inject('testStorageDir'));
     try {
-      await expect(runSeeds(db, ['migrated', 'demo'], true)).rejects.toThrow(/production/);
-      await expect(runSeeds(db, ['synthetic'], true)).rejects.toThrow(/production/);
+      await expect(runSeeds(db, ['migrated', 'demo'], true, storage)).rejects.toThrow(/production/);
+      await expect(runSeeds(db, ['synthetic'], true, storage)).rejects.toThrow(/production/);
     } finally {
       await db.$disconnect();
     }

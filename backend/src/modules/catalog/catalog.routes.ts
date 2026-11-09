@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { z } from 'zod';
 import {
   documentFiltersSchema,
@@ -27,7 +28,10 @@ function uuidOr404(params: unknown): string {
   return parsed.data;
 }
 
-export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClient }): Promise<void> {
+/** Форматы изображений страниц, которые сайт отдаёт браузеру. Остальные типы не отдаются, даже если лежат в хранилище. */
+const VIEWABLE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
+
+export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
   const repo = new CatalogRepository(opts.db);
 
   app.get('/catalog/documents', async (request, reply) => {
@@ -147,6 +151,31 @@ export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClie
           .map((d) => ({ variant: d.variant, format: d.format, width: d.width, height: d.height })),
       })),
     };
+  });
+
+  /**
+   * Изображение страницы цифровой копии (F-041, F-042). Только страницы из public_document_pages_v:
+   * документ эффективно открыт, файл обработан и проверен антивирусом. Иначе — тот же 404, что для несуществующего.
+   */
+  app.get('/catalog/documents/:id/pages/:page/image', async (request, reply) => {
+    const { id: rawId, page } = z.object({ id: z.string().max(100), page: z.string().max(6) }).parse(request.params);
+    const id = uuidOr404({ id: rawId });
+    const pageNumber = Number(page);
+    if (!Number.isInteger(pageNumber) || pageNumber < 1) throw notFound();
+    const file = await repo.findPageFile(id, pageNumber);
+    if (!file || !VIEWABLE_TYPES.has(file.mime_type)) throw notFound();
+    const body = await opts.storage.read(file.storage_bucket, file.storage_key);
+    if (!body) {
+      request.log.warn({ assetId: file.asset_id }, 'page file is missing in storage');
+      throw notFound();
+    }
+    return reply
+      .header('Content-Type', file.mime_type)
+      .header('Content-Disposition', 'inline')
+      // SVG открывается браузером как документ: запрещаем скрипты и любые внешние загрузки.
+      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+      .header('Cache-Control', 'public, max-age=300')
+      .send(body);
   });
 
   app.get('/catalog/fonds', async (request, reply) => {
