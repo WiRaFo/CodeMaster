@@ -58,7 +58,9 @@ export function BranchPage() {
           {b.website ? <Field label={t('branches.website')}><a href={b.website} rel="noopener noreferrer">{b.website}</a></Field> : null}
           {text('branches.schedule', b.scheduleText)}
           {text('branches.readingRoom', b.readingRoomSchedule)}
+          {b.isMain ? null : b.staff.map((s) => <Field key={s.id} label={s.position}>{s.fullName}</Field>)}
         </dl>
+        {b.isMain ? <p className="mt-2"><Link to={`/${lang}/about/structure`}>{t('branches.structureLink')}</Link></p> : null}
       </section>
 
       {b.address ? <RoutePlanner address={b.address} coordinates={b.coordinates} /> : null}

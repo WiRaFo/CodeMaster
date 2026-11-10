@@ -117,6 +117,28 @@ export interface BranchDetail extends BranchSummary {
   verifiedAt: string | null;
   sites: BranchSummary[];
   highlightedFonds: Array<{ id: string; number: string; title: string | null }>;
+  staff: StaffContact[];
+}
+
+/** Контакт сотрудника из сведений, переданных архивом. */
+export interface StaffContact {
+  id: string;
+  fullName: string;
+  position: string;
+  department: string | null;
+  phone: string | null;
+  email: string | null;
+  contentLang: string;
+  translationStatus: string;
+}
+
+export type HistoryBlock = { type: 'p'; text: string } | { type: 'ol' | 'ul'; items: string[] };
+
+/** Ответ /about: история, структура, соцсети. */
+export interface AboutInfo {
+  history: { title: string; blocks: HistoryBlock[]; contentLang: string; translationStatus: string; dataOrigin: DataOrigin } | null;
+  staff: StaffContact[];
+  social: Array<{ network: 'instagram' | 'facebook'; label: string; url: string }>;
 }
 
 export interface FacetValue {

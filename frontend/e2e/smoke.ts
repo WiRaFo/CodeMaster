@@ -15,7 +15,7 @@ const AXE_SOURCE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -327,7 +327,7 @@ async function main() {
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
       const page = await context.newPage();
       await openWithPrefs(page, '/ru/branches', {});
-      await page.getByText('Найдено подразделений: 6').waitFor();
+      await page.getByText('Найдено подразделений: 15').waitFor();
       check(await page.getByTestId('map-pending').isVisible(), 'сценарий 8: без сверенных координат вместо карты — пояснение');
       check(!(await page.getByTestId('branch-map').count()), 'сценарий 8: карта не показывается без координат');
       await page.getByRole('searchbox', { name: 'Название или населённый пункт' }).fill('Лениногорск');
@@ -341,7 +341,7 @@ async function main() {
       await page.getByRole('link', { name: 'Сбросить' }).click();
       await page.getByRole('link', { name: 'Государственный архив Восточно-Казахстанской области', exact: true }).click();
       await page.getByRole('heading', { level: 2, name: 'Как добраться' }).waitFor();
-      check(await page.getByText('Сведения уточняются').first().isVisible(), 'сценарий 8: несверенные сведения помечены');
+      check(await page.getByText('Сверено архивом: 2026-11-10.').isVisible(), 'сценарий 8: сведения, переданные архивом, помечены датой сверки');
       // Геолокация без разрешения: страница работает, остаётся ввод адреса.
       await page.getByRole('button', { name: 'Определить моё местоположение' }).click();
       const denied = await page.getByText('Не удалось определить местоположение').waitFor({ timeout: 5000 }).then(() => true, () => false);
@@ -350,7 +350,7 @@ async function main() {
       await page.getByRole('textbox', { name: 'Откуда' }).fill('ул. Крылова, 39');
       const google = new URL((await page.getByRole('link', { name: /Маршрут в Google Картах/ }).getAttribute('href')) ?? '');
       check(
-        google.searchParams.get('destination') === 'г. Усть-Каменогорск, ул. Головкова, 26/1' && google.searchParams.get('travelmode') === 'walking' && google.searchParams.get('origin') === 'ул. Крылова, 39',
+        google.searchParams.get('destination') === 'г. Усть-Каменогорск, ул. Бейбітшілік, 26/1 (Головкова, 26/1)' && google.searchParams.get('travelmode') === 'walking' && google.searchParams.get('origin') === 'ул. Крылова, 39',
         `сценарий 8: ссылка маршрута Google: ${google.toString()}`,
       );
       check((await axe(page)).length === 0, `axe карточка филиала: ${(await axe(page)).join('; ')}`);
@@ -381,7 +381,7 @@ async function main() {
       await page.keyboard.press('Enter');
       const popup = await page.getByRole('link', { name: 'Подробнее' }).waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(popup, 'сценарий 8: маркер открывается с клавиатуры, в подсказке ссылка на карточку');
-      check((await page.locator('#main article').count()) === 6, 'сценарий 8: при карте список подразделений остаётся полным');
+      check((await page.locator('#main article').count()) === 15, 'сценарий 8: при карте список подразделений остаётся полным');
       // Подсказка Leaflet появляется с анимацией прозрачности; axe проверяем после её окончания.
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.leaflet-popup') as Element).opacity === '1');
       const mapAxe = await axe(page);

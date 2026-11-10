@@ -16,6 +16,18 @@ export const MAIN_BRANCH = {
   sites: [],
 };
 
+export const ABOUT = {
+  history: { title: 'История архива', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified', blocks: [
+    { type: 'p', text: 'Государственный архив Восточно-Казахстанской области образован в 1940 году.' },
+    { type: 'ol', items: ['Государственного архива Восточно-Казахстанской области', 'Зайсанского филиала госархива области'] },
+  ] },
+  staff: [
+    { id: 's1', fullName: 'Жапаров Аскар Кенжебаевич', position: 'Director', department: 'Management', phone: '8 (7232) 25-13-22', email: 'ak.zhaparov@akimvko.gov.kz', contentLang: 'en', translationStatus: 'machine' },
+    { id: 's2', fullName: 'Бекниязқызы Жангуль', position: 'Head of department', department: 'Information Technology Department', phone: '8 (7232) 25-01-85', email: null, contentLang: 'en', translationStatus: 'machine' },
+  ],
+  social: [{ network: 'instagram', label: '@arhiv_vko', url: 'https://www.instagram.com/arhiv_vko/' }],
+};
+
 export function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   const utils = render(
@@ -148,6 +160,7 @@ export function apiMock(overrides: Record<string, unknown> = {}) {
     [`/api/v1/catalog/documents/${DOCUMENTS.open.id}?`, DOCUMENTS.open],
     [`/api/v1/catalog/documents/${DOCUMENTS.restricted.id}?`, DOCUMENTS.restricted],
     ['/api/v1/branches/main', MAIN_BRANCH],
+    ['/api/v1/about?', ABOUT],
     ['/api/v1/branches?', FIXTURES.branches],
     ['/api/v1/home?', FIXTURES.home],
     ['/api/v1/catalog/documents?', FIXTURES.catalog],

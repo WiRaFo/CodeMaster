@@ -11,7 +11,7 @@ import { ExhibitionsPage } from '../pages/ExhibitionsPage.tsx';
 import { FaqPage } from '../pages/FaqPage.tsx';
 import { FeedbackPage } from '../pages/FeedbackPage.tsx';
 import { HistoryPage, PublicationPage } from '../pages/HistoryPage.tsx';
-import { AboutPage, VisitorsPage } from '../pages/InfoPages.tsx';
+import { AboutPage, StructurePage, VisitorsPage } from '../pages/InfoPages.tsx';
 import { HomePage } from '../pages/HomePage.tsx';
 import { NewsItemPage } from '../pages/NewsItemPage.tsx';
 import { NewsListPage } from '../pages/NewsListPage.tsx';
@@ -52,6 +52,7 @@ export const routes: RouteObject[] = [
       { path: 'faq', element: <FaqPage /> },
       { path: 'visitors', element: <VisitorsPage /> },
       { path: 'about', element: <AboutPage /> },
+      { path: 'about/structure', element: <StructurePage /> },
       { path: 'feedback', element: <FeedbackPage /> },
       ...SECTIONS.filter((s) => s.path && !IMPLEMENTED.has(s.path)).map((s) => ({ path: s.path, element: <SectionStubPage section={s.key} /> })),
       { path: 'accessibility', element: <AccessibilityPage /> },

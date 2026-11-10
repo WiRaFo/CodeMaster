@@ -20,7 +20,10 @@ export type SectionKey = (typeof SECTIONS)[number]['key'];
 export const sectionHref = (lang: string, path: string): string => (path ? `/${lang}/${path}` : `/${lang}`);
 
 /**
- * Официальные страницы архива в соцсетях (ТЗ §4, с. 4). Пусто, пока архив не подтвердил адреса:
- * не публикуем ссылки, найденные только на старом сайте.
+ * Официальные страницы архива в соцсетях (ТЗ §4, с. 4): переданы архивом 10.11.2026 («Контакты.docx»).
+ * Те же адреса хранятся в site_settings.social_links и отдаются /about.
  */
-export const SOCIAL_LINKS: ReadonlyArray<{ name: string; url: string }> = [];
+export const SOCIAL_LINKS: ReadonlyArray<{ name: string; url: string }> = [
+  { name: 'Instagram', url: 'https://www.instagram.com/arhiv_vko/' },
+  { name: 'Facebook', url: 'https://www.facebook.com/vkoarhiv' },
+];

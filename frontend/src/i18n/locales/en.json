@@ -363,7 +363,8 @@
         "walking": "On foot",
         "transit": "Public transport"
       }
-    }
+    },
+    "structureLink": "Archive structure and management"
   },
   "assistant": {
     "lead": "The assistant helps you find open materials on the site and points you to the right section.",
@@ -496,9 +497,19 @@
     "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions."
   },
   "about": {
-    "lead": "State Archive of East Kazakhstan Region.",
+    "lead": "State Archive of East Kazakhstan Region: history, structure and contacts.",
     "contactsTitle": "Archive contacts",
     "moreTitle": "Site sections",
-    "pending": "Information about the archive's history, structure and management will be published once the archive provides the texts."
+    "socialTitle": "The archive on social media",
+    "network": {
+      "instagram": "Instagram",
+      "facebook": "Facebook"
+    },
+    "historyTitle": "History of the archive",
+    "structureTitle": "Structure and management",
+    "structureLead": "Management and departments of the State Archive of East Kazakhstan Region. Branch directors are listed on the branch pages.",
+    "structureLink": "Archive structure and management",
+    "source": "Information provided by the archive on 10 November 2026.",
+    "unavailable": "This section has not been filled in yet."
   }
 }

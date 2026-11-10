@@ -11,11 +11,16 @@ describe('филиалы (ТЗ §5.5)', () => {
   it('список содержит только опубликованные подразделения без выдуманных координат', async () => {
     const res = await t.get('/api/v1/branches?lang=ru');
     const items = res.body.items ?? [];
-    expect(items.map((b) => b['slug'])).toEqual(['main', 'main-krylova', 'ust-kamenogorsk-personnel', 'zaisan', 'ridder', 'altai']);
+    expect(items.map((b) => b['slug'])).toEqual([
+      'main', 'main-krylova', 'altai', 'glubokoe', 'zaisan', 'katon-karagay', 'kurchum', 'markakol', 'ridder', 'samar',
+      'tarbagatai', 'ulan', 'ulken-naryn', 'ust-kamenogorsk-personnel', 'shemonaikha',
+    ]);
     for (const b of items) {
       expect(b['coordinates']).toBeNull();
-      expect(b['needsVerification']).toBe(true);
-      expect(b['dataOrigin']).toBe('migrated');
+      // Сведения от архива (10.11.2026) сверены; площадка на ул. Крылова есть только на старом сайте.
+      const fromOldSite = b['slug'] === 'main-krylova';
+      expect(b['needsVerification']).toBe(fromOldSite);
+      expect(b['dataOrigin']).toBe(fromOldSite ? 'migrated' : 'verified');
     }
     expect((await t.get('/api/v1/branches/synthetic-draft')).status).toBe(404);
   });
@@ -26,23 +31,51 @@ describe('филиалы (ТЗ §5.5)', () => {
     const byName = await t.get(`/api/v1/branches?q=${encodeURIComponent('Зайсан')}`);
     expect(byName.body.items?.map((b) => b['slug'])).toEqual(['zaisan']);
     const byType = await t.get('/api/v1/branches?type=branch');
-    expect(byType.body.items).toHaveLength(4);
+    expect(byType.body.items).toHaveLength(13);
   });
 
-  it('карточка основного архива: график, площадки, источник сведений', async () => {
+  it('карточка основного архива: график и реквизиты из сведений архива, площадки', async () => {
     const res = await t.get('/api/v1/branches/main?lang=ru');
     expect(res.body).toMatchObject({
       isMain: true,
-      address: 'г. Усть-Каменогорск, ул. Головкова, 26/1',
+      address: 'г. Усть-Каменогорск, ул. Бейбітшілік, 26/1 (Головкова, 26/1)',
       phone: '8 (7232) 25-59-76',
-      postalCode: null,
-      verifiedAt: null,
-      sourceUrl: 'http://e-arhiv.vko.gov.kz/ru/Page/Index/1330',
+      email: 'arhiv-ukg@yandex.kz',
+      postalCode: '070000',
+      verifiedAt: '2026-11-10',
+      sourceUrl: null,
+      dataOrigin: 'verified',
     });
-    const schedule = res.body['schedule'] as { office: unknown[]; readingRoom: Array<{ opens: string; closes: string }> };
+    const schedule = res.body['schedule'] as { office: Array<{ opens: string; closes: string }>; readingRoom: Array<{ opens: string; closes: string }> };
     expect(schedule.office).toHaveLength(5);
-    expect(schedule.readingRoom[0]).toMatchObject({ opens: '10:00', closes: '17:00' });
+    expect(schedule.office[0]).toMatchObject({ opens: '08:00', closes: '17:00' });
+    expect(schedule.readingRoom[0]).toMatchObject({ opens: '09:00', closes: '16:00' });
     expect((res.body['sites'] as Array<{ slug: string }>).map((s) => s.slug)).toContain('main-krylova');
+  });
+
+  it('карточка филиала: директор из сведений архива; адрес почты с опечаткой в источнике не публикуется', async () => {
+    const ulan = await t.get('/api/v1/branches/ulan?lang=ru');
+    expect(ulan.body).toMatchObject({ phone: '8 (72338) 27120', email: 'a.abdrasulin@akimvko.gov.kz', verifiedAt: '2026-11-10' });
+    expect(ulan.body['staff']).toMatchObject([{ fullName: 'Абдрасулин Аслан Оралович', position: 'Директор филиала' }]);
+    for (const slug of ['glubokoe', 'zaisan']) {
+      expect((await t.get(`/api/v1/branches/${slug}`)).body['email']).toBeNull();
+    }
+  });
+});
+
+describe('«Об архиве» (ТЗ §5.2)', () => {
+  it('история от архива на русском с пометкой языка, руководство и соцсети', async () => {
+    const res = await t.get('/api/v1/about?lang=kk');
+    const history = res.body['history'] as { contentLang: string; dataOrigin: string; blocks: Array<{ type: string; text?: string }> };
+    expect(history).toMatchObject({ contentLang: 'ru', dataOrigin: 'verified' });
+    expect(history.blocks[0]?.text).toMatch(/^Государственный архив Восточно-Казахстанской области образован в 1940 году/);
+    const staff = res.body['staff'] as Array<{ fullName: string; position: string; contentLang: string }>;
+    expect(staff[0]).toMatchObject({ fullName: 'Жапаров Аскар Кенжебаевич', position: 'Директор', contentLang: 'kk' });
+    expect(staff).toHaveLength(10);
+    expect(res.body['social']).toEqual([
+      { network: 'instagram', label: '@arhiv_vko', url: 'https://www.instagram.com/arhiv_vko/' },
+      { network: 'facebook', label: 'vkoarhiv', url: 'https://www.facebook.com/vkoarhiv' },
+    ]);
   });
 });
 

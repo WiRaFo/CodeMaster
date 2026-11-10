@@ -105,7 +105,22 @@ describe('«Посетителям» и «Об архиве»', () => {
     expect(screen.getByText(/Правила читального зала и перечень услуг архива будут опубликованы/)).toBeInTheDocument();
     expect(within(screen.getByRole('main')).getByText(/заявления, запросы и заказы через него не принимаются/)).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
-    renderAt('/en/about');
-    expect(await screen.findByText(/will be published once the archive provides the texts/)).toBeInTheDocument();
+  });
+
+  it('«Об архиве» показывает историю от архива с пометкой языка и ссылки на соцсети', async () => {
+    const { container } = renderAt('/en/about');
+    expect(await screen.findByText(/образован в 1940 году/)).toBeInTheDocument();
+    expect(screen.getByText(/This text is available only in/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '@arhiv_vko' })).toHaveAttribute('href', 'https://www.instagram.com/arhiv_vko/');
+    expect(screen.getByRole('link', { name: 'Archive structure and management' })).toHaveAttribute('href', '/en/about/structure');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('«Структура» группирует сотрудников по отделам', async () => {
+    const { container } = renderAt('/en/about/structure');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Management' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Information Technology Department' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '8 (7232) 25-13-22' })).toBeInTheDocument();
+    expect(await axeViolations(container)).toEqual([]);
   });
 });

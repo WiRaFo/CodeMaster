@@ -5,6 +5,7 @@ import { branchListSchema, langOnlySchema, type Locale } from '@archive-vko/shar
 import { notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { and, bestTranslation, likePattern } from '../../infrastructure/database/sql.ts';
+import { publicStaff } from '../content/staff.ts';
 
 /**
  * Публичный реестр подразделений (ТЗ §5.5, с. 7–8). Только опубликованные и не удалённые записи.
@@ -116,7 +117,7 @@ export async function branchRoutes(app: FastifyInstance, opts: { db: PrismaClien
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
     const [b] = await db.$queryRaw<BranchRow[]>`${branchSelect(lang)} WHERE ${PUBLIC_BRANCH} AND b.slug = ${slug}`;
     if (!b) throw notFound();
-    const [schedules, sites, fonds] = await Promise.all([
+    const [schedules, sites, fonds, staff] = await Promise.all([
       db.branchSchedule.findMany({
         where: { branchId: b.id },
         orderBy: [{ kind: 'asc' }, { weekday: 'asc' }],
@@ -128,6 +129,7 @@ export async function branchRoutes(app: FastifyInstance, opts: { db: PrismaClien
         ${bestTranslation('fond', 't', 'f.id', lang, ['title'])}
         WHERE f.branch_id = ${b.id}::uuid AND f.is_highlighted
         ORDER BY f.fond_number_sort NULLS LAST, f.fond_number`,
+      publicStaff(db, b.id, lang),
     ]);
     const hours = (kind: string) =>
       schedules.filter((s) => s.kind === kind).map(({ weekday, opens, closes, note }) => ({ weekday, opens, closes, note }));
@@ -147,6 +149,7 @@ export async function branchRoutes(app: FastifyInstance, opts: { db: PrismaClien
       verifiedAt: b.verified_at ? b.verified_at.toISOString().slice(0, 10) : null,
       sites: sites.map(summaryDto),
       highlightedFonds: fonds.map((f) => ({ id: f.id, number: f.fond_number, title: f.title })),
+      staff,
     };
   });
 

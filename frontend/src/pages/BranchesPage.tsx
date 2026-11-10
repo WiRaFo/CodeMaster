@@ -106,7 +106,7 @@ export function BranchesPage() {
           {items.length === 0 ? (
             <p>{t('branches.empty')}</p>
           ) : (
-            <ul className="grid gap-4 md:grid-cols-2" aria-busy={list.status === 'loading'}>
+            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-busy={list.status === 'loading'}>
               {items.map((b) => (
                 <li key={b.slug}>
                   <article className="flex h-full flex-col gap-2 rounded-md border-2 border-border bg-surface p-4">
@@ -125,7 +125,7 @@ export function BranchesPage() {
                       <p className="flex gap-2"><Phone aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span><span className="visually-hidden">{t('branches.phone')}: </span><a href={telHref(b.phone)}>{b.phone}</a></span></p>
                     ) : null}
                     {b.email ? (
-                      <p className="flex gap-2"><Mail aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span className="min-w-0 break-words"><span className="visually-hidden">{t('branches.email')}: </span><a href={`mailto:${b.email}`}>{b.email}</a></span></p>
+                      <p className="flex gap-2"><Mail aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span className="min-w-0 wrap-anywhere"><span className="visually-hidden">{t('branches.email')}: </span><a href={`mailto:${b.email}`}>{b.email}</a></span></p>
                     ) : null}
                   </article>
                 </li>

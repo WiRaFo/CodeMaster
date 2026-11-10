@@ -21,7 +21,7 @@ const DETAIL: BranchDetail = {
   description: 'Сведения перенесены с текущего сайта.', mainDirections: null, competence: 'Документы по личному составу', serviceArea: null,
   accessibilityInfo: null, sourceUrl: 'http://e-arhiv.vko.gov.kz/ru/Page/Index/1330', verifiedAt: null,
   sites: [base({ slug: 'main-krylova', isMain: false, shortName: 'ул. Крылова, 39', address: 'г. Усть-Каменогорск, ул. Крылова, 39' })],
-  highlightedFonds: [],
+  highlightedFonds: [], staff: [],
 };
 
 let fetchMock: MockInstance<typeof fetch>;
