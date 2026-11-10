@@ -25,7 +25,8 @@ export interface NewsSummary extends Localized {
 }
 
 export interface NewsList extends Paged<NewsSummary> {
-  rubrics: Array<{ slug: string; name: string | null; count: number }>;
+  /** Может отсутствовать в ответе старой версии API: тогда рубрики не показываются. */
+  rubrics?: Array<{ slug: string; name: string | null; count: number }>;
 }
 
 export interface NewsItem extends NewsSummary {

@@ -47,7 +47,7 @@ export function NewsListPage() {
         {q || rubric ? <Link to={listHref({})} className="btn-secondary">{t('news.reset')}</Link> : null}
       </form>
 
-      {news.status === 'ready' ? (
+      {news.status === 'ready' && news.data.rubrics?.length ? (
         <nav aria-label={t('news.rubrics')} className="mb-6">
           <ul className="flex flex-wrap gap-2">
             <li>

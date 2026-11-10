@@ -131,6 +131,13 @@ describe('новости', () => {
     expect(await screen.findByText('Новостей пока нет.')).toBeInTheDocument();
   });
 
+  it('ответ старой версии API без рубрик: лента работает, рубрики не показываются', async () => {
+    fetchMock.mockImplementation(apiMock({ '/api/v1/news?': { items: [], page: 1, pageSize: 10, total: 0, totalPages: 0 } }));
+    renderAt('/ru/news');
+    expect(await screen.findByText('Новостей пока нет.')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Рубрики новостей' })).toBeNull();
+  });
+
   it('поиск и рубрика попадают в адрес и в запрос к API; сброс возвращает всю ленту (F-101)', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/ru/news');
