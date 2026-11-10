@@ -24,6 +24,10 @@ export interface NewsSummary extends Localized {
   rubric: { slug: string; name: string | null } | null;
 }
 
+export interface NewsList extends Paged<NewsSummary> {
+  rubrics: Array<{ slug: string; name: string | null; count: number }>;
+}
+
 export interface NewsItem extends NewsSummary {
   bodyText: string | null;
   sourceUrl: string | null;

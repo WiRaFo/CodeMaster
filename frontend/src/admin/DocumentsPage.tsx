@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { AdminHeading, ErrorMessage, useAuth } from './AdminApp.tsx';
 import { ACCESS_LABEL, STATUS_LABEL } from './labels.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 interface Row {
   id: string;
@@ -45,6 +46,10 @@ export function DocumentsPage() {
     <>
       <AdminHeading title="Документы">
         {can('catalog:edit') ? <Link to="/admin/documents/new" className="btn-primary">Создать документ</Link> : null}
+        {/* Обычная ссылка: файл отдаёт сервер по cookie сессии, с тем же фильтром статуса (F-145). */}
+        <a href={`/api/v1/admin/export/documents.csv${status ? `?status=${encodeURIComponent(status)}` : ''}`} className="btn-secondary" download>
+          Выгрузить в CSV
+        </a>
       </AdminHeading>
       <form onSubmit={search} className="mb-4 flex flex-wrap items-end gap-3" role="search" aria-label="Поиск документов">
         <div className="admin-field mb-0">
@@ -98,7 +103,7 @@ export function DocumentsPage() {
                     <td>{d.archiveCode}{d.documentNumber ? `, № ${d.documentNumber}` : ''}</td>
                     <td><span className="status-badge" data-status={d.status}>{STATUS_LABEL[d.status]}</span></td>
                     <td>{ACCESS_LABEL[d.access]}</td>
-                    <td>{new Date(d.updatedAt).toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })}</td>
+                    <td>{formatDateTime(d.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>

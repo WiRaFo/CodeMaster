@@ -12,7 +12,8 @@ export type AuditAction =
   | 'delete'
   | 'status_change'
   | 'access_change'
-  | 'upload';
+  | 'upload'
+  | 'export';
 
 export interface AuditEntry {
   userId: string | null;

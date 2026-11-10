@@ -93,7 +93,10 @@ export const FIXTURES = {
     ],
     page: 1, pageSize: 20, total: 2, totalPages: 1, interpretedCode: null,
   },
-  news: { items: [], page: 1, pageSize: 10, total: 0, totalPages: 0 },
+  news: {
+    items: [], page: 1, pageSize: 10, total: 0, totalPages: 0,
+    rubrics: [{ slug: 'news', name: 'Новости', count: 0 }, { slug: 'announcements', name: 'Объявления', count: 0 }, { slug: 'events', name: 'Мероприятия', count: 0 }],
+  },
   facets: {
     types: [{ code: 'organization_record', name: 'Документы организаций и предприятий', count: 2 }, { code: 'photo', name: 'Фотодокументы', count: 1 }],
     periods: [{ slug: '1946-1991', name: '1946–1991', count: 3 }],

@@ -27,6 +27,15 @@ describe('главная (ТЗ §5.1)', () => {
     expect(b.getByRole('link', { name: /онлайн-выставки/i })).toHaveAttribute('href', '/ru/exhibitions');
   });
 
+  it('«Полезная информация»: четыре перехода на рабочие страницы (F-016)', async () => {
+    renderAt('/ru');
+    const block = within((await screen.findByRole('heading', { level: 2, name: 'Полезная информация' })).closest('section') as HTMLElement);
+    expect(block.getByRole('link', { name: 'Как пользоваться каталогом' })).toHaveAttribute('href', '/ru/faq');
+    expect(block.getByRole('link', { name: 'Как устроены фонды и описи' })).toHaveAttribute('href', '/ru/catalog/fonds');
+    expect(block.getByRole('link', { name: 'Что опубликовано' })).toHaveAttribute('href', '/ru/catalog?hasDigitalCopy=true');
+    expect(block.getByRole('link', { name: 'Сведения о филиалах' })).toHaveAttribute('href', '/ru/branches');
+  });
+
   it('блоки из API: история в документах, выставки, филиалы, новости; демо и тестовые данные помечены', async () => {
     renderAt('/ru');
     const history = (await screen.findByRole('heading', { level: 2, name: 'История в документах' })).closest('section') as HTMLElement;
@@ -120,5 +129,23 @@ describe('новости', () => {
   it('пустая лента сообщает, что новостей нет', async () => {
     renderAt('/ru/news');
     expect(await screen.findByText('Новостей пока нет.')).toBeInTheDocument();
+  });
+
+  it('поиск и рубрика попадают в адрес и в запрос к API; сброс возвращает всю ленту (F-101)', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/ru/news');
+    const form = within(await screen.findByRole('search', { name: 'Поиск по новостям' }));
+    await user.type(form.getByRole('searchbox', { name: 'Поиск по новостям' }), 'выставка');
+    await user.click(form.getByRole('button', { name: 'Найти' }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('q=%D0%B2%D1%8B%D1%81%D1%82%D0%B0%D0%B2%D0%BA%D0%B0'))).toBe(true));
+    expect(await screen.findByText('По этому запросу новостей нет. Измените запрос или выберите другую рубрику.')).toBeInTheDocument();
+    const rubrics = within(screen.getByRole('navigation', { name: 'Рубрики новостей' }));
+    expect(rubrics.getByRole('link', { name: 'Все рубрики' })).toHaveAttribute('aria-current', 'true');
+    await user.click(rubrics.getByRole('link', { name: 'Мероприятия (0)' }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('rubric=events') && String(u).includes('q='))).toBe(true));
+    expect(within(screen.getByRole('navigation', { name: 'Рубрики новостей' })).getByRole('link', { name: 'Мероприятия (0)' })).toHaveAttribute('aria-current', 'true');
+    await user.click(screen.getByRole('link', { name: 'Сбросить' }));
+    expect(await screen.findByText('Новостей пока нет.')).toBeInTheDocument();
+    expect(await axeViolations(container)).toEqual([]);
   });
 });

@@ -1,7 +1,20 @@
 import type { Prisma } from '@prisma/client';
+import type { Staff } from '../../http/staff.ts';
 import { WORKFLOW_ACTIONS, type WorkflowAction } from '@archive-vko/shared';
 
 /** Общие части административного API: каталог и выставки. */
+
+/** Перевод для панели: русский, а если его нет — первый имеющийся. Панель ведётся на русском. */
+export const ruFirst = <T extends { locale: string }>(list: readonly T[]): T | undefined => list.find((t) => t.locale === 'ru') ?? list[0];
+
+/** Права, дающие доступ к каталогу в панели. */
+export const CATALOG_READ = ['catalog:edit', 'catalog:submit', 'catalog:review', 'catalog:publish'] as const;
+
+/** Филиалы, каталог которых видит сотрудник; null — все филиалы (право глобальное). */
+export function catalogBranchScope(staff: Staff): string[] | null {
+  if (CATALOG_READ.some((p) => staff.grants.global.has(p))) return null;
+  return [...new Set(CATALOG_READ.flatMap((p) => [...(staff.grants.byBranch.get(p) ?? [])]))];
+}
 
 /** Действие согласования в адресе пишется через дефис: /request-changes. */
 export const actionFromPath = (segment: string): WorkflowAction | null => {

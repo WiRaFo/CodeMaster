@@ -29,6 +29,14 @@ export function HomePage() {
     { key: 'findBranch', to: href('branches'), Icon: MapPin },
   ] as const;
 
+  // «Полезная информация» (ТЗ §5.1, F-016): четыре справочных перехода, все на рабочие страницы.
+  const usefulLinks = [
+    { key: 'catalogHelp', to: href('faq') },
+    { key: 'fonds', to: href('catalog/fonds') },
+    { key: 'published', to: `${href('catalog')}?hasDigitalCopy=true` },
+    { key: 'branches', to: href('branches') },
+  ] as const;
+
   return (
     <>
       <section aria-labelledby="home-banner-title" className="home-banner mb-10 rounded-lg border-2 border-border p-5 sm:p-8">
@@ -65,6 +73,19 @@ export function HomePage() {
             {t('home.advancedSearch')}
           </Link>
         </p>
+      </section>
+
+      <section aria-labelledby="home-useful" className="mb-10">
+        <BlockHeading id="home-useful" title={t('home.useful.title')} />
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {usefulLinks.map(({ key, to }) => (
+            <li key={key}>
+              <LinkCard to={to} title={t(`home.useful.${key}.title`)}>
+                <p>{t(`home.useful.${key}.text`)}</p>
+              </LinkCard>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {home.status === 'ready' ? (

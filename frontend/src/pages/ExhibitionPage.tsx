@@ -86,7 +86,6 @@ const ZOOM_STEP = 0.25;
  * источник и ссылка на документ каталога, если документ публичен.
  */
 export function ExhibitPage() {
-  const { t } = useTranslation();
   const { lang = 'kk', slug = '', number = '' } = useParams();
   const ex = useApi<ExhibitionDetail>(`/exhibitions/${encodeURIComponent(slug)}?lang=${lang}`);
   const position = Number.parseInt(number, 10);

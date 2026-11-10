@@ -82,7 +82,7 @@ export const branchListSchema = z.object({
 
 /** Лента новостей (ТЗ §5.11, с. 12). На главной показываются последние записи. */
 export const newsListSchema = z
-  .object({ rubric: shortText(100).optional(), lang: langSchema.optional() })
+  .object({ rubric: shortText(100).optional(), q: shortText(200).optional(), lang: langSchema.optional() })
   .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(10) }));
 export type NewsListQuery = z.infer<typeof newsListSchema>;
 

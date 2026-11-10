@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { AdminHeading, ErrorMessage } from './AdminApp.tsx';
 import { adminRequest, errorText } from './api.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 interface Item {
   id: string;
@@ -56,7 +57,7 @@ export function FeedbackAdminPage() {
             {list.data.items.map((f) => (
               <li key={f.id} className="rounded-md border border-border bg-surface p-3">
                 <p className="text-sm text-muted">
-                  <time dateTime={f.createdAt}>{new Date(f.createdAt).toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })}</time>
+                  <time dateTime={f.createdAt}>{formatDateTime(f.createdAt)}</time>
                   {` · ${TOPIC[f.topic] ?? f.topic} · ${f.locale.toUpperCase()} · ${STATUS[f.status]}`}
                   {f.pagePath ? ` · ${f.pagePath}` : ''}
                 </p>

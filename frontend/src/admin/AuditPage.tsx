@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router';
 import { AdminHeading, ErrorMessage } from './AdminApp.tsx';
 import { AUDIT_LABEL } from './labels.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 interface Page {
   items: Array<{ id: string; at: string; user: string | null; action: string; entityType: string | null; summary: string; ip: string | null }>;
@@ -41,7 +42,7 @@ export function AuditPage() {
               <tbody>
                 {log.data.items.map((r) => (
                   <tr key={r.id}>
-                    <td><time dateTime={r.at}>{new Date(r.at).toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })}</time></td>
+                    <td><time dateTime={r.at}>{formatDateTime(r.at)}</time></td>
                     <td>{r.user ?? '—'}</td>
                     <td>{AUDIT_LABEL[r.action] ?? r.action}</td>
                     <td>{r.summary}</td>

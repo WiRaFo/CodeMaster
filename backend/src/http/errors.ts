@@ -1,4 +1,4 @@
-import type { FastifyError, FastifyInstance } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 
 /** Коды ошибок API (docs/api-design.md §2). Текст для пользователя клиент берёт по коду из словаря i18n. */
@@ -63,4 +63,16 @@ export function registerErrorHandling(app: FastifyInstance): void {
   app.setNotFoundHandler((request, reply) =>
     reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Resource not found', requestId: request.id } }),
   );
+}
+
+/**
+ * Оптимистическая блокировка: клиент присылает в If-Match время последнего изменения записи, которую видел.
+ * Если запись с тех пор изменили, сохранение отклоняется с 409, чтобы не затереть чужую правку.
+ * Без заголовка проверка не выполняется (служебные запросы и тесты).
+ */
+export function assertIfMatch(request: FastifyRequest, updatedAt: Date): void {
+  const ifMatch = request.headers['if-match'];
+  if (typeof ifMatch === 'string' && ifMatch !== updatedAt.toISOString()) {
+    throw new ApiError(409, 'CONFLICT', 'The record was changed by someone else; reload it');
+  }
 }

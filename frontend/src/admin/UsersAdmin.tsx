@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { AdminHeading, ErrorMessage } from './AdminApp.tsx';
 import { AdminApiError, adminRequest, errorText } from './api.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 interface RoleRef { code: string; branchSlug: string | null }
 interface UserRow {
@@ -28,7 +29,7 @@ const ERRORS: Record<string, string> = {
   FORBIDDEN: 'Нельзя назначить роль с правами шире ваших или менять сотрудника с более широкими правами.',
   VALIDATION_FAILED: 'Проверьте поля: почта, имя (от 3 символов), пароль (от 12 символов), у администратора филиала выбран филиал.',
 };
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' }) : 'не входил');
+const when = (iso: string | null) => (iso ? formatDateTime(iso) : 'не входил');
 
 /**
  * Сотрудники и роли (F-142, F-143). Список, создание, смена ролей, блокировка и новый пароль.
