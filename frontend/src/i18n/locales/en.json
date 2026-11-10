@@ -644,5 +644,14 @@
     "decade": "{{decade}}s",
     "empty": "No events yet.",
     "fullHistory": "Full history of the archive"
+  },
+  "persons": {
+    "title": "Historical figures",
+    "lead": "People connected with the history of East Kazakhstan Region, from the archive's calendar of memorable dates.",
+    "empty": "No one yet.",
+    "biography": "Biography",
+    "noBiography": "A biography will be published once the archive prepares the text. Below are the entries from the calendar of memorable dates.",
+    "dates": "In the calendar of memorable dates",
+    "source": "Information from the calendar of memorable dates provided by the State Archive of East Kazakhstan Region."
   }
 }

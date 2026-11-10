@@ -64,6 +64,28 @@ describe('цифровая история региона (F-080–F-082)', () =>
     }
   });
 
+  it('личности (F-086): список, страница с записями календаря, снятая личность — 404', async () => {
+    const list = await t.get('/api/v1/history/persons?lang=ru');
+    const items = list.body['items'] as Array<{ slug: string; fullName: string; lifeYears: string | null }>;
+    expect(items).toHaveLength(8);
+    expect(items.find((p) => p.slug === 'burov-pavel')).toMatchObject({ fullName: 'Буров Павел Петрович', lifeYears: '1902–1944' });
+    const kk = await t.get('/api/v1/history/persons/auezov-mukhtar?lang=kk');
+    expect(kk.body).toMatchObject({ fullName: 'Мұхтар Омарханұлы Әуезов', contentLang: 'kk', biography: null });
+    expect(kk.body['memorableDates']).toEqual([
+      { calendarYear: 2022, dateLabel: '28 қыркүйек', text: expect.stringContaining('Абай жолы'), contentLang: 'kk' },
+    ]);
+    const pankratyev = await t.get('/api/v1/history/persons/pankratyev-dmitry?lang=ru');
+    expect((pankratyev.body['memorableDates'] as unknown[]).length).toBe(2);
+    await t.db.historicalPerson.update({ where: { slug: 'burov-pavel' }, data: { publicationStatus: 'draft' } });
+    try {
+      expect((await t.get('/api/v1/history/persons/burov-pavel')).status).toBe(404);
+      expect(((await t.get('/api/v1/history/persons')).body['items'] as Array<{ slug: string }>).map((p) => p.slug)).not.toContain('burov-pavel');
+    } finally {
+      await t.db.historicalPerson.update({ where: { slug: 'burov-pavel' }, data: { publicationStatus: 'published' } });
+    }
+    expect((await t.get('/api/v1/history/persons/no-such-person')).status).toBe(404);
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

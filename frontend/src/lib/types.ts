@@ -437,3 +437,16 @@ export interface TimelineEvent extends Localized {
   sourceNote: string | null;
   dataOrigin: DataOrigin;
 }
+
+/** Историческая личность (GET /history/persons, F-086). */
+export interface PersonSummary extends Localized {
+  slug: string;
+  fullName: string;
+  lifeYears: string | null;
+  dataOrigin: DataOrigin;
+}
+export interface PersonDetail extends PersonSummary {
+  biography: string | null;
+  sourceNote: string | null;
+  memorableDates: Array<{ calendarYear: number; dateLabel: string; text: string; contentLang: string }>;
+}
