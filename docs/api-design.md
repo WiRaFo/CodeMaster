@@ -337,3 +337,8 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 
 Не сделано в 10a: `POST /auth/password`, управление пользователями и ролями (F-142, F-143), импорт и экспорт (F-145), ограничение входа хранится в памяти процесса (для одного экземпляра API; при нескольких — Redis), счётчики обзора считаются по всем филиалам.
 
+### Безопасность (ЭТАП 13)
+
+- Все ответы API: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Cross-Origin-Resource-Policy: same-origin`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy`, CSP `default-src 'none'; frame-ancestors 'none'` (маршрут может задать свою), HSTS при `NODE_ENV=production`.
+- Каждый маршрут `/admin/*`, найденный при сборке приложения, без сессии отвечает `401`, сотруднику без прав — `403 FORBIDDEN` до разбора тела и поиска записи (тест `api-admin-guard.test.ts`; исключение — собственные уведомления). Раньше 16 маршрутов сначала искали запись и отвечали `404`/`400`, что позволяло вошедшему без прав узнавать о существовании id.
+- `TRUST_PROXY` (по умолчанию `false`): адрес клиента для ограничителей частоты из `X-Forwarded-For` только за своим прокси. Проверка Origin сверяет с `request.host`, который учитывает `X-Forwarded-Host` тоже только при `TRUST_PROXY`.

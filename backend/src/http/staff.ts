@@ -25,9 +25,9 @@ export function assertSameOrigin(request: FastifyRequest, allowed: readonly stri
   if (site === 'cross-site' || site === 'same-site') throw new ApiError(403, 'CSRF_FAILED', 'Cross-site request rejected');
   const origin = request.headers.origin;
   if (!origin) return;
-  const forwardedHost = request.headers['x-forwarded-host'];
-  const host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) ?? request.headers.host;
-  const sameAsHost = host !== undefined && (origin === `http://${host}` || origin === `https://${host}`);
+  // request.host учитывает X-Forwarded-Host только при включённом TRUST_PROXY, иначе это заголовок Host.
+  const host = request.host;
+  const sameAsHost = host !== '' && (origin === `http://${host}` || origin === `https://${host}`);
   if (!sameAsHost && !allowed.includes(origin)) throw new ApiError(403, 'CSRF_FAILED', 'Origin not allowed');
 }
 

@@ -24,7 +24,7 @@ export function ExhibitionPage() {
   return (
     <article>
       <Breadcrumbs lang={lang} />
-      <PageHeading title={e.title ?? e.slug}>
+      <PageHeading title={e.title ?? e.slug} meta={{ description: e.lead ?? e.description ?? undefined }}>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <OriginBadge origin={e.dataOrigin} />
           {years ? <span className="text-muted">{t('exhibitions.years', { years })}</span> : null}

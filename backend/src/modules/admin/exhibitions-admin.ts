@@ -253,6 +253,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
   });
 
   app.patch('/admin/exhibitions/:id', async (request) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id } = ids.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
     const ifMatch = request.headers['if-match'];
@@ -299,6 +300,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
   });
 
   app.post('/admin/exhibitions/:id/items', async (request, reply) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id } = ids.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
     const input = exhibitionItemInputSchema.parse(request.body);
@@ -322,6 +324,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
   }
 
   app.patch('/admin/exhibitions/:id/items/:itemId', async (request) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id, itemId } = itemIds.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
     await itemOf(id, itemId);
@@ -338,6 +341,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
   });
 
   app.delete('/admin/exhibitions/:id/items/:itemId', async (request, reply) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id, itemId } = itemIds.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
     await itemOf(id, itemId);
@@ -352,6 +356,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
 
   /** Порядок экспонатов: кнопки «выше» и «ниже» (F-148; без обязательного перетаскивания). */
   app.post('/admin/exhibitions/:id/items/:itemId/move', async (request) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id, itemId } = itemIds.parse(request.params);
     const { direction } = z.object({ direction: z.enum(['up', 'down']) }).parse(request.body);
     const { staff } = await requireEditable(request, id);
@@ -374,6 +379,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
   });
 
   app.post('/admin/exhibitions/:id/items/:itemId/image', async (request, reply) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id, itemId } = itemIds.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
     if (!hasGrant(staff.grants, 'assets:upload')) throw new ApiError(403, 'FORBIDDEN', 'Permission assets:upload required');
@@ -425,6 +431,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
 
   /** Согласование выставки (ТЗ §6.7): те же переходы, что у каталога, с правами exhibitions:*. */
   app.post('/admin/exhibitions/:id/:action', async (request) => {
+    requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const params = z.object({ id: z.uuid(), action: z.string().max(20) }).parse(request.params);
     const action = actionFromPath(params.action);
     if (!action) throw notFound();

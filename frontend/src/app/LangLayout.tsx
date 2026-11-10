@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import { isLocale } from '../i18n/index.ts';
+import { setLanguageLinks } from '../lib/head.ts';
 import { writeStorage } from '../lib/storage.ts';
 import { preferredLocale, LANG_STORAGE_KEY } from './preferred-locale.ts';
 import { SkipLink } from '../components/accessibility/SkipLink.tsx';
@@ -33,6 +34,10 @@ export function LangLayout() {
     document.documentElement.lang = lang;
     writeStorage(LANG_STORAGE_KEY, lang);
   }, [lang, valid, i18n]);
+
+  useEffect(() => {
+    if (valid) setLanguageLinks(window.location.origin, pathname);
+  }, [valid, pathname]);
 
   useEffect(() => {
     if (firstRender.current) {

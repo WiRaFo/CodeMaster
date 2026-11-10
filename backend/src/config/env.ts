@@ -13,6 +13,19 @@ const envSchema = z.object({
     .string()
     .default('')
     .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+  /**
+   * Доверие X-Forwarded-For/Host: false (по умолчанию), true или адреса прокси через запятую
+   * (например loopback или 10.0.0.0/8). Без своего обратного прокси оставлять false.
+   */
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((v): boolean | string => {
+      const value = v.trim();
+      if (value === '' || value === 'false') return false;
+      if (value === 'true') return true;
+      return value;
+    }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 export type Env = z.infer<typeof envSchema>;

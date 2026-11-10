@@ -125,7 +125,7 @@ export function PublicationPage() {
       <nav aria-label={t('history.breadcrumbs')} className="mb-2 text-sm">
         <Link to={`/${lang}/history`}>{t('nav.history')}</Link>
       </nav>
-      <PageHeading title={p.title ?? p.slug}>
+      <PageHeading title={p.title ?? p.slug} meta={{ description: p.lead ?? undefined }}>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <OriginBadge origin={p.dataOrigin} />
           {years ? <span className="text-muted">{t('history.years', { years })}</span> : null}

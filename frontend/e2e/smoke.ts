@@ -10,7 +10,8 @@ import { readFileSync } from 'node:fs';
 import { chromium, type Browser, type Page } from 'playwright';
 
 const require = createRequire(import.meta.url);
-const AXE_PATH = require.resolve('axe-core/axe.min.js');
+// axe подключается через evaluate (протокол отладки), а не тегом <script>: тег запретила бы CSP сайта.
+const AXE_SOURCE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
@@ -77,7 +78,11 @@ async function openWithPrefs(page: Page, path: string, prefs: Record<string, unk
 }
 
 async function axe(page: Page): Promise<string[]> {
-  await page.addScriptTag({ path: AXE_PATH });
+  if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE_SOURCE);
+  // Контраст проверяется по итоговому виду: ждём конца конечных анимаций (появление диалогов, всплывающих окон).
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))),
+  );
   return page.evaluate(async () => {
     type Node = { target: string[]; any: Array<{ data?: { messageKey?: string } | null }> };
     type Rule = { id: string; nodes: Node[] };
@@ -107,6 +112,16 @@ async function main() {
     const RESTRICTED_DOC = `/kk/catalog/documents/${restrictedDoc.id}`;
     PAGES.push(OPEN_DOC, RESTRICTED_DOC, `/en/catalog/documents/${openDoc.id}`);
     const browser = await chromium.launch();
+    // Любое нарушение CSP сборки (встроенный скрипт без хеша, чужой адрес) — ошибка проверки.
+    const cspViolations: string[] = [];
+    const newPage = browser.newPage.bind(browser);
+    browser.newPage = async (options) => {
+      const page = await newPage(options);
+      page.on('console', (msg) => {
+        if (/Content Security Policy/i.test(msg.text())) cspViolations.push(`${page.url()}: ${msg.text().slice(0, 200)}`);
+      });
+      return page;
+    };
 
     for (const [name, prefs] of THEMES) {
       for (const path of PAGES) {
@@ -586,6 +601,8 @@ async function main() {
     }
 
     await adminScenarios(browser);
+    await seoScenario(browser);
+    check(cspViolations.length === 0, `нет нарушений CSP: ${cspViolations.slice(0, 3).join(' | ')}`);
 
     await browser.close();
   } finally {
@@ -597,6 +614,40 @@ async function main() {
     for (const f of failures) console.error(`  ✗ ${f}`);
     process.exit(1);
   }
+}
+
+/** ЭТАП 13: заголовки и метаданные сборки, robots.txt, канонический адрес и языковые версии, noindex. */
+async function seoScenario(browser: Browser) {
+  const index = await fetch(`${BASE}/ru/faq`);
+  const html = await index.text();
+  check(/<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/.test(html), 'SEO/безопасность: CSP со хешем встроенного скрипта в index.html');
+  check(index.headers.get('x-frame-options') === 'DENY' && index.headers.get('x-content-type-options') === 'nosniff', 'SEO/безопасность: X-Frame-Options и nosniff у страниц сайта');
+  const robots = await (await fetch(`${BASE}/robots.txt`)).text();
+  check(robots.includes('Disallow: /admin') && robots.includes('Disallow: /api/'), 'SEO: robots.txt закрывает панель и API');
+  const api = await fetch(`${BASE}/api/v1/branches`);
+  check(api.headers.get('x-frame-options') === 'DENY' && (api.headers.get('content-security-policy') ?? '').includes("default-src 'none'"), 'безопасность: заголовки у ответов API');
+
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`${BASE}/ru/faq`);
+  await page.locator('#main h1').waitFor();
+  const head = await page.evaluate(() => ({
+    canonical: document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.getAttribute('href'),
+    alternates: [...document.querySelectorAll<HTMLLinkElement>('link[rel="alternate"][hreflang]')].map((l) => `${l.hreflang} ${l.getAttribute('href')}`),
+    description: document.querySelector('meta[name="description"]')?.getAttribute('content') ?? '',
+    ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute('content') ?? '',
+    robots: document.querySelector('meta[name="robots"]'),
+    title: document.title,
+  }));
+  check(head.canonical === `${BASE}/ru/faq`, `SEO: канонический адрес (${head.canonical})`);
+  check(['kk', 'ru', 'en', 'x-default'].every((l) => head.alternates.some((a) => a.startsWith(`${l} ${BASE}/`) && a.endsWith('/faq'))), `SEO: языковые версии hreflang (${head.alternates.join(', ')})`);
+  check(head.description.startsWith('Государственный архив') && head.ogTitle === head.title && head.robots === null, 'SEO: описание и og:title на русском, страница индексируется');
+  await page.goto(`${BASE}/kk/nonexistent`);
+  await page.locator('#main h1').waitFor();
+  check((await page.locator('meta[name="robots"]').getAttribute('content')) === 'noindex', 'SEO: страница «не найдено» — noindex');
+  await page.goto(`${BASE}/en/faq`);
+  await page.locator('#main h1').waitFor();
+  check(((await page.locator('meta[name="description"]').getAttribute('content')) ?? '').startsWith('State Archive') && (await page.locator('meta[name="robots"]').count()) === 0, 'SEO: noindex снимается при переходе, описание на английском');
+  await page.close();
 }
 
 async function signIn(browser: Browser, who: { email: string; password: string }): Promise<Page> {

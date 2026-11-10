@@ -7,7 +7,7 @@ export function NotFoundPage() {
   const { lang = 'kk' } = useParams();
   return (
     <>
-      <PageHeading title={t('notFound.title')} />
+      <PageHeading title={t('notFound.title')} meta={{ noindex: true }} />
       <p className="mb-4">{t('notFound.text')}</p>
       <Link to={`/${lang}`}>{t('notFound.toHome')}</Link>
     </>

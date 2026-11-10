@@ -22,23 +22,46 @@ export interface AppOptions {
   /** Cookie с флагом Secure (production за HTTPS). */
   secureCookies?: boolean;
   allowedOrigins?: readonly string[];
+  /**
+   * Доверие заголовкам X-Forwarded-* (адрес клиента для ограничителей частоты, исходный Host).
+   * Включать только за своим обратным прокси: иначе клиент подставит любой адрес. См. TRUST_PROXY.
+   */
+  trustProxy?: boolean | string;
+  /** Наблюдатель за регистрацией маршрутов (тест проверяет, что каждый маршрут /admin закрыт). */
+  onRoute?: (route: { method: string | string[]; url: string }) => void;
 }
 
+/** Заголовки безопасности для всех ответов API (S-011). Маршрут может задать свою политику CSP. */
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+};
+const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
 /** Сборка приложения без запуска сервера (используется и в тестах через app.inject). */
-export async function buildApp({ db, storage, logLevel = 'info', secureCookies = false, allowedOrigins = [] }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, storage, logLevel = 'info', secureCookies = false, allowedOrigins = [], trustProxy = false, onRoute }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel, redact: ['req.headers.cookie', 'req.headers.authorization'] },
     genReqId: () => randomUUID(),
     requestIdHeader: false,
     routerOptions: { maxParamLength: 200 },
     bodyLimit: 1_048_576,
+    trustProxy,
   });
+  if (onRoute) app.addHook('onRoute', (route) => onRoute({ method: route.method, url: route.url }));
 
   registerErrorHandling(app);
 
   app.addHook('onSend', async (request, reply) => {
     reply.header('X-Request-Id', request.id);
-    reply.header('X-Content-Type-Options', 'nosniff');
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) reply.header(name, value);
+    if (!reply.hasHeader('Content-Security-Policy')) reply.header('Content-Security-Policy', API_CSP);
+    // HSTS имеет смысл только за HTTPS; тот же признак включает флаг Secure у cookie.
+    if (secureCookies) reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     if (!reply.hasHeader('Cache-Control')) {
       // Ответы админки и входа содержат служебные данные: не кешируются нигде.
       const privateArea = request.url.startsWith('/api/v1/admin') || request.url.startsWith('/api/v1/auth');
