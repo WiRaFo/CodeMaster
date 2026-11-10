@@ -325,6 +325,8 @@ export interface PublicationSummary extends Localized {
 }
 export interface PublicationList extends Paged<PublicationSummary> {
   topics: Array<{ slug: string; name: string | null; count: number }>;
+  /** Населённые пункты с публикациями. Старый API поле не отдаёт. */
+  settlements?: Array<{ slug: string; name: string | null; count: number }>;
 }
 export interface PublicationDetail extends PublicationSummary {
   bodyText: string | null;

@@ -479,7 +479,8 @@
     "authorship": "Author",
     "source": "Source",
     "sourceUrl": "Source link",
-    "related": "More on this theme"
+    "related": "More on this theme",
+    "settlement": "Place"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",

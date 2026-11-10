@@ -101,7 +101,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     }
     const where = and(conds);
     const offset = (query.page - 1) * query.pageSize;
-    const [rows, [count], topics] = await Promise.all([
+    const [rows, [count], topics, settlements] = await Promise.all([
       db.$queryRaw<Row[]>`${select(lang)} ${where} ORDER BY p.is_featured DESC, p.published_at DESC, p.slug LIMIT ${query.pageSize} OFFSET ${offset}`,
       db.$queryRaw<Array<{ total: bigint }>>`SELECT count(*) AS total FROM publications p ${where}`,
       db.$queryRaw<Array<{ slug: string; name: string | null; count: bigint }>>`
@@ -111,10 +111,19 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
         FROM categories c ${bestTranslation('category', 'ct', 'c.id', lang, ['name'])}
         WHERE c.kind = 'history_topic'
         ORDER BY c.sort_order`,
+      // Для фильтра — только населённые пункты, у которых есть опубликованные публикации.
+      db.$queryRaw<Array<{ slug: string; name: string | null; count: bigint }>>`
+        SELECT s.slug, st.name, count(*) AS count
+        FROM publication_settlements ps
+        JOIN publications p ON p.id = ps.publication_id AND ${PUBLIC_PUBLICATION}
+        JOIN settlements s ON s.id = ps.settlement_id
+        ${bestTranslation('settlement', 'st', 's.id', lang, ['name'])}
+        GROUP BY s.slug, st.name ORDER BY st.name`,
     ]);
     return {
       ...pageOf(rows.map(summary), Number(count?.total ?? 0), query.page, query.pageSize),
       topics: topics.map((x) => ({ slug: x.slug, name: x.name, count: Number(x.count) })),
+      settlements: settlements.map((x) => ({ slug: x.slug, name: x.name, count: Number(x.count) })),
     };
   });
 
