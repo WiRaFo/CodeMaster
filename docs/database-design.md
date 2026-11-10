@@ -273,4 +273,5 @@ branches 1─* fonds 1─* inventories 1─* cases 1─* documents 1─* digital
 ## 14. Изменения ЭТАПА 8 (2026-11-09)
 
 - Миграция `20261109200000_exhibitions_public`: `exhibition_item_translations.alt_text`; внешние ключи `exhibition_items.document_id` и `fond_id` (`ON DELETE SET NULL`); представления `public_exhibitions_v` (опубликованные, не удалённые) и `public_exhibition_images_v` (открытый, готовый, проверенный антивирусом файл; страница документа — только из `public_document_pages_v`).
+- Миграция `20261111000000_publication_cover`: `publication_translations.cover_alt` (описание обложки для незрячих) и представление `public_publication_covers_v` (обложка опубликованной публикации: открытый, готовый, проверенный антивирусом файл; скан страницы документа — только если страница публична).
 - Справочник: категории `exhibition_topic` (те же тематики, что у истории региона). Демо-набор: две выставки с пометкой «Демо» и SVG-заглушками в корзине `archive-demo`.

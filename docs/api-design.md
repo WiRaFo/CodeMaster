@@ -331,6 +331,8 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 |---|---|
 | `GET /history?topic&period&settlement&lang&page&pageSize` | Опубликованные публикации; `topics` — все 11 направлений ТЗ с числом публикаций |
 | `GET /history/:slug` | Текст, источник, авторство, тематики, населённые пункты, `document` из `public_documents_v` (закрытый — `null`), `related` по общей тематике |
+| `GET /history/:slug/cover` | Обложка публикации из `public_publication_covers_v`: только открытый, готовый и проверенный антивирусом файл опубликованной публикации; иначе `404`. В выдаче публикаций `cover: { url, alt } | null` |
+| `/admin/memory/publications[/:id]` | Публикации в панели: GET, POST, PUT (If-Match), DELETE (`{confirm:true}`). Черновик — `publications:edit`, публикация и правка опубликованного — `publications:publish`. `POST/DELETE/GET …/:id/cover` — обложка (файл телом запроса, нужно `assets:upload`), до проверки антивирусом на сайте не видна; опубликованная обложка требует `translations.ru.coverAlt` |
 | `GET /faq?lang` | Опубликованные вопросы |
 | `POST /feedback` | `{ topic, message, contactEmail?, consent?, pagePath?, website, lang }` → `202`. Проверка Origin, 5 отзывов за 10 минут с адреса, бот-ловушка `website`. IP не сохраняется |
 | `GET /admin/feedback`, `POST /admin/feedback/:id/status` | Право `feedback:read`; статусы new, read, archived; смена статуса пишется в журнал |

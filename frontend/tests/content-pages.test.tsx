@@ -21,6 +21,7 @@ const DETAIL: PublicationDetail = {
   related: [],
   persons: [{ slug: 'auezov-mukhtar', fullName: 'Ауэзов Мухтар Омарханович', lifeYears: '1897–1961' }],
   events: [{ slug: 'archive-founded', year: 1940, title: 'Образован архив' }],
+  cover: { url: '/api/v1/history/demo-a/cover', alt: 'Здание архива, 1960-е годы' },
 };
 const FAQ = { items: [{ id: 'f1', question: 'Можно ли подать заявление через сайт?', answer: 'Нет. Сайт справочный.', dataOrigin: 'demo', contentLang: 'ru', translationStatus: 'reviewed' }] };
 
@@ -76,6 +77,7 @@ describe('цифровая история региона (F-080–F-084)', () =>
   it('публикация: абзацы текста, тематика, документ каталога с пометкой доступа, источник', async () => {
     const { container } = renderAt('/ru/history/demo-a');
     expect(await screen.findByRole('heading', { level: 1, name: '[Демо] Как читать шифр' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Здание архива, 1960-е годы' })).toHaveAttribute('src', '/api/v1/history/demo-a/cover');
     expect(screen.getByText('Первый абзац.')).toBeInTheDocument();
     expect(screen.getByText('Второй абзац.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ф. 1. Оп. 1. Д. 1. — Протокол' })).toHaveAttribute('href', '/ru/catalog/documents/11111111-1111-4111-8111-111111111111');

@@ -6,6 +6,7 @@ import { notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { pageOf } from '../../http/pagination.ts';
 import { and, bestTranslation } from '../../infrastructure/database/sql.ts';
+import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { archiveCodeDto } from '../catalog/catalog.mapper.ts';
 
 /**
@@ -34,6 +35,8 @@ interface Row {
   body_text: string | null;
   content_lang: string | null;
   translation_status: string | null;
+  cover_alt: string | null;
+  has_cover: boolean;
   topics: Array<{ slug: string; name: string | null }>;
   settlements: Array<{ slug: string; name: string | null }>;
 }
@@ -42,7 +45,8 @@ function select(lang: Locale): Prisma.Sql {
   return Prisma.sql`
     SELECT p.id, p.slug, p.kind::text AS kind, p.period_text, p.year_from, p.year_to, p.published_at,
            p.data_origin::text AS data_origin, p.source_note, p.authorship, p.source_url, p.document_id,
-           t.title, t.lead, t.body_text, t.locale AS content_lang, t.translation_status,
+           t.title, t.lead, t.body_text, t.locale AS content_lang, t.translation_status, t.cover_alt,
+           EXISTS (SELECT 1 FROM public_publication_covers_v pc WHERE pc.publication_id = p.id) AS has_cover,
            coalesce((
              SELECT json_agg(json_build_object('slug', c.slug, 'name', ct.name) ORDER BY c.sort_order)
              FROM publication_categories pc
@@ -58,7 +62,7 @@ function select(lang: Locale): Prisma.Sql {
              WHERE ps.publication_id = p.id
            ), '[]'::json) AS settlements
     FROM publications p
-    ${bestTranslation('publication', 't', 'p.id', lang, ['title', 'lead', 'body_text'])}`;
+    ${bestTranslation('publication', 't', 'p.id', lang, ['title', 'lead', 'body_text', 'cover_alt'])}`;
 }
 
 const summary = (p: Row) => ({
@@ -75,9 +79,13 @@ const summary = (p: Row) => ({
   dataOrigin: p.data_origin,
   contentLang: p.content_lang,
   translationStatus: p.translation_status,
+  // Обложка — только проверенный открытый файл опубликованной публикации (public_publication_covers_v).
+  cover: p.has_cover ? { url: `/api/v1/history/${encodeURIComponent(p.slug)}/cover`, alt: p.cover_alt ?? '' } : null,
 });
 
-export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClient }): Promise<void> {
+const COVER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
   const { db } = opts;
 
   app.get('/history', async (request, reply) => {
@@ -223,6 +231,24 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       memorableDates: dates.map((d) => ({ calendarYear: d.calendar_year, dateLabel: d.date_label, text: d.text, contentLang: d.content_lang })),
       publications: publications.map(summary),
     };
+  });
+
+  app.get('/history/:slug/cover', async (request, reply) => {
+    const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
+    const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
+      SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_publication_covers_v WHERE slug = ${slug}`;
+    if (!file || !COVER_TYPES.has(file.mime_type)) throw notFound();
+    const body = await opts.storage.read(file.storage_bucket, file.storage_key);
+    if (!body) {
+      request.log.warn({ assetId: file.asset_id }, 'publication cover is missing in storage');
+      throw notFound();
+    }
+    return reply
+      .header('Content-Type', file.mime_type)
+      .header('Content-Disposition', 'inline')
+      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+      .header('Cache-Control', 'public, max-age=300')
+      .send(body);
   });
 
   app.get('/history/:slug', async (request, reply) => {

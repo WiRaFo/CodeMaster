@@ -1126,6 +1126,8 @@ model PublicationTranslation {
   body              Json?
   bodyText          String?                  @map("body_text")
   seoKeywords       String?                  @map("seo_keywords")
+  /// Описание обложки для незрячих (alt); пусто — обложки нет или она не описана
+  coverAlt          String?                  @map("cover_alt")
   translationStatus TranslationStatus        @default(missing) @map("translation_status")
   searchVector      Unsupported("tsvector")? @map("search_vector")
 

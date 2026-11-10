@@ -322,6 +322,8 @@ export interface PublicationSummary extends Localized {
   publishedAt: string;
   topics: Array<{ slug: string; name: string | null }>;
   settlements: Array<{ slug: string; name: string | null }>;
+  /** Обложка, если файл проверен и открыт; alt — описание для незрячих. Старый API поле не отдаёт. */
+  cover?: { url: string; alt: string } | null;
 }
 export interface PublicationList extends Paged<PublicationSummary> {
   topics: Array<{ slug: string; name: string | null; count: number }>;

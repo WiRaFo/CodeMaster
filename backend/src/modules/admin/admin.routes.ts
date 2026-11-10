@@ -534,7 +534,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   await userAdminRoutes(app, { db });
   await newsAdminRoutes(app, { db });
   await memoryAdminRoutes(app, { db });
-  await publicationsAdminRoutes(app, { db });
+  await publicationsAdminRoutes(app, { db, storage });
   await exportAdminRoutes(app, { db });
   await overviewAdminRoutes(app, { db });
 

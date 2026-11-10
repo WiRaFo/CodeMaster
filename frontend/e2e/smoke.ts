@@ -846,6 +846,16 @@ async function memoryAdminScenario(browser: Browser) {
   check(await personPage.getByRole('region', { name: 'Публикации' }).getByRole('link', { name: pubTitle }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: публикация из панели на странице личности');
   await personPage.close();
 
+  // Обложка: загружается в панели, но до проверки антивирусом на сайте не показывается.
+  await page.getByRole('button', { name: `Изменить: ${pubTitle}` }).click();
+  const editForm = page.getByRole('form', { name: 'Правка публикации' });
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
+  await editForm.getByLabel('Загрузить обложку').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png });
+  check(await editForm.getByText(/ожидает проверки антивирусом/).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: обложка загружена и ждёт проверки антивирусом');
+  const coverOnSite = await fetch(`${BASE}/api/v1/history/e2e-publication-${tag}/cover`);
+  check(coverOnSite.status === 404, 'архив памяти: непроверенная обложка не отдаётся сайтом');
+  await editForm.getByRole('button', { name: 'Отмена' }).click();
+
   await page.getByRole('button', { name: `Удалить: ${pubTitle}` }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
   await page.getByRole('status').filter({ hasText: 'удалено' }).waitFor();

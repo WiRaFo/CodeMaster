@@ -293,6 +293,8 @@ export const publicationInputSchema = z.object({
     title: z.string().trim().min(5).max(300),
     lead: optionalLongText(1000),
     bodyText: z.string().trim().min(10).max(50_000),
+    /** Описание обложки для незрячих; нужно, если обложка загружена. */
+    coverAlt: optionalLongText(300),
   })),
 })
   .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
