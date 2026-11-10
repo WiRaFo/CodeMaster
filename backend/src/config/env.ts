@@ -36,6 +36,16 @@ const envSchema = z.object({
   AI_EMBED_MODEL: z.string().min(1).default('bge-m3'),
   /** Сколько ждать модель при поиске; дольше — посетитель получает обычную выдачу без смысловой части. */
   AI_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(4000),
+  /**
+   * Антивирус для загруженных файлов (S-013). none — файлы остаются «ожидают проверки» и на сайт не попадают.
+   * clamd — служба ClamAV на сервере архива: файлы проверяются в фоне, чистые появляются на сайте.
+   */
+  ANTIVIRUS_PROVIDER: z.enum(['none', 'clamd']).default('none'),
+  CLAMD_HOST: z.string().min(1).default('127.0.0.1'),
+  CLAMD_PORT: z.coerce.number().int().min(1).max(65_535).default(3310),
+  ANTIVIRUS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300_000).default(30_000),
+  /** Как часто проверять очередь, секунды. */
+  ANTIVIRUS_INTERVAL_S: z.coerce.number().int().min(5).max(3600).default(30),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 export type Env = z.infer<typeof envSchema>;
