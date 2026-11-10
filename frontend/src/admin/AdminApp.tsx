@@ -3,12 +3,16 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { AdminApiError, adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
+import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
 import { FeedbackAdminPage } from './FeedbackAdminPage.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 import { DocumentEditPage } from './DocumentEditPage.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
 import { ExhibitionEditPage, ExhibitionsAdminPage, canSeeExhibitions } from './ExhibitionsAdmin.tsx';
 import { HierarchyPage } from './HierarchyPage.tsx';
+import { ImportPage } from './ImportPage.tsx';
+import { FaqAdminPage, PageEditPage, PagesAdminPage } from './ContentAdmin.tsx';
+import { UsersAdminPage } from './UsersAdmin.tsx';
 import { LoginPage } from './LoginPage.tsx';
 
 export interface AdminUser {
@@ -159,8 +163,13 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             <AdminNavItem to="/admin" end label={unread ? `Обзор (${unread} новых)` : 'Обзор'} />
             {catalog ? <AdminNavItem to="/admin/documents" label="Документы" /> : null}
             {catalog ? <AdminNavItem to="/admin/hierarchy" label="Фонды, описи, дела" /> : null}
+            {can('catalog:import') ? <AdminNavItem to="/admin/import" label="Импорт описи" /> : null}
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
+            {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
+            {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
+            {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
             {can('feedback:read') ? <AdminNavItem to="/admin/feedback" label="Отзывы" /> : null}
+            {can('users:manage') ? <AdminNavItem to="/admin/users" label="Сотрудники" /> : null}
             {can('audit:read') ? <AdminNavItem to="/admin/audit" label="Журнал действий" /> : null}
             <li>
               <a className="admin-nav-link" href="/ru">Открыть сайт</a>
@@ -175,10 +184,17 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="documents/new" element={can('catalog:edit') ? <DocumentEditPage /> : <NoAccess />} />
           <Route path="documents/:id" element={catalog ? <DocumentEditPage /> : <NoAccess />} />
           <Route path="hierarchy" element={catalog ? <HierarchyPage /> : <NoAccess />} />
+          <Route path="import" element={can('catalog:import') ? <ImportPage /> : <NoAccess />} />
           <Route path="exhibitions" element={exhibitions ? <ExhibitionsAdminPage /> : <NoAccess />} />
           <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
+          <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
+          <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
+          <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
+          <Route path="branches" element={can('branches:edit') ? <BranchesAdminPage /> : <NoAccess />} />
+          <Route path="branches/:id" element={can('branches:edit') ? <BranchEditPage /> : <NoAccess />} />
           <Route path="feedback" element={can('feedback:read') ? <FeedbackAdminPage /> : <NoAccess />} />
+          <Route path="users" element={can('users:manage') ? <UsersAdminPage /> : <NoAccess />} />
           <Route path="audit" element={can('audit:read') ? <AuditPage /> : <NoAccess />} />
           <Route path="*" element={<AdminHeading title="Раздел не найден" />} />
         </Routes>

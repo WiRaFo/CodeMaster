@@ -25,6 +25,10 @@ import type { ObjectStorage } from '../../infrastructure/storage/local-storage.t
 import { createHash, randomUUID } from 'node:crypto';
 import { writeAudit } from '../audit/audit.ts';
 import { exhibitionAdminRoutes } from './exhibitions-admin.ts';
+import { branchAdminRoutes } from './branches-admin.ts';
+import { importAdminRoutes } from './import-admin.ts';
+import { contentAdminRoutes } from './content-admin.ts';
+import { userAdminRoutes } from './users-admin.ts';
 import { MASTER_BUCKET, STATUS_RU, UPLOAD_LIMIT, UPLOAD_TYPES, actionFromPath, notifyWorkflow, sniffImage } from './admin-common.ts';
 import {
   branchOf,
@@ -580,6 +584,10 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   await exhibitionAdminRoutes(app, { db, storage });
+  await branchAdminRoutes(app, { db });
+  await importAdminRoutes(app, { db });
+  await contentAdminRoutes(app, { db });
+  await userAdminRoutes(app, { db });
 
   /** Отзывы и предложения посетителей (ЭТАП 7): чтение и смена статуса — право feedback:read. */
   app.get('/admin/feedback', async (request) => {

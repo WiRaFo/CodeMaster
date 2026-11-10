@@ -481,9 +481,16 @@
     }
   },
   "faq": {
-    "lead": "Frequently asked questions about the website.",
+    "lead": "Frequently asked questions, grouped by topic.",
     "demoNote": "The answers were prepared by the development team and will be agreed with the archive.",
-    "more": "Didn't find an answer? Ask the assistant or leave feedback:"
+    "more": "Didn't find an answer? Ask the assistant or leave feedback:",
+    "topic": {
+      "services": "Certificates and services",
+      "catalog": "Catalogue and search",
+      "access": "Access to documents",
+      "visit": "Visiting the archive",
+      "site": "Using the website"
+    }
   },
   "visitors": {
     "lead": "How to prepare for a visit to the archive.",
@@ -560,7 +567,39 @@
       "legislation": "Legislation",
       "reading-room": "Reading room",
       "symbols": "State symbols",
-      "links": "Useful links"
+      "links": "Useful links",
+      "paid": "Paid services"
     }
+  },
+  "breadcrumbs": {
+    "label": "Breadcrumb"
+  },
+  "fonds": {
+    "title": "Fonds",
+    "lead": "Guide to the fonds: open a fond, then an inventory and a file to see its documents. Only published descriptions are shown; closed fonds are not listed.",
+    "kindFilter": "Type of fond",
+    "kind": {
+      "all": "All fonds",
+      "organization": "Organisation fonds",
+      "personal": "Personal fonds",
+      "collection": "Collections"
+    },
+    "empty": "There are no fonds of this type in the catalogue yet.",
+    "count_one": "{{count}} fond found",
+    "count_other": "{{count}} fonds found",
+    "toSearch": "Search documents across the catalogue",
+    "branch": "Held at",
+    "years": "Years",
+    "units": "Storage units",
+    "historyNote": "Historical note",
+    "inventories": "Inventories",
+    "noInventories": "No published inventories.",
+    "cases": "Files",
+    "noCases": "No published files.",
+    "sheets_one": "{{count}} folio",
+    "sheets_other": "{{count}} folios",
+    "documents": "Documents",
+    "noDocuments": "Document descriptions for this file have not been added to the website yet. The file can be requested in the reading room by its reference code.",
+    "guide": "Guide to the fonds"
   }
 }

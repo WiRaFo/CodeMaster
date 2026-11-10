@@ -39,9 +39,6 @@ export function CalendarPage() {
   const first = cal.status === 'ready' ? cal.data.items[0] : undefined;
   return (
     <>
-      <nav aria-label={t('branches.breadcrumbs')} className="mb-2 text-sm">
-        <Link to={`/${lang}/history`}>{t('nav.history')}</Link>
-      </nav>
       <PageHeading title={t('calendar.title')}>
         <p className="mt-2 max-w-3xl">{t('calendar.lead')}</p>
       </PageHeading>

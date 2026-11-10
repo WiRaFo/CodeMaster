@@ -1489,6 +1489,8 @@ model GalleryItem {
 
 model FaqItem {
   id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Тема для группировки (дополнение к ТЗ §2): site, catalog, services, visit, access
+  topic             String            @default("site")
   sortOrder         Int               @default(0) @map("sort_order")
   publicationStatus PublicationStatus @default(draft) @map("publication_status")
   dataOrigin        DataOrigin        @map("data_origin")
@@ -1497,6 +1499,7 @@ model FaqItem {
 
   translations FaqItemTranslation[]
 
+  @@index([topic, sortOrder])
   @@map("faq_items")
 }
 

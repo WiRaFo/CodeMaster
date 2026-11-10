@@ -363,3 +363,46 @@ export interface InfoPageData {
   translationStatus: string;
   dataOrigin: DataOrigin;
 }
+
+/** Навигация по каталогу: фонд → опись → дело → документ (F-030). */
+export type AccessDto = 'open' | 'restricted';
+export interface FondSummary extends Localized {
+  id: string;
+  number: string;
+  archiveCode: ArchiveCodeDto;
+  title: string | null;
+  annotation: string | null;
+  historyNote: string | null;
+  kind: 'organization' | 'personal' | 'collection';
+  years: { from: number | null; to: number | null };
+  unitsCount: number | null;
+  access: AccessDto;
+  branch: { slug: string; name: string | null };
+}
+export interface FondDetail extends FondSummary {
+  inventories: Array<{ id: string; number: string; title: string | null; contentLang: string | null; years: { from: number | null; to: number | null }; access: AccessDto }>;
+}
+export interface InventoryDetail extends Localized {
+  id: string;
+  number: string;
+  title: string | null;
+  annotation: string | null;
+  archiveCode: ArchiveCodeDto;
+  years: { from: number | null; to: number | null };
+  access: AccessDto;
+  fond: { id: string; number: string; title: string | null };
+  cases: Array<{ id: string; number: string; title: string | null; contentLang: string | null; date: DateRange; sheetCount: number | null; access: AccessDto }>;
+}
+export interface CaseDetail extends Localized {
+  id: string;
+  number: string;
+  title: string | null;
+  annotation: string | null;
+  archiveCode: ArchiveCodeDto;
+  date: DateRange;
+  sheetCount: number | null;
+  access: AccessDto;
+  fond: { id: string; number: string; title: string | null };
+  inventory: { id: string; number: string; title: string | null };
+  documents: DocumentSummary[];
+}

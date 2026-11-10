@@ -172,3 +172,16 @@ export function exhibitionCompletenessIssues(ex: {
   });
   return issues;
 }
+
+/** Темы вопросов и ответов (дополнение к ТЗ §2: группировка FAQ с управлением из панели). Порядок — порядок на сайте. */
+export const FAQ_TOPICS = ['services', 'catalog', 'access', 'visit', 'site'] as const;
+export type FaqTopic = (typeof FAQ_TOPICS)[number];
+
+export const faqInputSchema = z.object({
+  topic: z.enum(FAQ_TOPICS),
+  sortOrder: z.coerce.number().int().min(0).max(10_000),
+  published: z.boolean(),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({ question: z.string().trim().min(5).max(500), answer: z.string().trim().min(5).max(5000) })),
+}).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'question'], message: 'required' });
+export type FaqInput = z.infer<typeof faqInputSchema>;

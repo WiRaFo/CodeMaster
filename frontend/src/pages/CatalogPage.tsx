@@ -66,6 +66,10 @@ export function CatalogPage() {
       <PageHeading title={t('nav.catalog')} />
       <div className="mb-6 max-w-3xl">
         <CatalogSearchForm id="catalog-search" initialQuery={query.q} key={query.q} keepParams={filterParams({ ...query, q: '' }).toString()} />
+        <p className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <Link to={`/${lang}/catalog/fonds`}>{t('fonds.guide')}</Link>
+          <Link to={`/${lang}/catalog/fonds?kind=personal`}>{t('fonds.kind.personal')}</Link>
+        </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)]">

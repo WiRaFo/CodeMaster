@@ -158,6 +158,16 @@ describe('навигация фонд → опись → дело', () => {
     expect(numbers).not.toContain('TEST-4');
   });
 
+  it('фильтр по виду фонда: личные фонды отдельно (дополнение к ТЗ §2); неверный вид — 400', async () => {
+    const personal = await t.get('/api/v1/catalog/fonds?kind=personal&pageSize=100');
+    const items = (personal.body.items ?? []) as Array<Record<string, unknown>>;
+    expect(items.map((f) => f['number'])).toContain('TEST-5');
+    expect(items.every((f) => f['kind'] === 'personal')).toBe(true);
+    const orgs = await t.get('/api/v1/catalog/fonds?kind=organization&pageSize=100');
+    expect(((orgs.body.items ?? []) as Array<Record<string, unknown>>).map((f) => f['number'])).not.toContain('TEST-5');
+    expect((await t.get('/api/v1/catalog/fonds?kind=secret')).status).toBe(400);
+  });
+
   it('закрытые и неопубликованные уровни отвечают 404 и не попадают в списки', async () => {
     const hiddenUrls = [
       `/api/v1/catalog/fonds/${await idOf(t.db, 'fonds', 'TEST-3')}`,

@@ -15,6 +15,7 @@ import { AboutPage, StructurePage, VisitorsPage } from '../pages/InfoPages.tsx';
 import { CalendarPage } from '../pages/CalendarPage.tsx';
 import { AnticorruptionPage } from '../pages/AnticorruptionPage.tsx';
 import { ReferencePage } from '../pages/ReferencePage.tsx';
+import { CasePage, FondPage, FondsPage, InventoryPage } from '../pages/FondPages.tsx';
 import { HomePage } from '../pages/HomePage.tsx';
 import { NewsItemPage } from '../pages/NewsItemPage.tsx';
 import { NewsListPage } from '../pages/NewsListPage.tsx';
@@ -44,6 +45,10 @@ export const routes: RouteObject[] = [
       { path: 'news/:slug', element: <NewsItemPage /> },
       // Карточки, которые появятся на следующих этапах: ссылки с главной уже ведут на постоянные адреса.
       { path: 'catalog/documents/:id', element: <DocumentPage /> },
+      { path: 'catalog/fonds', element: <FondsPage /> },
+      { path: 'catalog/fonds/:id', element: <FondPage /> },
+      { path: 'catalog/inventories/:id', element: <InventoryPage /> },
+      { path: 'catalog/cases/:id', element: <CasePage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'history/:slug', element: <PublicationPage /> },
       { path: 'exhibitions', element: <ExhibitionsPage /> },

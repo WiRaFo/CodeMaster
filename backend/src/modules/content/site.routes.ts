@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
+import { FAQ_TOPICS, feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
 import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { assertSameOrigin } from '../../http/staff.ts';
@@ -59,15 +59,18 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
 
   app.get('/faq', async (request, reply) => {
     const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
-    const items = await db.faqItem.findMany({
+    const rows = await db.faqItem.findMany({
       where: { publicationStatus: 'published' },
       orderBy: { sortOrder: 'asc' },
       include: { translations: true },
     });
+    // Группы по темам в порядке FAQ_TOPICS (дополнение к ТЗ §2), внутри темы — по sortOrder.
+    const rank = (t: string) => FAQ_TOPICS.findIndex((x) => x === t);
+    const items = rows.sort((a, b) => rank(a.topic) - rank(b.topic) || a.sortOrder - b.sortOrder);
     return {
       items: items.flatMap((f) => {
         const t = f.translations.find((x) => x.locale === lang) ?? f.translations.find((x) => x.locale === 'ru') ?? f.translations[0];
-        return t ? [{ id: f.id, question: t.question, answer: t.answer, dataOrigin: f.dataOrigin, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
+        return t ? [{ id: f.id, topic: f.topic, question: t.question, answer: t.answer, dataOrigin: f.dataOrigin, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
       }),
     };
   });

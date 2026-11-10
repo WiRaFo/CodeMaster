@@ -141,9 +141,6 @@ export function StructurePage() {
   }
   return (
     <>
-      <nav aria-label={t('branches.breadcrumbs')} className="mb-2 text-sm">
-        <Link to={`/${lang}/about`}>{t('nav.about')}</Link>
-      </nav>
       <PageHeading title={t('about.structureTitle')}>
         <p className="mt-2 max-w-3xl">{t('about.structureLead')}</p>
       </PageHeading>

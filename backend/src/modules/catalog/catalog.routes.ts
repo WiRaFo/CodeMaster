@@ -181,7 +181,7 @@ export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClie
   app.get('/catalog/fonds', async (request, reply) => {
     const query = fondListSchema.parse(request.query);
     const lang = resolveLang(request, reply, query.lang);
-    const { rows, total } = await repo.listFonds(query.branch, query.q, query.page, query.pageSize, lang);
+    const { rows, total } = await repo.listFonds(query.branch, query.q, query.page, query.pageSize, lang, query.kind);
     return pageOf(rows.map((f) => fondDto(f, lang)), total, query.page, query.pageSize);
   });
 

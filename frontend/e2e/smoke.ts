@@ -15,7 +15,7 @@ const AXE_SOURCE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024', '/kk/anticorruption', '/ru/services', '/kk/services/paid', '/en/legislation', '/ru/reading-room', '/kk/symbols', '/en/links'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024', '/kk/anticorruption', '/ru/services', '/kk/services/paid', '/en/legislation', '/ru/reading-room', '/kk/symbols', '/en/links', '/ru/catalog/fonds?kind=personal'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -40,6 +40,7 @@ function staffCredentials() {
     admin: { email: get('SEED_ADMIN_EMAIL'), password: get('SEED_ADMIN_PASSWORD') },
     archivist: { email: 'archivist@archive.local', password: get('SEED_DEMO_STAFF_PASSWORD') },
     moderator: { email: 'moderator@archive.local', password: get('SEED_DEMO_STAFF_PASSWORD') },
+    branchAdmin: { email: 'ridder@archive.local', password: get('SEED_DEMO_STAFF_PASSWORD') },
   };
 }
 
@@ -601,6 +602,9 @@ async function main() {
     }
 
     await adminScenarios(browser);
+    await branchAdminScenario(browser);
+    await importScenario(browser);
+    await contentAdminScenario(browser);
     await seoScenario(browser);
     check(cspViolations.length === 0, `нет нарушений CSP: ${cspViolations.slice(0, 3).join(' | ')}`);
 
@@ -617,6 +621,133 @@ async function main() {
 }
 
 /** ЭТАП 13: заголовки и метаданные сборки, robots.txt, канонический адрес и языковые версии, noindex. */
+/**
+ * Дополнение к ТЗ §6 «Работа администратора филиала»: меняет контакты своего филиала,
+ * чужой филиал недоступен ни в интерфейсе, ни прямым запросом. Телефон возвращается к исходному.
+ */
+async function branchAdminScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.branchAdmin.password) {
+    check(false, 'администратор филиала: нет SEED_DEMO_STAFF_PASSWORD в backend/.env');
+    return;
+  }
+  const page = await signIn(browser, staff.branchAdmin);
+  await page.getByRole('link', { name: 'Филиалы' }).click();
+  await page.getByRole('heading', { level: 1, name: 'Филиалы' }).waitFor();
+  const rows = await page.getByRole('table').getByRole('link').allTextContents();
+  check(rows.length === 1 && rows[0] === 'Риддер', `администратор филиала видит только свой филиал (${rows.join(', ')})`);
+  check((await axe(page)).length === 0, `axe список филиалов: ${(await axe(page)).join('; ')}`);
+  await page.getByRole('link', { name: 'Риддер' }).click();
+  const phone = page.getByLabel('Телефон', { exact: true });
+  await phone.waitFor();
+  const original = await phone.inputValue();
+  check((await axe(page)).length === 0, `axe форма филиала: ${(await axe(page)).join('; ')}`);
+  await phone.fill('8 (72336) 00-00-00');
+  await page.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Изменено: Телефон' }).waitFor();
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(`${BASE}/ru/branches/ridder`);
+  check(await site.getByRole('link', { name: '8 (72336) 00-00-00' }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'администратор филиала: новый телефон на сайте');
+  await site.close();
+  const foreign = await page.evaluate(async () => {
+    const list = (await (await fetch('/api/v1/branches?lang=ru')).json()) as { items: Array<{ slug: string }> };
+    const me = (await (await fetch('/api/v1/auth/me')).json()) as { csrfToken: string };
+    const zaisan = list.items.find((b) => b.slug === 'zaisan');
+    const detail = (await (await fetch('/api/v1/branches/zaisan?lang=ru')).json()) as { id: string };
+    const r = await fetch(`/api/v1/admin/branches/${detail.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrfToken }, body: '{}' });
+    return [Boolean(zaisan), r.status];
+  });
+  check(foreign[1] === 404, `администратор филиала: правка чужого филиала прямым запросом — 404 (${foreign[1]})`);
+  await phone.fill(original);
+  await page.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Изменено: Телефон' }).waitFor();
+  await page.close();
+}
+
+/**
+ * Импорт описи (F-145; дополнение к ТЗ §3.5): файл → сопоставление → предпросмотр с ошибками → загрузка черновиками
+ * → протокол. Фонд с уникальным номером на каждый прогон; созданные документы после проверки удаляются.
+ */
+async function importScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.archivist.password) return;
+  const fond = `E2E${Date.now().toString(36).toUpperCase()}`;
+  const csv = [
+    'Фонд;Название фонда;Опись;Название описи;Дело;Заголовок дела;Номер документа;Заголовок;Дата;Вид документа;Доступ;Условия доступа',
+    `${fond};[Демо] Фонд e2e;1;Опись e2e;1;Дело e2e;1;[Демо] Документ e2e 1;14.03.1956;Письменные источники;;`,
+    `${fond};[Демо] Фонд e2e;1;Опись e2e;1;Дело e2e;2;[Демо] Документ e2e 2;1957;Фотографии;ограниченный;Только в читальном зале`,
+    `${fond};[Демо] Фонд e2e;1;Опись e2e;1;Дело e2e;3;[Демо] Документ e2e 3;31.02.1956;Письменные источники;;`,
+  ].join('\n');
+  const page = await signIn(browser, staff.archivist);
+  await page.getByRole('link', { name: 'Импорт описи' }).click();
+  await page.getByRole('heading', { level: 1, name: 'Импорт описи' }).waitFor();
+  await page.getByLabel('Файл описи').setInputFiles({ name: 'opis-e2e.csv', mimeType: 'text/csv', buffer: Buffer.from(`\uFEFF${csv}`, 'utf8') });
+  const summary = page.getByTestId('import-summary');
+  await summary.waitFor();
+  check((await summary.textContent())?.includes('Готовы к загрузке: 2. С ошибками: 1.') === true, `импорт: предпросмотр (${await summary.textContent()})`);
+  check(await page.getByText('Такой даты нет: «31.02.1956»').isVisible(), 'импорт: ошибка даты показана у строки');
+  check((await page.getByLabel('Номер фонда (обязательно)').inputValue()) === '0', 'импорт: столбец фонда сопоставлен по названию');
+  check((await axe(page)).length === 0, `axe импорт, предпросмотр: ${(await axe(page)).join('; ')}`);
+  await page.getByRole('button', { name: 'Загрузить строк: 2' }).click();
+  await page.getByRole('heading', { level: 2, name: 'Протокол загрузки' }).waitFor();
+  check((await summary.textContent())?.includes('Создано черновиков: 2.') === true, `импорт: создано 2 черновика (${await summary.textContent()})`);
+  const ids = await page.locator('table a[href^="/admin/documents/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')?.split('/').pop() ?? ''));
+  const pub = await page.evaluate(async (q) => (await (await fetch(`/api/v1/catalog/documents?lang=ru&q=${encodeURIComponent(q)}`)).text()).includes('Документ e2e'), 'Документ e2e');
+  check(!pub, 'импорт: черновики не видны в публичном каталоге');
+  const statuses = await page.evaluate(async (list) => {
+    const me = (await (await fetch('/api/v1/auth/me')).json()) as { csrfToken: string };
+    const out: number[] = [];
+    for (const id of list) out.push((await fetch(`/api/v1/admin/documents/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrfToken }, body: JSON.stringify({ confirm: true }) })).status);
+    return out;
+  }, ids);
+  check(ids.length === 2 && statuses.every((s) => s === 204), `импорт: созданные документы удалены после проверки (${statuses.join(', ')})`);
+  await page.close();
+}
+
+/** Страницы, вопросы-ответы и сотрудники в панели: формы доступны (axe), вопрос по теме появляется на сайте и удаляется. */
+async function contentAdminScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.admin.password) return;
+  const page = await signIn(browser, staff.admin);
+  await page.goto(`${BASE}/admin/pages`);
+  await page.getByRole('link', { name: 'Читальный зал' }).click();
+  await page.getByLabel('Текст страницы').first().waitFor();
+  check((await page.getByLabel('Текст страницы').first().inputValue()).includes('! Правила работы читального зала'), 'страницы в панели: «ожидаются сведения» видны в разметке');
+  check((await axe(page)).length === 0, `axe правка страницы: ${(await axe(page)).join('; ')}`);
+  await page.getByRole('button', { name: 'Сохранить и опубликовать' }).click();
+  check(await page.getByRole('status').filter({ hasText: /Сохранено/ }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'страницы в панели: сохранение без изменений проходит');
+
+  const question = `Тестовый вопрос e2e ${Date.now().toString(36)}?`;
+  await page.goto(`${BASE}/admin/faq`);
+  await page.getByRole('button', { name: 'Добавить вопрос' }).click();
+  const form = page.getByRole('form', { name: 'Новый вопрос' });
+  await form.getByLabel('Тема').selectOption('visit');
+  await form.getByLabel('Происхождение').selectOption('demo');
+  await form.getByLabel('Вопрос').first().fill(question);
+  await form.getByLabel('Ответ').first().fill('Тестовый ответ, будет удалён после проверки.');
+  await form.getByLabel('Показывать на сайте').check();
+  check((await axe(page)).length === 0, `axe вопросы и ответы в панели: ${(await axe(page)).join('; ')}`);
+  await form.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Вопрос добавлен.' }).waitFor();
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(`${BASE}/ru/faq`);
+  const group = site.getByRole('region', { name: 'Посещение архива' });
+  check(await group.getByText(question).waitFor({ timeout: 5000 }).then(() => true, () => false), 'вопросы и ответы: новый вопрос на сайте в своей теме');
+  check((await axe(site)).length === 0, `axe /ru/faq по темам: ${(await axe(site)).join('; ')}`);
+  await site.close();
+  await page.getByRole('listitem').filter({ hasText: question }).getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Вопрос удалён.' }).waitFor();
+  check(true, 'вопросы и ответы: удаление с подтверждением');
+
+  await page.goto(`${BASE}/admin/users`);
+  await page.getByRole('table').waitFor();
+  check((await page.getByRole('cell', { name: /ridder@archive\.local/ }).count()) === 1, 'сотрудники: администратор филиала в списке');
+  await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
+  check((await axe(page)).length === 0, `axe сотрудники: ${(await axe(page)).join('; ')}`);
+  await page.close();
+}
+
 async function seoScenario(browser: Browser) {
   const index = await fetch(`${BASE}/ru/faq`);
   const html = await index.text();

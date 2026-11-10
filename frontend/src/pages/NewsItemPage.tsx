@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -19,6 +20,7 @@ export function NewsItemPage() {
   const n = item.data;
   return (
     <article className="prose-page">
+      <Breadcrumbs items={[{ label: t('nav.news'), to: `/${lang}/news` }, { label: n.title ?? slug }]} />
       <PageHeading title={n.title ?? slug} meta={{ description: n.lead ?? undefined }}>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-muted">
           <time dateTime={n.publishedAt}>{formatDate(n.publishedAt, lang)}</time>

@@ -349,8 +349,9 @@ export class CatalogRepository {
     return row?.a ?? null;
   }
 
-  async listFonds(branch: string[] | undefined, q: string | undefined, page: number, pageSize: number, lang: Locale) {
+  async listFonds(branch: string[] | undefined, q: string | undefined, page: number, pageSize: number, lang: Locale, kind?: string) {
     const conds: Prisma.Sql[] = [];
+    if (kind) conds.push(Prisma.sql`f.fond_kind::text = ${kind}`);
     if (branch) conds.push(Prisma.sql`f.branch_id IN (SELECT id FROM branches WHERE slug = ANY(${branch}) OR id::text = ANY(${branch}))`);
     if (q) {
       conds.push(Prisma.sql`(upper(f.fond_number) = upper(${q})

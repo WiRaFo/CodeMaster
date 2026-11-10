@@ -178,9 +178,12 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
 
   // Вопросы без собственного ключа: демо-набор пересоздаётся целиком.
   await db.faqItem.deleteMany({ where: { dataOrigin: 'demo' } });
+  // Темы по порядку вопросов: заявления, шифр, цифровая копия, пометки «Демо», доступность, языки.
+  const faqTopics = ['services', 'catalog', 'access', 'site', 'site', 'site'] as const;
   for (const [i, f] of FAQ.entries()) {
     await db.faqItem.create({
       data: {
+        topic: faqTopics[i] ?? 'site',
         sortOrder: i,
         publicationStatus: 'published',
         dataOrigin: 'demo',

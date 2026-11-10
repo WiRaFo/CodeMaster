@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { RoutePlanner } from '../components/branches/RoutePlanner.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
@@ -35,9 +36,7 @@ export function BranchPage() {
 
   return (
     <>
-      <nav aria-label={t('branches.breadcrumbs')} className="mb-2 text-sm">
-        <Link to={`/${lang}/branches`}>{t('nav.branches')}</Link>
-      </nav>
+      <Breadcrumbs items={[{ label: t('nav.branches'), to: `/${lang}/branches` }, { label: b.shortName ?? b.name ?? b.slug }]} />
       <PageHeading title={b.name ?? b.shortName ?? b.slug}>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-muted">{b.type.name}</span>

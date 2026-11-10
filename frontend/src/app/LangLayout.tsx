@@ -8,6 +8,7 @@ import { preferredLocale, LANG_STORAGE_KEY } from './preferred-locale.ts';
 import { SkipLink } from '../components/accessibility/SkipLink.tsx';
 import { Header } from '../components/layout/Header.tsx';
 import { Footer } from '../components/layout/Footer.tsx';
+import { SectionBreadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 
 /**
  * Адрес панели вида /admin/exhibitions/new совпадает с публичным /:lang/exhibitions/:slug (lang = «admin»),
@@ -63,6 +64,7 @@ export function LangLayout() {
       <Header />
       {/* min-h-screen: пока страница загружает данные, подвал уже ниже первого экрана и не «прыгает» (CLS, ЭТАП 14). */}
       <main id="main" tabIndex={-1} className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 focus:outline-none">
+        <SectionBreadcrumbs />
         <Outlet />
       </main>
       <Footer />

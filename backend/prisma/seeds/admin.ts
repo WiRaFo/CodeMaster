@@ -23,7 +23,10 @@ export async function seedAdmin(db: PrismaClient, email: string, password: strin
 export const DEMO_STAFF = [
   { email: 'archivist@archive.local', fullName: '[Демо] Сотрудник архива', role: 'archivist' },
   { email: 'moderator@archive.local', fullName: '[Демо] Модератор', role: 'moderator' },
-] as const;
+  { email: 'editor@archive.local', fullName: '[Демо] Редактор сайта', role: 'site_admin' },
+  // Администратор одного филиала: права действуют только в пределах филиала Риддер.
+  { email: 'ridder@archive.local', fullName: '[Демо] Администратор филиала Риддер', role: 'branch_admin', branchSlug: 'ridder' },
+] as const satisfies ReadonlyArray<{ email: string; fullName: string; role: string; branchSlug?: string }>;
 
 export async function seedDemoStaff(db: PrismaClient, password: string): Promise<void> {
   if (password.length < 12) throw new Error('SEED_DEMO_STAFF_PASSWORD должен быть не короче 12 символов');
@@ -31,7 +34,8 @@ export async function seedDemoStaff(db: PrismaClient, password: string): Promise
   for (const s of DEMO_STAFF) {
     const role = await db.role.findUniqueOrThrow({ where: { code: s.role } });
     const user = await db.user.upsert({ where: { email: s.email }, create: { email: s.email, fullName: s.fullName, passwordHash: hash }, update: {} });
-    const assigned = await db.userRole.findFirst({ where: { userId: user.id, roleId: role.id, branchId: null } });
-    if (!assigned) await db.userRole.create({ data: { userId: user.id, roleId: role.id } });
+    const branchId = 'branchSlug' in s ? (await db.branch.findUniqueOrThrow({ where: { slug: s.branchSlug }, select: { id: true } })).id : null;
+    const assigned = await db.userRole.findFirst({ where: { userId: user.id, roleId: role.id, branchId } });
+    if (!assigned) await db.userRole.create({ data: { userId: user.id, roleId: role.id, branchId } });
   }
 }
