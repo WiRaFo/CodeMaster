@@ -13,6 +13,7 @@ import { HierarchyPage } from './HierarchyPage.tsx';
 import { ImportPage } from './ImportPage.tsx';
 import { FaqAdminPage, PageEditPage, PagesAdminPage } from './ContentAdmin.tsx';
 import { NewsAdminPage } from './NewsAdmin.tsx';
+import { MemoryCollectionsPage, MemoryEventsPage, MemoryPersonsPage } from './MemoryAdmin.tsx';
 import { UsersAdminPage } from './UsersAdmin.tsx';
 import { LoginPage } from './LoginPage.tsx';
 
@@ -168,6 +169,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {can('catalog:import') ? <AdminNavItem to="/admin/import" label="Импорт описи" /> : null}
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
             {news ? <AdminNavItem to="/admin/news" label="Новости" /> : null}
+            {can('publications:edit') ? <AdminNavItem to="/admin/memory/events" label="Архив памяти" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
@@ -192,6 +194,9 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="news" element={news ? <NewsAdminPage /> : <NoAccess />} />
+          <Route path="memory/events" element={can('publications:edit') ? <MemoryEventsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
+          <Route path="memory/persons" element={can('publications:edit') ? <MemoryPersonsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
+          <Route path="memory/collections" element={can('publications:edit') ? <MemoryCollectionsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
           <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
           <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
