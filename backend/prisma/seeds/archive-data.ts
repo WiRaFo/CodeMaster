@@ -6,7 +6,8 @@ import { names, type Tri } from './lib.ts';
  * Переносятся как есть; ничего не дополняется. Известные ошибки источника не публикуются:
  * два адреса почты с опечаткой в домене (Глубоковский: alimvko, Зайсанский: akimvko.qov) оставлены пустыми
  * до подтверждения архивом; у филиала района Марқакөл телефон в источнике не указан.
- * Казахские и английские формы подготовлены командой и помечаются как машинный перевод.
+ * Казахские и английские формы подготовлены командой и помечаются как машинный перевод; казахские названия филиалов
+ * сверены с постановлением Восточно-Казахстанского областного акимата от 2 июня 2026 года № 142.
  */
 
 export const ARCHIVE_DATA_DATE = new Date('2026-11-10');
@@ -51,7 +52,7 @@ export const ARCHIVE_BRANCHES: ArchiveBranchData[] = [
   {
     slug: 'altai', settlement: 'altai', address: 'ВКО, район Алтай, ул. М. Горького, 33',
     phone: '8 (72335) 41630', email: 'sa.seilkhanov@akimvko.gov.kz', director: 'Сейлханов Сабырбек Какенович',
-    names: n('Филиал района Алтай', 'Алтай ауданының филиалы', 'Altai District Branch', 'Алтай', 'Алтай', 'Altai'),
+    names: n('Филиал района Алтай', 'Алтай аудандық филиалы', 'Altai District Branch', 'Алтай', 'Алтай', 'Altai'),
   },
   {
     slug: 'glubokoe', settlement: 'glubokoe', address: 'ВКО, Глубоковский район, п. Глубокое, ул. Пирогова, 6',
@@ -76,7 +77,7 @@ export const ARCHIVE_BRANCHES: ArchiveBranchData[] = [
   {
     slug: 'markakol', settlement: 'markakol', address: 'ВКО, район Марқакөл, с. Маркаколь, ул. Крахмаля, 67',
     email: 's.smagulov1@akimvko.gov.kz', director: 'Смагулов Самат Нурлыбекович',
-    names: n('Филиал района Марқакөл', 'Марқакөл ауданының филиалы', 'Markakol District Branch', 'Марқакөл', 'Марқакөл', 'Markakol'),
+    names: n('Филиал района Марқакөл', 'Марқакөл аудандық филиалы', 'Markakol District Branch', 'Марқакөл', 'Марқакөл', 'Markakol'),
   },
   {
     slug: 'ridder', settlement: 'ridder', address: 'ВКО, г. Риддер, ул. Ч. Уалиханова, 44',
@@ -86,7 +87,7 @@ export const ARCHIVE_BRANCHES: ArchiveBranchData[] = [
   {
     slug: 'samar', settlement: 'samar', address: 'ВКО, район Самар, с. Самар, ул. Горохова, 58',
     phone: '8 (72333) 31032', email: 'a.babataev@akimvko.gov.kz', director: 'Бабатаев Айдар Шамилевич',
-    names: n('Филиал района Самар', 'Самар ауданының филиалы', 'Samar District Branch', 'Самар', 'Самар', 'Samar'),
+    names: n('Филиал района Самар', 'Самар аудандық филиалы', 'Samar District Branch', 'Самар', 'Самар', 'Samar'),
   },
   {
     slug: 'tarbagatai', settlement: 'akzhar', address: 'ВКО, Тарбагатайский район, с. Акжар, ул. Даулетбая, 45',
@@ -101,13 +102,13 @@ export const ARCHIVE_BRANCHES: ArchiveBranchData[] = [
   {
     slug: 'ulken-naryn', settlement: 'ulken-naryn', address: 'ВКО, район Үлкен-Нарын, с. Улкен Нарын, ул. Огнева, 40',
     phone: '8 (72341) 21599', email: 'ba.ozhenov@akimvko.gov.kz', director: 'Оженов Бауржан Файзоллинович',
-    names: n('Филиал района Үлкен Нарын', 'Үлкен Нарын ауданының филиалы', 'Ulken Naryn District Branch', 'Үлкен Нарын', 'Үлкен Нарын', 'Ulken Naryn'),
+    names: n('Филиал района Үлкен Нарын', 'Үлкен Нарын аудандық филиалы', 'Ulken Naryn District Branch', 'Үлкен Нарын', 'Үлкен Нарын', 'Ulken Naryn'),
   },
   {
     slug: 'ust-kamenogorsk-personnel', settlement: 'ust-kamenogorsk', address: 'ВКО, г. Усть-Каменогорск, ул. Потанина, 12/2',
     phone: '8 (7232) 766560', email: 'g.bisenova@akimvko.gov.kz', director: 'Бисенова Гулсим Алдабергеновна',
     names: n(
-      'Усть-Каменогорский городской филиал по личному составу', 'Өскемен қалалық жеке құрам бойынша филиалы', 'Oskemen City Personnel Records Branch',
+      'Усть-Каменогорский городской филиал по личному составу', 'Жеке құрамы бойынша Өскемен қалалық филиалы', 'Oskemen City Personnel Records Branch',
       'Усть-Каменогорск, по личному составу', 'Өскемен, жеке құрам бойынша', 'Oskemen (personnel records)',
     ),
   },

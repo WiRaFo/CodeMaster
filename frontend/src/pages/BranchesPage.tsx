@@ -54,6 +54,10 @@ export function BranchesPage() {
     <>
       <PageHeading title={t('nav.branches')}>
         <p className="mt-2 max-w-3xl">{t('branches.listLead')}</p>
+        <p className="mt-2 max-w-3xl text-sm">
+          {t('branches.basis')}{' '}
+          <a href="/files/documents/postanovlenie-142-2026.pdf" type="application/pdf">{t('branches.basisLink')}</a>
+        </p>
       </PageHeading>
 
       <form
