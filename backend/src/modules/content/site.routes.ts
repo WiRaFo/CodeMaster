@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
-import { ApiError } from '../../http/errors.ts';
+import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { assertSameOrigin } from '../../http/staff.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
@@ -12,6 +12,19 @@ const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
   z.object({ type: z.enum(['p', 'h']), text: z.string() }),
   z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
 ]));
+
+const infoBodySchema = z.object({
+  actualizedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  blocks: z.array(z.discriminatedUnion('type', [
+    z.object({ type: z.enum(['p', 'h', 'pending']), text: z.string() }),
+    z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
+    z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.string().url().startsWith('https://'), note: z.string().optional() })) }),
+  ])),
+});
+
+/** Справочные страницы, которые отдаёт GET /pages/:key. Остальные страницы имеют свои маршруты. */
+export const INFO_PAGE_KEYS = ['services', 'services/paid', 'legislation', 'reading-room', 'symbols', 'links'] as const;
+const infoPageParamsSchema = z.object({ key: z.enum(INFO_PAGE_KEYS) });
 
 const calendarQuerySchema = langOnlySchema.extend({
   year: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -134,6 +147,34 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
       documents: info.success
         ? info.data.documents.map((d) => ({ key: d.key, title: d.title[lang], scanned: d.scanned, files: d.files }))
         : [],
+    };
+  });
+
+  /**
+   * Справочные разделы по дополнению к ТЗ: государственная и платные услуги, законодательство, читальный зал,
+   * государственные символы, полезные ссылки. Только сведения и внешние ссылки — заявления сайт не принимает.
+   * Ключ вне списка и неопубликованная страница — одинаковый 404.
+   */
+  app.get('/pages/*', async (request, reply) => {
+    const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const params = infoPageParamsSchema.safeParse({ key: (request.params as { '*': string })['*'] });
+    if (!params.success) throw notFound();
+    const page = await db.page.findFirst({
+      where: { key: params.data.key, publicationStatus: 'published', deletedAt: null },
+      include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+    });
+    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+    if (!page || !t) throw notFound();
+    const body = infoBodySchema.parse(t.body);
+    return {
+      key: page.key,
+      title: t.title,
+      lead: t.lead,
+      blocks: body.blocks,
+      actualizedAt: body.actualizedAt,
+      contentLang: t.locale,
+      translationStatus: t.translationStatus,
+      dataOrigin: page.dataOrigin,
     };
   });
 

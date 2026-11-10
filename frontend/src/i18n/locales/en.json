@@ -22,7 +22,8 @@
     "faq": "Questions and answers",
     "assistant": "AI assistant",
     "accessibility": "Accessibility",
-    "feedback": "Feedback and suggestions"
+    "feedback": "Feedback and suggestions",
+    "services": "Public service"
   },
   "header": {
     "searchLabel": "Search the site",
@@ -547,5 +548,19 @@
     "file": "{{lang}}, PDF, {{pages}} p., {{size}} MB",
     "scanned": "Scanned document without a text layer: screen readers cannot read it. A summary is given in the information below.",
     "newsTitle": "Compliance service information"
+  },
+  "reference": {
+    "contactsTitle": "Archive contacts",
+    "paidLink": "Paid services of the archive",
+    "actualized": "Information updated: {{date}}.",
+    "pending": "Awaiting information from the archive.",
+    "external": "(external website, opens another site)",
+    "externalHost": "External website: {{host}}",
+    "nav": {
+      "legislation": "Legislation",
+      "reading-room": "Reading room",
+      "symbols": "State symbols",
+      "links": "Useful links"
+    }
   }
 }

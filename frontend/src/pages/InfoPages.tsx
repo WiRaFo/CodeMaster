@@ -9,7 +9,7 @@ import { useApi } from '../lib/useApi.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
 
 /** Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте. */
-function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) {
+export function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);

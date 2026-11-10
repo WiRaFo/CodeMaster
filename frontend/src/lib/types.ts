@@ -346,3 +346,20 @@ export interface AnticorruptionInfo {
     files: Array<{ locale: string; url: string; sizeBytes: number; pages: number }>;
   }>;
 }
+
+/** Блок справочной страницы (GET /pages/:key): pending — сведения, которые архив ещё не передал. */
+export type InfoBlock =
+  | { type: 'p' | 'h' | 'pending'; text: string }
+  | { type: 'ol' | 'ul'; items: string[] }
+  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> };
+
+export interface InfoPageData {
+  key: string;
+  title: string;
+  lead: string | null;
+  blocks: InfoBlock[];
+  actualizedAt: string;
+  contentLang: string;
+  translationStatus: string;
+  dataOrigin: DataOrigin;
+}

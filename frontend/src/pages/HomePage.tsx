@@ -24,8 +24,8 @@ export function HomePage() {
 
   const quickLinks = [
     { key: 'findDocument', to: href('catalog'), Icon: FileSearch },
-    { key: 'certificate', to: href('visitors'), Icon: BookOpen },
-    { key: 'readingRoom', to: href('visitors'), Icon: Building2 },
+    { key: 'certificate', to: href('services'), Icon: BookOpen },
+    { key: 'readingRoom', to: href('reading-room'), Icon: Building2 },
     { key: 'findBranch', to: href('branches'), Icon: MapPin },
   ] as const;
 

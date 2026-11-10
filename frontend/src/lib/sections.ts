@@ -7,6 +7,7 @@ export const SECTIONS = [
   { key: 'about', path: 'about' },
   { key: 'catalog', path: 'catalog' },
   { key: 'visitors', path: 'visitors' },
+  { key: 'services', path: 'services' },
   { key: 'history', path: 'history' },
   { key: 'exhibitions', path: 'exhibitions' },
   { key: 'news', path: 'news' },

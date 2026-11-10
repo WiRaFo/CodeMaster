@@ -14,6 +14,7 @@ import { HistoryPage, PublicationPage } from '../pages/HistoryPage.tsx';
 import { AboutPage, StructurePage, VisitorsPage } from '../pages/InfoPages.tsx';
 import { CalendarPage } from '../pages/CalendarPage.tsx';
 import { AnticorruptionPage } from '../pages/AnticorruptionPage.tsx';
+import { ReferencePage } from '../pages/ReferencePage.tsx';
 import { HomePage } from '../pages/HomePage.tsx';
 import { NewsItemPage } from '../pages/NewsItemPage.tsx';
 import { NewsListPage } from '../pages/NewsListPage.tsx';
@@ -23,7 +24,7 @@ import { SectionStubPage } from '../pages/SectionStubPage.tsx';
 import { LangLayout } from './LangLayout.tsx';
 import { preferredLocale } from './preferred-locale.ts';
 
-const IMPLEMENTED = new Set<string>(['catalog', 'news', 'exhibitions', 'branches', 'assistant', 'history', 'faq', 'visitors', 'about']);
+const IMPLEMENTED = new Set<string>(['catalog', 'news', 'exhibitions', 'branches', 'assistant', 'history', 'faq', 'visitors', 'about', 'services']);
 
 function RootRedirect() {
   return <Navigate to={`/${preferredLocale()}`} replace />;
@@ -57,6 +58,12 @@ export const routes: RouteObject[] = [
       { path: 'about/structure', element: <StructurePage /> },
       { path: 'calendar', element: <CalendarPage /> },
       { path: 'anticorruption', element: <AnticorruptionPage /> },
+      { path: 'services', element: <ReferencePage key="services" pageKey="services" /> },
+      { path: 'services/paid', element: <ReferencePage key="services/paid" pageKey="services/paid" /> },
+      { path: 'legislation', element: <ReferencePage key="legislation" pageKey="legislation" /> },
+      { path: 'reading-room', element: <ReferencePage key="reading-room" pageKey="reading-room" /> },
+      { path: 'symbols', element: <ReferencePage key="symbols" pageKey="symbols" /> },
+      { path: 'links', element: <ReferencePage key="links" pageKey="links" /> },
       { path: 'feedback', element: <FeedbackPage /> },
       ...SECTIONS.filter((s) => s.path && !IMPLEMENTED.has(s.path)).map((s) => ({ path: s.path, element: <SectionStubPage section={s.key} /> })),
       { path: 'accessibility', element: <AccessibilityPage /> },

@@ -21,8 +21,8 @@ describe('главная (ТЗ §5.1)', () => {
     expect(banner).not.toBeNull();
     const b = within(banner as HTMLElement);
     expect(b.getByRole('link', { name: 'Найти архивный документ' })).toHaveAttribute('href', '/ru/catalog');
-    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/visitors');
-    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/visitors');
+    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/services');
+    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/reading-room');
     expect(b.getByRole('link', { name: 'Найти филиал' })).toHaveAttribute('href', '/ru/branches');
     expect(b.getByRole('link', { name: /онлайн-выставки/i })).toHaveAttribute('href', '/ru/exhibitions');
   });

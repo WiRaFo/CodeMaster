@@ -5,6 +5,7 @@ import {
 import { ANTICORRUPTION_SETTING, ANTICORRUPTION_TEXT } from './archive-anticorruption.ts';
 import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
 import { ARCHIVE_HISTORY_RU, type HistoryBlock } from './archive-history.ts';
+import { INFO_PAGES, type InfoBlock } from './info-pages.ts';
 import { names, translationRows, OLD_SITE_CONTACTS_URL, type Tri } from './lib.ts';
 
 /**
@@ -160,6 +161,7 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
   await seedAboutPages(db);
   await seedCalendar(db);
   await seedAnticorruption(db);
+  await seedInfoPages(db);
   await db.siteSetting.upsert({
     where: { key: 'social_links' },
     update: { value: ARCHIVE_SOCIAL },
@@ -229,8 +231,29 @@ async function seedCalendar(db: PrismaClient): Promise<void> {
   }
 }
 
-const blocksText = (blocks: HistoryBlock[]): string =>
-  blocks.map((b) => ('items' in b ? b.items.join('\n') : b.text)).join('\n\n');
+const blocksText = (blocks: Array<HistoryBlock | InfoBlock>): string =>
+  blocks.map((b) => {
+    if (b.type === 'links') return b.items.map((l) => [l.label, l.note].filter(Boolean).join(' — ')).join('\n');
+    return 'items' in b ? b.items.join('\n') : b.text;
+  }).join('\n\n');
+
+/**
+ * Справочные разделы по дополнению к ТЗ (услуги, законодательство, читальный зал, символы, ссылки).
+ * Тело страницы — { actualizedAt, blocks }; незаполненное архивом помечено блоком «pending».
+ */
+async function seedInfoPages(db: PrismaClient): Promise<void> {
+  for (const [i, p] of INFO_PAGES.entries()) {
+    const data = { sortOrder: i, publicationStatus: 'published' as const, dataOrigin: 'verified' as const, sourceUrl: null };
+    const page = await db.page.upsert({ where: { key: p.key }, update: data, create: { key: p.key, ...data } });
+    await db.pageTranslation.deleteMany({ where: { pageId: page.id } });
+    const texts: Tri<{ title: string; lead: string; body: { actualizedAt: string; blocks: InfoBlock[] }; bodyText: string }> = {
+      ru: { title: p.title.ru, lead: p.lead.ru, body: { actualizedAt: p.actualizedAt, blocks: p.blocks.ru }, bodyText: blocksText(p.blocks.ru) },
+      kk: { title: p.title.kk, lead: p.lead.kk, body: { actualizedAt: p.actualizedAt, blocks: p.blocks.kk }, bodyText: blocksText(p.blocks.kk) },
+      en: { title: p.title.en, lead: p.lead.en, body: { actualizedAt: p.actualizedAt, blocks: p.blocks.en }, bodyText: blocksText(p.blocks.en) },
+    };
+    await db.pageTranslation.createMany({ data: translationRows(texts).map((t) => ({ ...t, pageId: page.id })) });
+  }
+}
 
 /** «Противодействие коррупции»: тексты на русском и казахском, комплаенс-офицер и документы (PDF) в site_settings. */
 async function seedAnticorruption(db: PrismaClient): Promise<void> {

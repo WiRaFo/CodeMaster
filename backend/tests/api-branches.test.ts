@@ -139,3 +139,27 @@ describe('«Противодействие коррупции» (сведени�
   });
 });
 
+
+describe('справочные разделы по дополнению к ТЗ (GET /pages/:key)', () => {
+  it('шесть страниц на трёх языках, внешние ссылки только https, незаполненное помечено pending', async () => {
+    for (const key of ['services', 'services/paid', 'legislation', 'reading-room', 'symbols', 'links']) {
+      const ru = await t.get(`/api/v1/pages/${key}?lang=ru`);
+      expect(ru.status).toBe(200);
+      expect(ru.body).toMatchObject({ key, contentLang: 'ru', translationStatus: 'reviewed', actualizedAt: '2026-11-10' });
+      const en = await t.get(`/api/v1/pages/${key}?lang=en`);
+      expect(en.body).toMatchObject({ contentLang: 'en', translationStatus: 'machine' });
+      const blocks = ru.body['blocks'] as Array<{ type: string; items?: Array<{ url?: string }> }>;
+      for (const b of blocks) if (b.type === 'links') for (const l of b.items ?? []) expect(l.url).toMatch(/^https:\/\//);
+    }
+    const paid = await t.get('/api/v1/pages/services/paid?lang=kk');
+    expect((paid.body['blocks'] as Array<{ type: string }>).some((b) => b.type === 'pending')).toBe(true);
+  });
+
+  it('ключ вне списка и служебные страницы — одинаковый 404', async () => {
+    const unknown = await t.get('/api/v1/pages/nope?lang=ru');
+    const history = await t.get('/api/v1/pages/about/history?lang=ru');
+    expect(unknown.status).toBe(404);
+    expect(history.status).toBe(404);
+    expect(history.body['error']).toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
