@@ -110,6 +110,20 @@ describe('цифровая история региона (F-080–F-082)', () =>
     expect((await t.get('/api/v1/history/collections/nothing')).status).toBe(404);
   });
 
+  it('галерея (F-085): только открытые документы с проверенной копией, ссылка на изображение работает', async () => {
+    const open = await idOf(t.db, 'documents', 'TEST-1/1/1/1');
+    const res = await t.get('/api/v1/history/gallery?lang=ru');
+    const items = res.body.items as Array<{ id: string; access: string; image: { url: string } }>;
+    // Ограниченный TEST-1/1/1/2 (копия не публикуется) и фото TEST-1/1/1/5 (антивирус не проверил) в галерею не попадают.
+    expect(items.map((i) => i.id)).toContain(open);
+    expect(items.every((i) => i.access === 'open')).toBe(true);
+    for (const key of ['TEST-1/1/1/2', 'TEST-1/1/1/3', 'TEST-1/1/1/5']) expect(res.raw).not.toContain(await idOf(t.db, 'documents', key));
+    const first = items.find((i) => i.id === open);
+    expect(first?.image.url).toBe(`/api/v1/catalog/documents/${open}/pages/1/image`);
+    expect((await t.app.inject({ method: 'GET', url: first?.image.url ?? '' })).statusCode).toBe(200);
+    expect(res.body['total']).toBe(items.length);
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

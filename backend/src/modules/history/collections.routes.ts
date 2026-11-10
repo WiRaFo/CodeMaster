@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { langOnlySchema, type Locale } from '@archive-vko/shared';
+import { langOnlySchema, paginationSchema, type Locale } from '@archive-vko/shared';
 import { notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
+import { pageOf } from '../../http/pagination.ts';
 import { bestTranslation } from '../../infrastructure/database/sql.ts';
 import { documentSummaryDto } from '../catalog/catalog.mapper.ts';
 import { CatalogRepository } from '../catalog/catalog.repository.ts';
@@ -46,6 +47,8 @@ const summary = (r: CollectionRow) => ({
   translationStatus: r.translation_status,
 });
 
+const gallerySchema = langOnlySchema.and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(48).default(24) }));
+
 export async function collectionRoutes(app: FastifyInstance, opts: { db: PrismaClient }): Promise<void> {
   const { db } = opts;
   const catalog = new CatalogRepository(db);
@@ -78,5 +81,34 @@ export async function collectionRoutes(app: FastifyInstance, opts: { db: PrismaC
       documents: byOrder(documents).map((d) => documentSummaryDto(d, lang)),
       persons: byOrder(persons).map((p) => ({ slug: p.slug, fullName: p.full_name, lifeYears: p.life_years_text, contentLang: p.content_lang })),
     };
+  });
+
+  /**
+   * Галерея (F-085): открытые документы с цифровой копией, первая страница как изображение. Источник —
+   * public_document_pages_v: туда попадают только проверенные антивирусом страницы документов с итоговым доступом open.
+   */
+  app.get('/history/gallery', async (request, reply) => {
+    const query = gallerySchema.parse(request.query);
+    const lang = resolveLang(request, reply, query.lang);
+    const firstPages = Prisma.sql`
+      SELECT DISTINCT ON (pg.document_id) pg.document_id, pg.page_number, pg.width, pg.height
+      FROM public_document_pages_v pg ORDER BY pg.document_id, pg.page_number`;
+    const [pages, [count]] = await Promise.all([
+      db.$queryRaw<Array<{ document_id: string; page_number: number; width: number | null; height: number | null }>>`
+        SELECT f.* FROM (${firstPages}) f JOIN public_documents_v p ON p.id = f.document_id
+        ORDER BY p.date_from NULLS LAST, p.id
+        LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`,
+      db.$queryRaw<Array<{ total: bigint }>>`SELECT count(*) AS total FROM (${firstPages}) f`,
+    ]);
+    const docs = new Map((await catalog.documentsByIds(pages.map((p) => p.document_id), lang)).map((d) => [d.id, d]));
+    const items = pages.flatMap((p) => {
+      const d = docs.get(p.document_id);
+      if (!d) return [];
+      return [{
+        ...documentSummaryDto(d, lang),
+        image: { url: `/api/v1/catalog/documents/${d.id}/pages/${p.page_number}/image`, width: p.width, height: p.height },
+      }];
+    });
+    return pageOf(items, Number(count?.total ?? 0), query.page, query.pageSize);
   });
 }

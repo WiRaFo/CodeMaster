@@ -463,3 +463,8 @@ export interface CollectionDetail extends CollectionSummary {
   documents: DocumentSummary[];
   persons: Array<{ slug: string; fullName: string; lifeYears: string | null; contentLang: string | null }>;
 }
+
+/** Плитка галереи (GET /history/gallery, F-085): документ и его первая публичная страница. */
+export interface GalleryItem extends DocumentSummary {
+  image: { url: string; width: number | null; height: number | null };
+}

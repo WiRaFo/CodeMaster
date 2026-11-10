@@ -661,5 +661,11 @@
     "documents": "Documents",
     "count_one": "{{count}} item",
     "count_other": "{{count}} items"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "lead": "Digitised documents that are open for viewing. Select an image to page through and zoom the copy.",
+    "empty": "No open digital copies yet.",
+    "alt": "First page of the digital copy: {{title}}"
   }
 }
