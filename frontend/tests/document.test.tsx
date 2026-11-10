@@ -95,6 +95,30 @@ describe('карточка открытого документа (F-040 – F-04
     expect(screen.getByTestId('copy-notice')).toHaveTextContent('Ссылка на документ скопирована');
   });
 
+  it('«Поделиться» с Web Share (телефон) открывает системное окно; отмена ничего не копирует', async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const share = vi.fn(async (_data: ShareData) => undefined);
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    try {
+      renderAt(OPEN);
+      const heading = await screen.findByRole('heading', { level: 1 });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Поделиться' }));
+      });
+      expect(share).toHaveBeenCalledWith({ title: heading.textContent, url: window.location.href });
+      expect(writeText).not.toHaveBeenCalled();
+      share.mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Поделиться' }));
+      });
+      expect(writeText).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('copy-notice')).toBeNull();
+    } finally {
+      Reflect.deleteProperty(navigator, 'share');
+    }
+  });
+
   it('нет нарушений axe в трёх языках', async () => {
     for (const lang of ['kk', 'ru', 'en']) {
       const { container, unmount } = renderAt(`/${lang}/catalog/documents/${DOCUMENTS.open.id}`);
