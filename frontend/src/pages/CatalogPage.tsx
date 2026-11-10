@@ -5,10 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { CatalogFilters } from '../components/catalog/CatalogFilters.tsx';
 import { CatalogSearchForm } from '../components/catalog/CatalogSearchForm.tsx';
-import { Highlight } from '../components/catalog/Highlight.tsx';
-import { LinkCard } from '../components/home/cards.tsx';
+import { DocumentCard } from '../components/catalog/DocumentCard.tsx';
+import { SemanticResults } from '../components/catalog/SemanticResults.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
-import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import {
   MULTI_FILTERS,
@@ -22,7 +21,6 @@ import {
   toggleValue,
   type CatalogQuery,
 } from '../lib/catalog-query.ts';
-import { formatYears } from '../lib/format.ts';
 import type { CatalogFacets, DocumentSearchResult, FacetValue } from '../lib/types.ts';
 import { dataOrPrevious, useApi } from '../lib/useApi.ts';
 
@@ -34,6 +32,7 @@ const isNarrow = () => typeof window !== 'undefined' && window.matchMedia('(max-
 /**
  * Электронный каталог (ТЗ §5.3; F-030 – F-036): поиск, фильтры с фасетными счётчиками, сортировка, страницы.
  * Всё состояние — в адресе; запросы к API строятся из того же состояния.
+ * Если подключена модель ИИ, под выдачей первой страницы — документы, похожие по смыслу (D-023).
  */
 export function CatalogPage() {
   const { t } = useTranslation();
@@ -146,31 +145,14 @@ export function CatalogPage() {
                 <ol className="mb-6 grid gap-3" start={(query.page - 1) * PAGE_SIZE + 1}>
                   {shown.items.map((d) => (
                     <li key={d.id}>
-                      <LinkCard
-                        to={`/${lang}/catalog/documents/${d.id}`}
-                        title={d.title ?? d.archiveCode.formatted}
-                        meta={
-                          <>
-                            <span>{d.archiveCode.formatted}</span>
-                            {d.access === 'restricted' ? <span className="badge-warning">{t('catalog.restricted')}</span> : null}
-                            <OriginBadge origin={d.dataOrigin} />
-                          </>
-                        }
-                      >
-                        <p className="text-sm text-muted">
-                          {[formatYears(d.date), d.type.name, d.branch.name, d.hasDigitalCopy ? t('home.digitalCopy') : null].filter(Boolean).join(' · ')}
-                        </p>
-                        {d.highlight ? (
-                          <p className="text-sm">
-                            <Highlight html={d.highlight} />
-                          </p>
-                        ) : null}
-                        <TranslationNote contentLang={d.contentLang} translationStatus={d.translationStatus} />
-                      </LinkCard>
+                      <DocumentCard lang={lang} doc={d} />
                     </li>
                   ))}
                 </ol>
               )}
+              {query.q && query.page === 1 ? (
+                <SemanticResults lang={lang} q={query.q} exclude={new Set(shown.items.map((d) => d.id))} />
+              ) : null}
               {shown.totalPages > 1 ? (
                 <nav aria-label={t('catalog.pagination')} className="flex flex-wrap items-center gap-3">
                   {query.page > 1 ? <Link to={pageHref(query.page - 1)} className="btn-secondary">{t('catalog.prev')}</Link> : null}

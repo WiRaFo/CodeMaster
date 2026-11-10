@@ -105,3 +105,38 @@ describe('каталог: фильтры и фасеты (ЭТАП 5)', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+describe('каталог: смысловой поиск (D-023)', () => {
+  const SEMANTIC_DOC = {
+    id: '9f1c2b3a-0000-4000-8000-000000000001', title: '[Синтетика] Отчёт о выпуске сливочного масла', contentLang: 'ru', translationStatus: 'reviewed',
+    archiveCode: { fond: 'TEST-1', inventory: '1', case: '2', formatted: 'Ф. TEST-1. Оп. 1. Д. 2.' }, documentNumber: '5',
+    date: { from: '1958-01-01', to: '1958-12-31', precision: 'year' }, type: { code: 'organization_record', name: 'Документы организаций и предприятий' },
+    branch: { slug: 'main', name: 'ГА ВКО' }, access: 'open', hasDigitalCopy: false, dataOrigin: 'synthetic', highlight: null, score: 0.71,
+  };
+
+  it('модель подключена: блок «Похожие по смыслу» под выдачей, без повторов основной выдачи', async () => {
+    fetchMock.mockImplementation(apiMock({
+      '/api/v1/catalog/semantic?': { available: true, model: 'bge-m3', items: [SEMANTIC_DOC, { ...SEMANTIC_DOC, id: '6b8741a3-8fc6-40af-9408-21b6f9709b6f', title: 'Повтор' }] },
+    }));
+    const { container } = renderAt('/ru/catalog?q=масло');
+    const block = await screen.findByRole('region', { name: 'Похожие по смыслу' });
+    expect(within(block).getByRole('link', { name: '[Синтетика] Отчёт о выпуске сливочного масла' })).toHaveAttribute('href', `/ru/catalog/documents/${SEMANTIC_DOC.id}`);
+    expect(within(block).queryByRole('link', { name: 'Повтор' })).toBeNull();
+    expect(lastParams('/api/v1/catalog/semantic?').get('q')).toBe('масло');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('модель не подключена или не ответила: блока нет, обычная выдача на месте', async () => {
+    fetchMock.mockImplementation(apiMock({ '/api/v1/catalog/semantic?': { available: false, model: null, items: [] } }));
+    renderAt('/ru/catalog?q=масло');
+    expect(await screen.findByRole('link', { name: '[Синтетика] Ведомость' })).toBeInTheDocument();
+    await waitFor(() => expect(calls('/api/v1/catalog/semantic?')).toHaveLength(1));
+    expect(screen.queryByRole('region', { name: 'Похожие по смыслу' })).toBeNull();
+  });
+
+  it('без запроса смысловой поиск не вызывается', async () => {
+    renderAt('/ru/catalog');
+    await screen.findByRole('link', { name: '[Синтетика] Ведомость' });
+    expect(calls('/api/v1/catalog/semantic?')).toHaveLength(0);
+  });
+});

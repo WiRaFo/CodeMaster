@@ -51,6 +51,27 @@ describe('архивный помощник', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 
+  it('модель ИИ подключена: под ответом правил — документы, похожие по смыслу', async () => {
+    fetchMock.mockImplementation(apiMock({
+      '/api/v1/assistant/ask?': {
+        ...SEARCH,
+        semantic: [{ id: '22222222-2222-4222-8222-222222222222', title: '[Синтетика] Вид набережной', code: 'Ф. TEST-1. Оп. 1. Д. 3.', date: { from: '1962-01-01', to: '1962-12-31' }, type: 'Фотографии', access: 'open', hasDigitalCopy: true, dataOrigin: 'synthetic' }],
+      },
+    }));
+    const { container } = renderAt('/ru/assistant?q=набережная');
+    const answer = await screen.findByTestId('assistant-answer');
+    const list = await within(answer).findByRole('list', { name: 'Похожие по смыслу' });
+    expect(within(list).getByRole('link', { name: 'Ф. TEST-1. Оп. 1. Д. 3. — [Синтетика] Вид набережной' })).toHaveAttribute('href', '/ru/catalog/documents/22222222-2222-4222-8222-222222222222');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('без модели блока «Похожие по смыслу» нет', async () => {
+    renderAt('/ru/assistant?q=фото');
+    await screen.findByTestId('assistant-answer');
+    await screen.findByText('Я понял запрос так:');
+    expect(screen.queryByRole('list', { name: 'Похожие по смыслу' })).toBeNull();
+  });
+
   it('вопрос о заявлении: объяснение, что сайт справочный, и ссылки на разделы; пример вопроса задаётся кнопкой', async () => {
     renderAt('/ru/assistant');
     await userEvent.click(screen.getByRole('button', { name: 'Как подать заявление на архивную справку?' }));

@@ -26,6 +26,16 @@ const envSchema = z.object({
       if (value === 'true') return true;
       return value;
     }),
+  /**
+   * Модель смыслового поиска (D-023). none — только обычный поиск. ollama — локальный сервер Ollama:
+   * модель работает на сервере архива, тексты наружу не уходят (ТЗ §5.8, P-005, S-031).
+   */
+  AI_PROVIDER: z.enum(['none', 'ollama']).default('none'),
+  AI_BASE_URL: z.string().url().default('http://127.0.0.1:11434'),
+  /** Многоязычная модель эмбеддингов: казахский, русский, английский. */
+  AI_EMBED_MODEL: z.string().min(1).default('bge-m3'),
+  /** Сколько ждать модель при поиске; дольше — посетитель получает обычную выдачу без смысловой части. */
+  AI_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(4000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 export type Env = z.infer<typeof envSchema>;

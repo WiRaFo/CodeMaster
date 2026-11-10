@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { ObjectStorage } from './infrastructure/storage/local-storage.ts';
+import type { EmbeddingProvider } from './modules/ai/embeddings.ts';
 import { randomUUID } from 'node:crypto';
 import { registerErrorHandling } from './http/errors.ts';
 import { adminRoutes } from './modules/admin/admin.routes.ts';
@@ -27,6 +28,9 @@ export interface AppOptions {
    * Включать только за своим обратным прокси: иначе клиент подставит любой адрес. См. TRUST_PROXY.
    */
   trustProxy?: boolean | string;
+  /** Модель смыслового поиска (AI_PROVIDER); без неё работает только обычный поиск. */
+  embeddings?: EmbeddingProvider | null;
+  aiTimeoutMs?: number;
   /** Наблюдатель за регистрацией маршрутов (тест проверяет, что каждый маршрут /admin закрыт). */
   onRoute?: (route: { method: string | string[]; url: string }) => void;
 }
@@ -43,7 +47,7 @@ const SECURITY_HEADERS: Record<string, string> = {
 const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
 /** Сборка приложения без запуска сервера (используется и в тестах через app.inject). */
-export async function buildApp({ db, storage, logLevel = 'info', secureCookies = false, allowedOrigins = [], trustProxy = false, onRoute }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, storage, logLevel = 'info', secureCookies = false, allowedOrigins = [], trustProxy = false, onRoute, embeddings = null, aiTimeoutMs }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel, redact: ['req.headers.cookie', 'req.headers.authorization'] },
     genReqId: () => randomUUID(),
@@ -73,12 +77,12 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
   await app.register(healthRoutes, { db });
   await app.register(
     async (api) => {
-      await api.register(catalogRoutes, { db, storage });
+      await api.register(catalogRoutes, { db, storage, embeddings, ...(aiTimeoutMs ? { aiTimeoutMs } : {}) });
       await api.register(branchRoutes, { db });
       await api.register(referenceRoutes, { db });
       await api.register(contentRoutes, { db });
       await api.register(exhibitionRoutes, { db, storage });
-      await api.register(assistantRoutes);
+      await api.register(assistantRoutes, { db, embeddings, ...(aiTimeoutMs ? { aiTimeoutMs } : {}) });
       await api.register(historyRoutes, { db });
       await api.register(siteRoutes, { db, allowedOrigins });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });

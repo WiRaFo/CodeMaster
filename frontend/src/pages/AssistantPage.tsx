@@ -6,7 +6,7 @@ import { OriginBadge } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { ApiRequestError, apiGet } from '../lib/api.ts';
 import { SECTIONS, sectionHref } from '../lib/sections.ts';
-import type { AssistantAnswer, AssistantRecognized, AssistantSection } from '../lib/types.ts';
+import type { AssistantAnswer, AssistantDocument, AssistantRecognized, AssistantSection } from '../lib/types.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
 
 type Turn = { id: number; question: string } & ({ state: 'loading' } | { state: 'error'; tooMany: boolean } | { state: 'ready'; answer: AssistantAnswer });
@@ -48,6 +48,40 @@ function RecognizedList({ items }: { items: AssistantRecognized[] }) {
   );
 }
 
+/** Документы ответа: шифр и название ссылкой на карточку, вид, годы, доступ, пометка демо. */
+function DocumentList({ documents, label }: { documents: AssistantDocument[]; label: string }) {
+  const { t } = useTranslation();
+  const { lang = 'kk' } = useParams();
+  return (
+    <ol className="mt-2 flex flex-col gap-2" aria-label={label}>
+      {documents.map((d) => (
+        <li key={d.id} className="rounded-md border-2 border-border p-3">
+          <Link to={`/${lang}/catalog/documents/${d.id}`}>{[d.code, d.title].filter(Boolean).join(' — ')}</Link>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+            {d.type ? <span className="text-muted">{d.type}</span> : null}
+            {d.date.from ? <span className="text-muted">{d.date.from.slice(0, 4)}{d.date.to && d.date.to.slice(0, 4) !== d.date.from.slice(0, 4) ? `–${d.date.to.slice(0, 4)}` : ''}</span> : null}
+            {d.access === 'restricted' ? <span className="font-semibold">{t('catalog.restricted')}</span> : null}
+            <OriginBadge origin={d.dataOrigin} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Дополнение от локальной модели ИИ; без модели блока нет. */
+function SemanticDocuments({ documents }: { documents: AssistantDocument[] | undefined }) {
+  const { t } = useTranslation();
+  if (!documents?.length) return null;
+  return (
+    <div className="mt-4">
+      <p className="font-semibold">{t('catalog.semantic.title')}</p>
+      <p className="text-sm text-muted">{t('catalog.semantic.note')}</p>
+      <DocumentList documents={documents} label={t('catalog.semantic.title')} />
+    </div>
+  );
+}
+
 function Answer({ answer }: { answer: AssistantAnswer }) {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
@@ -57,7 +91,7 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
     case 'navigation':
       return (<><p>{t('assistant.answers.navigation')}</p><SectionLinks links={answer.links} /></>);
     case 'unknown':
-      return (<><p>{t('assistant.answers.unknown')}</p><SectionLinks links={answer.links} /></>);
+      return (<><p>{t('assistant.answers.unknown')}</p><SectionLinks links={answer.links} /><SemanticDocuments documents={answer.semantic} /></>);
     case 'term':
       return (
         <>
@@ -101,19 +135,7 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
                 <p className="mb-1">{t('assistant.answers.relaxed', { what: answer.dropped.map((d) => t(`assistant.dropped.${d}`)).join(', ') })}</p>
               ) : null}
               <p>{t('assistant.answers.found', { count: answer.total })}</p>
-              <ol className="mt-2 flex flex-col gap-2" aria-label={t('assistant.sources')}>
-                {answer.documents.map((d) => (
-                  <li key={d.id} className="rounded-md border-2 border-border p-3">
-                    <Link to={`/${lang}/catalog/documents/${d.id}`}>{[d.code, d.title].filter(Boolean).join(' — ')}</Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                      {d.type ? <span className="text-muted">{d.type}</span> : null}
-                      {d.date.from ? <span className="text-muted">{d.date.from.slice(0, 4)}{d.date.to && d.date.to.slice(0, 4) !== d.date.from.slice(0, 4) ? `–${d.date.to.slice(0, 4)}` : ''}</span> : null}
-                      {d.access === 'restricted' ? <span className="font-semibold">{t('catalog.restricted')}</span> : null}
-                      <OriginBadge origin={d.dataOrigin} />
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <DocumentList documents={answer.documents} label={t('assistant.sources')} />
               <p className="mt-2"><Link to={catalog(answer.catalogQuery)} className="font-semibold">{t('assistant.answers.allResults')}</Link></p>
               {answer.suggestions.length > 0 ? (
                 <>
@@ -127,6 +149,7 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
               ) : null}
             </>
           )}
+          <SemanticDocuments documents={answer.semantic} />
         </>
       );
     }

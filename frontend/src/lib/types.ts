@@ -64,6 +64,13 @@ export interface DocumentSummary extends HomeDocument {
   highlight: string | null;
 }
 
+/** Смысловой поиск: available=false — модель не подключена или не ответила. */
+export interface SemanticResult {
+  available: boolean;
+  model: string | null;
+  items: Array<DocumentSummary & { score: number }>;
+}
+
 export interface DocumentSearchResult extends Paged<DocumentSummary> {
   interpretedCode: { fond: string; inventory?: string; case?: string; formatted: string } | null;
 }
@@ -279,7 +286,9 @@ export interface AssistantDocument {
   dataOrigin: DataOrigin;
 }
 export type AssistantAnswer =
-  | { intent: 'service_request' | 'navigation' | 'unknown'; links: AssistantSection[] }
+  | { intent: 'service_request' | 'navigation'; links: AssistantSection[] }
+  /** semantic — документы, похожие по смыслу (только при подключённой модели ИИ). */
+  | { intent: 'unknown'; links: AssistantSection[]; semantic?: AssistantDocument[] }
   | { intent: 'term'; term: string; links: AssistantSection[] }
   | {
       intent: 'branch';
@@ -296,6 +305,7 @@ export type AssistantAnswer =
       dropped: Array<'topic' | 'keywords' | 'type'>;
       documents: AssistantDocument[];
       suggestions: Array<{ reason: 'withCopy' | 'prevDecade' | 'nextDecade' | 'allTypes'; query: string }>;
+      semantic?: AssistantDocument[];
     };
 
 /** ЭТАП 7. Публикация цифровой истории региона (GET /history, /history/:slug; ТЗ §5.6). */

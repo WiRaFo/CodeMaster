@@ -115,6 +115,30 @@ function orderBy(sort: DocumentSearchQuery['sort'], plan: SearchPlan): Prisma.Sq
   }
 }
 
+/** Колонки карточки выдачи; FROM public_documents_v p — закрытые документы сюда не попадают. */
+function summarySelect(highlight: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`
+      SELECT p.id, p.fond_number, p.inventory_number, p.case_number, p.document_number,
+             p.sheets_from, p.sheets_to, p.date_from, p.date_to, p.date_precision::text AS date_precision,
+             p.effective_access::text AS effective_access, p.data_origin::text AS data_origin,
+             tr.locale AS content_lang, tr.translation_status, tr.title,
+             dty.code AS type_code, dtt.name AS type_name,
+             p.branch_id, b.slug AS branch_slug, coalesce(bt.short_name, bt.full_name) AS branch_name,
+             EXISTS (SELECT 1 FROM public_document_pages_v pg WHERE pg.document_id = p.id) AS online_copy,
+             ${highlight} AS highlight
+      FROM public_documents_v p`;
+}
+
+/** Переводы, вид документа и подразделение для карточки выдачи (после FROM и необязательного join поиска). */
+function summaryJoins(lang: Locale): Prisma.Sql {
+  return Prisma.sql`
+      ${bestTranslation('document', 'tr', 'p.id', lang, ['title', 'description'])}
+      JOIN document_types dty ON dty.id = p.document_type_id
+      ${bestTranslation('documentType', 'dtt', 'p.document_type_id', lang, ['name'])}
+      JOIN branches b ON b.id = p.branch_id
+      ${bestTranslation('branch', 'bt', 'p.branch_id', lang, ['full_name', 'short_name'])}`;
+}
+
 export class CatalogRepository {
   constructor(private readonly db: PrismaClient) {}
 
@@ -144,25 +168,24 @@ export class CatalogRepository {
     const [countRow] = await this.db.$queryRaw<Array<{ total: bigint }>>`
       SELECT count(*) AS total FROM public_documents_v p ${match} ${where}`;
     const rows = await this.db.$queryRaw<DocumentRow[]>`
-      SELECT p.id, p.fond_number, p.inventory_number, p.case_number, p.document_number,
-             p.sheets_from, p.sheets_to, p.date_from, p.date_to, p.date_precision::text AS date_precision,
-             p.effective_access::text AS effective_access, p.data_origin::text AS data_origin,
-             tr.locale AS content_lang, tr.translation_status, tr.title,
-             dty.code AS type_code, dtt.name AS type_name,
-             p.branch_id, b.slug AS branch_slug, coalesce(bt.short_name, bt.full_name) AS branch_name,
-             EXISTS (SELECT 1 FROM public_document_pages_v pg WHERE pg.document_id = p.id) AS online_copy,
-             ${highlight} AS highlight
-      FROM public_documents_v p
+      ${summarySelect(highlight)}
       ${match}
-      ${bestTranslation('document', 'tr', 'p.id', lang, ['title', 'description'])}
-      JOIN document_types dty ON dty.id = p.document_type_id
-      ${bestTranslation('documentType', 'dtt', 'p.document_type_id', lang, ['name'])}
-      JOIN branches b ON b.id = p.branch_id
-      ${bestTranslation('branch', 'bt', 'p.branch_id', lang, ['full_name', 'short_name'])}
+      ${summaryJoins(lang)}
       ${where}
       ${orderBy(query.sort, plan)}
       LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`;
     return { rows, total: Number(countRow?.total ?? 0), plan };
+  }
+
+  /** Карточки выдачи по списку id в заданном порядке (смысловой поиск). Только публичные документы. */
+  async documentsByIds(ids: readonly string[], lang: Locale): Promise<DocumentRow[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.db.$queryRaw<DocumentRow[]>`
+      ${summarySelect(Prisma.sql`NULL::text`)}
+      ${summaryJoins(lang)}
+      WHERE p.id = ANY(${[...ids]}::uuid[])`;
+    const order = new Map(ids.map((id, i) => [id, i]));
+    return rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
   }
 
   /**
