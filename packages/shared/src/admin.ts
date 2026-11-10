@@ -300,3 +300,12 @@ export const publicationInputSchema = z.object({
   .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
   .refine((v) => v.yearFrom === null || v.yearTo === null || v.yearFrom <= v.yearTo, { path: ['yearTo'], message: 'order' });
 export type PublicationInput = z.infer<typeof publicationInputSchema>;
+
+/** Подпись фото внутри публикации: описание для незрячих обязательно по-русски, подпись под фото — по желанию. */
+export const publicationImageInputSchema = z.object({
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    altText: z.string().trim().min(3).max(300),
+    caption: optionalLongText(500),
+  })),
+}).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'altText'], message: 'required' });
+export type PublicationImageInput = z.infer<typeof publicationImageInputSchema>;

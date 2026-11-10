@@ -852,6 +852,11 @@ async function memoryAdminScenario(browser: Browser) {
   const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
   await editForm.getByLabel('Загрузить обложку').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png });
   check(await editForm.getByText(/ожидает проверки антивирусом/).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: обложка загружена и ждёт проверки антивирусом');
+  await editForm.getByLabel('Добавить фото').setInputFiles({ name: 'zal.png', mimeType: 'image/png', buffer: png });
+  check(await editForm.getByText(/«zal\.png»: ожидает проверки антивирусом/).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: фото добавлено в публикацию и ждёт проверки');
+  check((await axe(page)).length === 0, `axe фото публикации в панели: ${(await axe(page)).join('; ')}`);
+  const photoOnSite = await fetch(`${BASE}/api/v1/history/e2e-publication-${tag}/images/1`);
+  check(photoOnSite.status === 404, 'архив памяти: непроверенное фото не отдаётся сайтом');
   const coverOnSite = await fetch(`${BASE}/api/v1/history/e2e-publication-${tag}/cover`);
   check(coverOnSite.status === 404, 'архив памяти: непроверенная обложка не отдаётся сайтом');
   await editForm.getByRole('button', { name: 'Отмена' }).click();

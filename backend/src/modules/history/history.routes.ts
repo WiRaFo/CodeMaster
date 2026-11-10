@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { historyListSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
@@ -83,10 +83,28 @@ const summary = (p: Row) => ({
   cover: p.has_cover ? { url: `/api/v1/history/${encodeURIComponent(p.slug)}/cover`, alt: p.cover_alt ?? '' } : null,
 });
 
-const COVER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+type PublicFile = { storage_bucket: string; storage_key: string; mime_type: string; asset_id: string } | undefined;
+
 
 export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
   const { db } = opts;
+
+  /** Отдаёт файл из публичного представления; нет записи или файла — 404, как у несуществующего. */
+  async function sendPublicImage(request: FastifyRequest, reply: FastifyReply, file: PublicFile) {
+    if (!file || !IMAGE_TYPES.has(file.mime_type)) throw notFound();
+    const body = await opts.storage.read(file.storage_bucket, file.storage_key);
+    if (!body) {
+      request.log.warn({ assetId: file.asset_id }, 'publication image is missing in storage');
+      throw notFound();
+    }
+    return reply
+      .header('Content-Type', file.mime_type)
+      .header('Content-Disposition', 'inline')
+      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+      .header('Cache-Control', 'public, max-age=300')
+      .send(body);
+  }
 
   app.get('/history', async (request, reply) => {
     const query = historyListSchema.parse(request.query);
@@ -237,18 +255,16 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
     const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
       SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_publication_covers_v WHERE slug = ${slug}`;
-    if (!file || !COVER_TYPES.has(file.mime_type)) throw notFound();
-    const body = await opts.storage.read(file.storage_bucket, file.storage_key);
-    if (!body) {
-      request.log.warn({ assetId: file.asset_id }, 'publication cover is missing in storage');
-      throw notFound();
-    }
-    return reply
-      .header('Content-Type', file.mime_type)
-      .header('Content-Disposition', 'inline')
-      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
-      .header('Cache-Control', 'public, max-age=300')
-      .send(body);
+    return sendPublicImage(request, reply, file);
+  });
+
+  app.get('/history/:slug/images/:number', async (request, reply) => {
+    const parsed = z.object({ slug: z.string().max(150), number: z.string().regex(/^[1-9]\d{0,2}$/) }).safeParse(request.params);
+    if (!parsed.success) throw notFound();
+    const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
+      SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_publication_images_v
+      WHERE slug = ${parsed.data.slug} AND position = ${Number(parsed.data.number)}`;
+    return sendPublicImage(request, reply, file);
   });
 
   app.get('/history/:slug', async (request, reply) => {
@@ -256,7 +272,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
     const [p] = await db.$queryRaw<Row[]>`${select(lang)} WHERE ${PUBLIC_PUBLICATION} AND p.slug = ${slug}`;
     if (!p) throw notFound();
-    const [docs, related, persons, events] = await Promise.all([
+    const [docs, related, persons, events, images] = await Promise.all([
       p.document_id
         ? db.$queryRaw<Array<{ id: string; fond_number: string; inventory_number: string; case_number: string; sheets_from: string | null; sheets_to: string | null; effective_access: string; title: string | null }>>`
             SELECT d.id, d.fond_number, d.inventory_number, d.case_number, d.sheets_from, d.sheets_to, d.effective_access::text AS effective_access, t.title
@@ -282,6 +298,13 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
         ${bestTranslation('historicalEvent', 't', 'e.id', lang, ['title'])}
         WHERE pe.publication_id = ${p.id}::uuid AND t.title IS NOT NULL
         ORDER BY e.year, e.event_date NULLS FIRST, e.slug`,
+      // Фото внутри публикации — только из публичного представления, по порядку; описание и подпись на лучшем языке.
+      db.$queryRaw<Array<{ position: bigint; alt_text: string | null; caption: string | null; content_lang: string | null }>>`
+        SELECT i.position, t.alt_text, t.caption, t.locale AS content_lang
+        FROM public_publication_images_v i
+        ${bestTranslation('asset', 't', 'i.asset_id', lang, ['alt_text', 'caption'])}
+        WHERE i.publication_id = ${p.id}::uuid
+        ORDER BY i.position`,
     ]);
     const doc = docs[0];
     return {
@@ -294,6 +317,10 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       related: related.map(summary),
       persons: persons.map((x) => ({ slug: x.slug, fullName: x.full_name, lifeYears: x.life_years_text })),
       events: events.map((x) => ({ slug: x.slug, year: x.year, title: x.title })),
+      images: images.map((x) => ({
+        url: `/api/v1/history/${encodeURIComponent(p.slug)}/images/${Number(x.position)}`,
+        alt: x.alt_text ?? '', caption: x.caption, contentLang: x.content_lang,
+      })),
     };
   });
 }
