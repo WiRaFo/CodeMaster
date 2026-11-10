@@ -137,3 +137,16 @@ describe('«Календарь памятных дат»', () => {
   });
 });
 
+describe('«Противодействие коррупции»', () => {
+  it('комплаенс-офицер, документы на двух языках с размером и пометкой скана, ссылка в подвале', async () => {
+    const { container } = renderAt('/kk/anticorruption');
+    expect(await screen.findByText('Ешенгельдиев Тырек Молболович')).toBeInTheDocument();
+    const ru = screen.getByRole('link', { name: /^Русский, PDF, 6 бет, 0,8 МБ$|^Орысша, PDF, 6 бет, 0,8 МБ$/ });
+    expect(ru).toHaveAttribute('href', '/files/anticorruption/polozhenie-ru.pdf');
+    expect(screen.getByText(/экрандық диктор оны оқи алмайды/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Сыбайлас жемқорлық тәуекелдеріне ішкі талдау жүргізу туралы' })).toBeInTheDocument();
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Сыбайлас жемқорлыққа қарсы іс-қимыл' })).toHaveAttribute('href', '/kk/anticorruption');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+

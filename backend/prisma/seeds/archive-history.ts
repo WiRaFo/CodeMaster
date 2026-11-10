@@ -1,5 +1,5 @@
 /** Текст «История архива.docx», переданный архивом 10.11.2026; разбит на абзацы и списки без правки по существу. */
-export type HistoryBlock = { type: 'p'; text: string } | { type: 'ol' | 'ul'; items: string[] };
+export type HistoryBlock = { type: 'p' | 'h'; text: string } | { type: 'ol' | 'ul'; items: string[] };
 
 export const ARCHIVE_HISTORY_RU: HistoryBlock[] = [
   {

@@ -119,8 +119,8 @@ export function AboutPage() {
   );
 }
 
-function HistoryBlockView({ block }: { block: HistoryBlock }) {
-  if (block.type === 'p') return <p>{block.text}</p>;
+export function HistoryBlockView({ block }: { block: HistoryBlock }) {
+  if (!('items' in block)) return block.type === 'h' ? <h3 className="mt-2 text-lg font-semibold">{block.text}</h3> : <p>{block.text}</p>;
   const items = block.items.map((item, i) => <li key={i}>{item}</li>);
   return block.type === 'ol'
     ? <ol className="flex list-decimal flex-col gap-1 pl-6">{items}</ol>

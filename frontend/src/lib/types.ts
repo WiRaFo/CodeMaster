@@ -132,7 +132,7 @@ export interface StaffContact {
   translationStatus: string;
 }
 
-export type HistoryBlock = { type: 'p'; text: string } | { type: 'ol' | 'ul'; items: string[] };
+export type HistoryBlock = { type: 'p' | 'h'; text: string } | { type: 'ol' | 'ul'; items: string[] };
 
 /** Ответ /about: история, структура, соцсети. */
 export interface AboutInfo {
@@ -333,4 +333,16 @@ export interface CalendarData {
   years: number[];
   year: number | null;
   items: CalendarItem[];
+}
+
+/** Ответ /anticorruption. */
+export interface AnticorruptionInfo {
+  text: { title: string; blocks: HistoryBlock[]; contentLang: string; translationStatus: string } | null;
+  officer: { fullName: string; position: string } | null;
+  documents: Array<{
+    key: string;
+    title: string;
+    scanned: boolean;
+    files: Array<{ locale: string; url: string; sizeBytes: number; pages: number }>;
+  }>;
 }

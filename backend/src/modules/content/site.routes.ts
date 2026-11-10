@@ -9,13 +9,24 @@ import { LoginLimiter } from '../auth/login-limiter.ts';
 import { publicStaff } from './staff.ts';
 
 const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
-  z.object({ type: z.literal('p'), text: z.string() }),
+  z.object({ type: z.enum(['p', 'h']), text: z.string() }),
   z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
 ]));
 
 const calendarQuerySchema = langOnlySchema.extend({
   year: z.coerce.number().int().min(1900).max(2100).optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),
+});
+
+const tri = z.object({ ru: z.string(), kk: z.string(), en: z.string() });
+const anticorruptionSchema = z.object({
+  officer: z.object({ fullName: z.string(), position: tri }),
+  documents: z.array(z.object({
+    key: z.string(),
+    title: tri,
+    scanned: z.boolean(),
+    files: z.array(z.object({ locale: z.enum(['ru', 'kk', 'en']), url: z.string().startsWith('/files/'), sizeBytes: z.number().int(), pages: z.number().int() })),
+  })),
 });
 
 const socialLinksSchema = z.array(z.object({
@@ -102,6 +113,27 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
         const t = r.translations.find((x) => x.locale === lang) ?? r.translations.find((x) => x.locale === 'ru') ?? r.translations[0];
         return t ? [{ id: r.id, month: r.month, day: r.day, dateLabel: t.dateLabel, text: t.text, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
       }),
+    };
+  });
+
+  /** «Противодействие коррупции» (сведения архива): текст, комплаенс-офицер, документы на русском и казахском. */
+  app.get('/anticorruption', async (request, reply) => {
+    const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const [page, setting] = await Promise.all([
+      db.page.findFirst({
+        where: { key: 'anticorruption', publicationStatus: 'published', deletedAt: null },
+        include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+      }),
+      db.siteSetting.findUnique({ where: { key: 'anticorruption' } }),
+    ]);
+    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+    const info = anticorruptionSchema.safeParse(setting?.value);
+    return {
+      text: t ? { title: t.title, blocks: historyBlocksSchema.parse(t.body), contentLang: t.locale, translationStatus: t.translationStatus } : null,
+      officer: info.success ? { fullName: info.data.officer.fullName, position: info.data.officer.position[lang] } : null,
+      documents: info.success
+        ? info.data.documents.map((d) => ({ key: d.key, title: d.title[lang], scanned: d.scanned, files: d.files }))
+        : [],
     };
   });
 

@@ -25,6 +25,18 @@ export const CALENDAR = {
   ],
 };
 
+export const ANTICORRUPTION = {
+  text: { title: 'Противодействие коррупции', contentLang: 'kk', translationStatus: 'reviewed', blocks: [
+    { type: 'h', text: 'Сыбайлас жемқорлық тәуекелдеріне ішкі талдау жүргізу туралы' },
+    { type: 'p', text: '2026 жылғы 11 қыркүйектен бастап сыбайлас жемқорлық тәуекелдеріне ішкі талдау жүргізуді бастайды.' },
+  ] },
+  officer: { fullName: 'Ешенгельдиев Тырек Молболович', position: 'Комплаенс-офицер' },
+  documents: [{ key: 'polozhenie', title: 'Сыбайлас жемқорлыққа қарсы комплаенс қызметі туралы ереже', scanned: true, files: [
+    { locale: 'ru', url: '/files/anticorruption/polozhenie-ru.pdf', sizeBytes: 857153, pages: 6 },
+    { locale: 'kk', url: '/files/anticorruption/polozhenie-kk.pdf', sizeBytes: 948303, pages: 6 },
+  ] }],
+};
+
 export const ABOUT = {
   history: { title: 'История архива', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified', blocks: [
     { type: 'p', text: 'Государственный архив Восточно-Казахстанской области образован в 1940 году.' },
@@ -171,6 +183,7 @@ export function apiMock(overrides: Record<string, unknown> = {}) {
     ['/api/v1/branches/main', MAIN_BRANCH],
     ['/api/v1/about?', ABOUT],
     ['/api/v1/calendar?', CALENDAR],
+    ['/api/v1/anticorruption?', ANTICORRUPTION],
     ['/api/v1/branches?', FIXTURES.branches],
     ['/api/v1/home?', FIXTURES.home],
     ['/api/v1/catalog/documents?', FIXTURES.catalog],

@@ -15,7 +15,7 @@ const AXE_SOURCE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024', '/kk/anticorruption'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -626,6 +626,11 @@ async function seoScenario(browser: Browser) {
   check(robots.includes('Disallow: /admin') && robots.includes('Disallow: /api/'), 'SEO: robots.txt закрывает панель и API');
   const api = await fetch(`${BASE}/api/v1/branches`);
   check(api.headers.get('x-frame-options') === 'DENY' && (api.headers.get('content-security-policy') ?? '').includes("default-src 'none'"), 'безопасность: заголовки у ответов API');
+  const docs = (await (await fetch(`${BASE}/api/v1/anticorruption?lang=ru`)).json()) as { documents: Array<{ files: Array<{ url: string; sizeBytes: number }> }> };
+  for (const f of docs.documents.flatMap((d) => d.files)) {
+    const res = await fetch(`${BASE}${f.url}`);
+    check(res.ok && res.headers.get('content-type') === 'application/pdf' && (await res.arrayBuffer()).byteLength === f.sizeBytes, `противодействие коррупции: файл ${f.url} отдаётся, размер совпадает`);
+  }
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(`${BASE}/ru/faq`);

@@ -13,6 +13,7 @@ import { FeedbackPage } from '../pages/FeedbackPage.tsx';
 import { HistoryPage, PublicationPage } from '../pages/HistoryPage.tsx';
 import { AboutPage, StructurePage, VisitorsPage } from '../pages/InfoPages.tsx';
 import { CalendarPage } from '../pages/CalendarPage.tsx';
+import { AnticorruptionPage } from '../pages/AnticorruptionPage.tsx';
 import { HomePage } from '../pages/HomePage.tsx';
 import { NewsItemPage } from '../pages/NewsItemPage.tsx';
 import { NewsListPage } from '../pages/NewsListPage.tsx';
@@ -55,6 +56,7 @@ export const routes: RouteObject[] = [
       { path: 'about', element: <AboutPage /> },
       { path: 'about/structure', element: <StructurePage /> },
       { path: 'calendar', element: <CalendarPage /> },
+      { path: 'anticorruption', element: <AnticorruptionPage /> },
       { path: 'feedback', element: <FeedbackPage /> },
       ...SECTIONS.filter((s) => s.path && !IMPLEMENTED.has(s.path)).map((s) => ({ path: s.path, element: <SectionStubPage section={s.key} /> })),
       { path: 'accessibility', element: <AccessibilityPage /> },

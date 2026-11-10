@@ -535,5 +535,15 @@
       "11": "November",
       "12": "December"
     }
+  },
+  "anticorruption": {
+    "title": "Anti-corruption",
+    "lead": "Anti-corruption compliance service of the State Archive of East Kazakhstan Region: regulations, corruption risk analysis and action plan.",
+    "officerTitle": "Compliance officer",
+    "contact": "Contact the archive using the details on the “About the archive” page.",
+    "documentsTitle": "Documents",
+    "file": "{{lang}}, PDF, {{pages}} p., {{size}} MB",
+    "scanned": "Scanned document without a text layer: screen readers cannot read it. A summary is given in the information below.",
+    "newsTitle": "Compliance service information"
   }
 }

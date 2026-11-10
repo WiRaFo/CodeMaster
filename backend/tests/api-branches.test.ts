@@ -127,3 +127,15 @@ describe('календарь памятных дат (сведения архи�
   });
 });
 
+describe('«Противодействие коррупции» (сведения архива)', () => {
+  it('текст на русском и казахском, комплаенс-офицер, 4 документа с файлами ru и kk', async () => {
+    const kk = await t.get('/api/v1/anticorruption?lang=kk');
+    expect(kk.body['text']).toMatchObject({ title: 'Сыбайлас жемқорлыққа қарсы іс-қимыл', contentLang: 'kk' });
+    expect(kk.body['officer']).toEqual({ fullName: 'Ешенгельдиев Тырек Молболович', position: 'Комплаенс-офицер' });
+    const docs = kk.body['documents'] as Array<{ key: string; files: Array<{ locale: string; url: string }> }>;
+    expect(docs.map((d) => d.key)).toEqual(['polozhenie', 'analiz-2026', 'perechen', 'plan']);
+    for (const d of docs) expect(d.files.map((f) => f.url)).toEqual([`/files/anticorruption/${d.key}-ru.pdf`, `/files/anticorruption/${d.key}-kk.pdf`]);
+    expect((await t.get('/api/v1/anticorruption?lang=en')).body['text']).toMatchObject({ contentLang: 'ru' });
+  });
+});
+

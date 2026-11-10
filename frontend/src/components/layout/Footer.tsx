@@ -76,6 +76,7 @@ export function Footer() {
             ))}
             <li><Link to={`/${lang}/accessibility`}>{t('nav.accessibility')}</Link></li>
             <li><Link to={`/${lang}/feedback`}>{t('nav.feedback')}</Link></li>
+            <li><Link to={`/${lang}/anticorruption`}>{t('anticorruption.title')}</Link></li>
           </ul>
         </nav>
 

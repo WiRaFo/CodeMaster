@@ -2,8 +2,9 @@ import type { PrismaClient } from '@prisma/client';
 import {
   ARCHIVE_BRANCHES, ARCHIVE_DATA_DATE, ARCHIVE_MAIN, ARCHIVE_SETTLEMENTS, ARCHIVE_SOCIAL, ARCHIVE_STAFF, BRANCH_DIRECTOR,
 } from './archive-data.ts';
+import { ANTICORRUPTION_SETTING, ANTICORRUPTION_TEXT } from './archive-anticorruption.ts';
 import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
-import { ARCHIVE_HISTORY_RU } from './archive-history.ts';
+import { ARCHIVE_HISTORY_RU, type HistoryBlock } from './archive-history.ts';
 import { names, translationRows, OLD_SITE_CONTACTS_URL, type Tri } from './lib.ts';
 
 /**
@@ -158,6 +159,7 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
   await seedStaff(db, branchIds);
   await seedAboutPages(db);
   await seedCalendar(db);
+  await seedAnticorruption(db);
   await db.siteSetting.upsert({
     where: { key: 'social_links' },
     update: { value: ARCHIVE_SOCIAL },
@@ -200,7 +202,7 @@ async function seedAboutPages(db: PrismaClient): Promise<void> {
       locale: 'ru',
       title: 'История архива',
       body: ARCHIVE_HISTORY_RU,
-      bodyText: ARCHIVE_HISTORY_RU.map((b) => (b.type === 'p' ? b.text : b.items.join('\n'))).join('\n\n'),
+      bodyText: blocksText(ARCHIVE_HISTORY_RU),
       translationStatus: 'reviewed',
     },
   });
@@ -225,4 +227,29 @@ async function seedCalendar(db: PrismaClient): Promise<void> {
       },
     });
   }
+}
+
+const blocksText = (blocks: HistoryBlock[]): string =>
+  blocks.map((b) => ('items' in b ? b.items.join('\n') : b.text)).join('\n\n');
+
+/** «Противодействие коррупции»: тексты на русском и казахском, комплаенс-офицер и документы (PDF) в site_settings. */
+async function seedAnticorruption(db: PrismaClient): Promise<void> {
+  const data = { sortOrder: 0, publicationStatus: 'published' as const, dataOrigin: 'verified' as const, sourceUrl: null };
+  const page = await db.page.upsert({ where: { key: 'anticorruption' }, update: data, create: { key: 'anticorruption', ...data } });
+  await db.pageTranslation.deleteMany({ where: { pageId: page.id } });
+  await db.pageTranslation.createMany({
+    data: (['ru', 'kk'] as const).map((locale) => ({
+      pageId: page.id,
+      locale,
+      title: locale === 'ru' ? 'Противодействие коррупции' : 'Сыбайлас жемқорлыққа қарсы іс-қимыл',
+      body: ANTICORRUPTION_TEXT[locale],
+      bodyText: blocksText(ANTICORRUPTION_TEXT[locale]),
+      translationStatus: 'reviewed' as const,
+    })),
+  });
+  await db.siteSetting.upsert({
+    where: { key: 'anticorruption' },
+    update: { value: ANTICORRUPTION_SETTING },
+    create: { key: 'anticorruption', value: ANTICORRUPTION_SETTING },
+  });
 }
