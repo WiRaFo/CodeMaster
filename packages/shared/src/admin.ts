@@ -309,3 +309,40 @@ export const publicationImageInputSchema = z.object({
   })),
 }).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'altText'], message: 'required' });
 export type PublicationImageInput = z.infer<typeof publicationImageInputSchema>;
+
+/**
+ * «Об архиве» в панели (ТЗ §5.2; F-023). Разделы — страницы about/*; «История архива» существует с миграции,
+ * остальные создаются при первом сохранении. Порядок списка — порядок разделов на сайте.
+ */
+export const ABOUT_SECTIONS = [
+  { key: 'about/history', title: 'История архива' },
+  { key: 'about/activities', title: 'Деятельность архива' },
+  { key: 'about/mission', title: 'Задачи и функции' },
+  { key: 'about/achievements', title: 'Достижения и награды' },
+] as const;
+export type AboutSectionKey = (typeof ABOUT_SECTIONS)[number]['key'];
+
+/** Сотрудник основного архива (страница «Структура и руководство»). */
+export const staffContactInputSchema = z.object({
+  phone: z.string().trim().max(60).regex(/^[0-9+()\-\s,;]*$/).transform((v) => (v === '' ? null : v)).nullish().transform((v) => v ?? null),
+  email: z.union([z.literal(''), z.null(), z.email().max(200)]).optional().transform((v) => (v ? v : null)),
+  sortOrder: z.coerce.number().int().min(0).max(10_000),
+  published: z.boolean(),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    fullName: z.string().trim().min(3).max(200),
+    position: z.string().trim().min(2).max(300),
+    department: optionalLongText(300),
+  })),
+}).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'fullName'], message: 'required' });
+export type StaffContactInput = z.infer<typeof staffContactInputSchema>;
+
+/** Ссылки на страницы архива в соцсетях: только https, не больше одной на сеть. */
+export const SOCIAL_NETWORKS = ['instagram', 'facebook'] as const;
+export const socialLinksInputSchema = z.object({
+  items: z.array(z.object({
+    network: z.enum(SOCIAL_NETWORKS),
+    label: z.string().trim().min(2).max(100),
+    url: z.url().max(500).startsWith('https://'),
+  })).max(SOCIAL_NETWORKS.length).refine((list) => new Set(list.map((i) => i.network)).size === list.length, { message: 'duplicate network' }),
+});

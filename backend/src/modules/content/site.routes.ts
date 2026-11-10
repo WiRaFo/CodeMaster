@@ -1,10 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { FAQ_TOPICS, feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
+import { ABOUT_SECTIONS, FAQ_TOPICS, feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
 import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
+import { sendPublicImage } from '../../http/public-image.ts';
 import { assertSameOrigin } from '../../http/staff.ts';
+import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
 import { publicStaff } from './staff.ts';
 
@@ -13,7 +15,7 @@ const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
   z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
 ]));
 
-const infoBodySchema = z.object({
+export const infoBodySchema = z.object({
   actualizedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   blocks: z.array(z.discriminatedUnion('type', [
     z.object({ type: z.enum(['p', 'h', 'pending']), text: z.string() }),
@@ -21,6 +23,15 @@ const infoBodySchema = z.object({
     z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.string().url().startsWith('https://'), note: z.string().optional() })) }),
   ])),
 });
+
+/**
+ * Текст раздела «Об архиве»: прежний формат (массив блоков из миграции) или формат справочных страниц,
+ * который сохраняет панель. Блок «ожидаются сведения» и ссылки — только во втором.
+ */
+export const aboutBodySchema = z.union([
+  historyBlocksSchema.transform((blocks) => ({ actualizedAt: null, blocks })),
+  infoBodySchema.transform((b) => ({ actualizedAt: b.actualizedAt as string | null, blocks: b.blocks })),
+]);
 
 /** Справочные страницы, которые отдаёт GET /pages/:key. Остальные страницы имеют свои маршруты. */
 export const INFO_PAGE_KEYS = ['services', 'services/paid', 'legislation', 'reading-room', 'symbols', 'links'] as const;
@@ -53,8 +64,8 @@ const socialLinksSchema = z.array(z.object({
  * Отзыв — не обращение и не заявление: ответ на него не обещается, личные данные — только
  * необязательный адрес почты с согласием. IP-адрес не сохраняется.
  */
-export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient; allowedOrigins: readonly string[] }): Promise<void> {
-  const { db, allowedOrigins } = opts;
+export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage; allowedOrigins: readonly string[] }): Promise<void> {
+  const { db, storage, allowedOrigins } = opts;
   const limiter = new LoginLimiter(5, 5, 10 * 60_000);
 
   app.get('/faq', async (request, reply) => {
@@ -76,32 +87,72 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
   });
 
   /**
-   * «Об архиве» (ТЗ §5.2, с. 5): история, структура и ссылки на соцсети из сведений, переданных архивом.
-   * Нет перевода — отдаётся русский текст, contentLang сообщает язык.
+   * «Об архиве» (ТЗ §5.2, с. 5; F-023, F-021): история и другие разделы из панели, структура, ссылки на соцсети,
+   * фотогалерея учреждения. Нет перевода — отдаётся русский текст, contentLang сообщает язык.
+   * Фото — только из public_about_gallery_v (проверенные антивирусом, с описанием для незрячих).
    */
   app.get('/about', async (request, reply) => {
     const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
-    const [page, main, social] = await Promise.all([
-      db.page.findFirst({
-        where: { key: 'about/history', publicationStatus: 'published', deletedAt: null },
+    const keys = ABOUT_SECTIONS.map((s) => s.key);
+    const [pages, main, social, gallery] = await Promise.all([
+      db.page.findMany({
+        where: { key: { in: keys }, publicationStatus: 'published', deletedAt: null },
         include: { translations: { where: { translationStatus: { not: 'missing' } } } },
       }),
       db.branch.findFirst({ where: { isMain: true, publicationStatus: 'published', deletedAt: null }, select: { id: true } }),
       db.siteSetting.findUnique({ where: { key: 'social_links' } }),
+      db.$queryRaw<Array<{ position: bigint; width: number | null; height: number | null; alt_text: string | null; caption: string | null; content_lang: string | null; data_origin: string }>>`
+        SELECT g.position, g.width, g.height, t.alt_text, t.caption, t.locale::text AS content_lang, a.data_origin::text AS data_origin
+        FROM public_about_gallery_v g
+        JOIN digital_assets a ON a.id = g.asset_id
+        LEFT JOIN LATERAL (
+          SELECT alt_text, caption, locale FROM asset_translations
+          WHERE asset_id = g.asset_id AND coalesce(trim(alt_text), '') <> ''
+          ORDER BY (locale = ${lang}::"Locale") DESC, (locale = 'ru') DESC LIMIT 1
+        ) t ON true
+        ORDER BY g.position`,
     ]);
-    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
-    const links = socialLinksSchema.safeParse(social?.value);
-    return {
-      history: page && t ? {
+    const sections = keys.flatMap((key) => {
+      const page = pages.find((p) => p.key === key);
+      const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+      const body = t ? aboutBodySchema.safeParse(t.body) : null;
+      if (!page || !t || !body?.success) return [];
+      return [{
+        key: page.key,
         title: t.title,
-        blocks: historyBlocksSchema.parse(t.body),
+        lead: t.lead,
+        blocks: body.data.blocks,
+        actualizedAt: body.data.actualizedAt,
         contentLang: t.locale,
         translationStatus: t.translationStatus,
         dataOrigin: page.dataOrigin,
-      } : null,
+      }];
+    });
+    const links = socialLinksSchema.safeParse(social?.value);
+    const history = sections.find((s) => s.key === 'about/history');
+    return {
+      history: history ?? null,
+      sections: sections.filter((s) => s.key !== 'about/history'),
       staff: main ? await publicStaff(db, main.id, lang) : [],
       social: links.success ? links.data : [],
+      gallery: gallery.map((g) => ({
+        url: `/api/v1/about/gallery/${Number(g.position)}`,
+        width: g.width,
+        height: g.height,
+        alt: g.alt_text ?? '',
+        caption: g.caption,
+        contentLang: g.content_lang,
+        dataOrigin: g.data_origin,
+      })),
     };
+  });
+
+  app.get('/about/gallery/:number', async (request, reply) => {
+    const parsed = z.object({ number: z.string().regex(/^[1-9]\d{0,2}$/) }).safeParse(request.params);
+    if (!parsed.success) throw notFound();
+    const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
+      SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_about_gallery_v WHERE position = ${Number(parsed.data.number)}`;
+    return sendPublicImage(storage, request, reply, file);
   });
 
   /**

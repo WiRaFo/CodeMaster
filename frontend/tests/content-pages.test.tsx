@@ -147,9 +147,18 @@ describe('«Посетителям» и «Об архиве»', () => {
   it('«Об архиве» показывает историю от архива с пометкой языка и ссылки на соцсети', async () => {
     const { container } = renderAt('/en/about');
     expect(await screen.findByText(/образован в 1940 году/)).toBeInTheDocument();
-    expect(screen.getByText(/This text is available only in/)).toBeInTheDocument();
+    expect(screen.getAllByText(/This text is available only in/)).toHaveLength(2);
     expect(screen.getByRole('link', { name: '@arhiv_vko' })).toHaveAttribute('href', 'https://www.instagram.com/arhiv_vko/');
     expect(screen.getByRole('link', { name: 'Archive structure and management' })).toHaveAttribute('href', '/en/about/structure');
+    // Разделы из панели: заголовок h2, подзаголовки внутри — h3, блок «ожидаются сведения».
+    expect(screen.getByRole('heading', { level: 2, name: '[Демо] Достижения' })).toHaveAttribute('lang', 'ru');
+    expect(screen.getByRole('heading', { level: 3, name: 'Награды' })).toBeInTheDocument();
+    expect(screen.getByText('Перечень наград передаст архив.')).toBeInTheDocument();
+    // Фотогалерея учреждения: описание для незрячих, подпись, пометка демонстрационного фото.
+    const gallery = screen.getByRole('region', { name: 'Archive photo gallery' });
+    expect(within(gallery).getByRole('img', { name: 'Здание архива' })).toHaveAttribute('src', '/api/v1/about/gallery/1');
+    expect(within(gallery).getByText('Главный корпус')).toBeInTheDocument();
+    expect(within(gallery).getAllByText('Demo photo')).toHaveLength(1);
     expect(await axeViolations(container)).toEqual([]);
   });
 

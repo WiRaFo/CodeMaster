@@ -1,10 +1,11 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { historyListSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
 import { notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { pageOf } from '../../http/pagination.ts';
+import { sendPublicImage } from '../../http/public-image.ts';
 import { and, bestTranslation } from '../../infrastructure/database/sql.ts';
 import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { archiveCodeDto } from '../catalog/catalog.mapper.ts';
@@ -83,28 +84,8 @@ const summary = (p: Row) => ({
   cover: p.has_cover ? { url: `/api/v1/history/${encodeURIComponent(p.slug)}/cover`, alt: p.cover_alt ?? '' } : null,
 });
 
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-type PublicFile = { storage_bucket: string; storage_key: string; mime_type: string; asset_id: string } | undefined;
-
-
 export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
   const { db } = opts;
-
-  /** Отдаёт файл из публичного представления; нет записи или файла — 404, как у несуществующего. */
-  async function sendPublicImage(request: FastifyRequest, reply: FastifyReply, file: PublicFile) {
-    if (!file || !IMAGE_TYPES.has(file.mime_type)) throw notFound();
-    const body = await opts.storage.read(file.storage_bucket, file.storage_key);
-    if (!body) {
-      request.log.warn({ assetId: file.asset_id }, 'publication image is missing in storage');
-      throw notFound();
-    }
-    return reply
-      .header('Content-Type', file.mime_type)
-      .header('Content-Disposition', 'inline')
-      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
-      .header('Cache-Control', 'public, max-age=300')
-      .send(body);
-  }
 
   app.get('/history', async (request, reply) => {
     const query = historyListSchema.parse(request.query);
@@ -255,7 +236,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
     const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
       SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_publication_covers_v WHERE slug = ${slug}`;
-    return sendPublicImage(request, reply, file);
+    return sendPublicImage(opts.storage, request, reply, file);
   });
 
   app.get('/history/:slug/images/:number', async (request, reply) => {
@@ -264,7 +245,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const [file] = await db.$queryRaw<Array<{ storage_bucket: string; storage_key: string; mime_type: string; asset_id: string }>>`
       SELECT storage_bucket, storage_key, mime_type, asset_id FROM public_publication_images_v
       WHERE slug = ${parsed.data.slug} AND position = ${Number(parsed.data.number)}`;
-    return sendPublicImage(request, reply, file);
+    return sendPublicImage(opts.storage, request, reply, file);
   });
 
   app.get('/history/:slug', async (request, reply) => {

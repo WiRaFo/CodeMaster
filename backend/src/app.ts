@@ -86,7 +86,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(assistantRoutes, { db, embeddings, ...(aiTimeoutMs ? { aiTimeoutMs } : {}) });
       await api.register(historyRoutes, { db, storage });
       await api.register(collectionRoutes, { db });
-      await api.register(siteRoutes, { db, allowedOrigins });
+      await api.register(siteRoutes, { db, storage, allowedOrigins });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
       await api.register(adminRoutes, { db, storage, allowedOrigins });
     },

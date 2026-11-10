@@ -38,7 +38,7 @@ export const ANTICORRUPTION = {
 };
 
 export const ABOUT = {
-  history: { title: 'История архива', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified', blocks: [
+  history: { key: 'about/history', title: 'История архива', lead: null, actualizedAt: null, contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified', blocks: [
     { type: 'p', text: 'Государственный архив Восточно-Казахстанской области образован в 1940 году.' },
     { type: 'ol', items: ['Государственного архива Восточно-Казахстанской области', 'Зайсанского филиала госархива области'] },
   ] },
@@ -46,7 +46,15 @@ export const ABOUT = {
     { id: 's1', fullName: 'Жапаров Аскар Кенжебаевич', position: 'Director', department: 'Management', phone: '8 (7232) 25-13-22', email: 'ak.zhaparov@akimvko.gov.kz', contentLang: 'en', translationStatus: 'machine' },
     { id: 's2', fullName: 'Бекниязқызы Жангуль', position: 'Head of department', department: 'Information Technology Department', phone: '8 (7232) 25-01-85', email: null, contentLang: 'en', translationStatus: 'machine' },
   ],
+  sections: [{
+    key: 'about/achievements', title: '[Демо] Достижения', lead: null, actualizedAt: '2026-11-10', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'demo',
+    blocks: [{ type: 'p', text: 'Демонстрационный абзац.' }, { type: 'h', text: 'Награды' }, { type: 'pending', text: 'Перечень наград передаст архив.' }],
+  }],
   social: [{ network: 'instagram', label: '@arhiv_vko', url: 'https://www.instagram.com/arhiv_vko/' }],
+  gallery: [
+    { url: '/api/v1/about/gallery/1', width: null, height: null, alt: 'Здание архива', caption: 'Главный корпус', contentLang: 'ru', dataOrigin: 'verified' },
+    { url: '/api/v1/about/gallery/2', width: null, height: null, alt: 'Читальный зал', caption: null, contentLang: 'ru', dataOrigin: 'demo' },
+  ],
 };
 
 export function renderAt(path: string) {

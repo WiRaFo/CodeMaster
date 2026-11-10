@@ -559,7 +559,10 @@
     "structureLead": "Management and departments of the State Archive of East Kazakhstan Region. Branch directors are listed on the branch pages.",
     "structureLink": "Archive structure and management",
     "source": "Information provided by the archive on 10 November 2026.",
-    "unavailable": "This section has not been filled in yet."
+    "unavailable": "This section has not been filled in yet.",
+    "galleryTitle": "Archive photo gallery",
+    "demoPhoto": "Demo photo",
+    "actualized": "Information current as of {{date}}."
   },
   "calendar": {
     "title": "Calendar of memorable dates",
