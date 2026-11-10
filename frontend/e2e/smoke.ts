@@ -179,7 +179,7 @@ async function main() {
       await menuButton.click();
       const dialog = page.getByRole('dialog', { name: 'Разделы сайта' });
       check(await dialog.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
-      check((await dialog.getByRole('link').count()) === 10, 'в мобильном меню 10 разделов');
+      check((await dialog.getByRole('link').count()) === 11, 'в мобильном меню 11 разделов (10 из ТЗ и госуслуга)');
       const violations = await axe(page);
       check(violations.length === 0, `axe мобильное меню: ${violations.join('; ')}`);
       await page.keyboard.press('Escape');
