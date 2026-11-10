@@ -653,5 +653,13 @@
     "noBiography": "A biography will be published once the archive prepares the text. Below are the entries from the calendar of memorable dates.",
     "dates": "In the calendar of memorable dates",
     "source": "Information from the calendar of memorable dates provided by the State Archive of East Kazakhstan Region."
+  },
+  "collections": {
+    "title": "Collections",
+    "lead": "Themed selections of documents and material about people.",
+    "empty": "No collections yet.",
+    "documents": "Documents",
+    "count_one": "{{count}} item",
+    "count_other": "{{count}} items"
   }
 }

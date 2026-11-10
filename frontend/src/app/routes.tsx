@@ -17,6 +17,7 @@ import { AboutPage, StructurePage, VisitorsPage } from '../pages/InfoPages.tsx';
 import { CalendarPage } from '../pages/CalendarPage.tsx';
 import { TimelinePage } from '../pages/TimelinePage.tsx';
 import { PersonPage, PersonsPage } from '../pages/PersonPages.tsx';
+import { CollectionPage, CollectionsPage } from '../pages/CollectionPages.tsx';
 import { AnticorruptionPage } from '../pages/AnticorruptionPage.tsx';
 import { ReferencePage } from '../pages/ReferencePage.tsx';
 import { CasePage, FondPage, FondsPage, InventoryPage } from '../pages/FondPages.tsx';
@@ -73,6 +74,8 @@ export const routes: RouteObject[] = [
           { path: 'history', element: <HistoryPage /> },
           { path: 'history/timeline', element: <TimelinePage /> },
           { path: 'history/persons', element: <PersonsPage /> },
+          { path: 'history/collections', element: <CollectionsPage /> },
+          { path: 'history/collections/:slug', element: <CollectionPage /> },
           { path: 'history/persons/:slug', element: <PersonPage /> },
           { path: 'history/:slug', element: <PublicationPage /> },
           { path: 'exhibitions', element: <ExhibitionsPage /> },

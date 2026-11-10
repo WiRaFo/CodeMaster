@@ -218,6 +218,7 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
   }
 
   await seedDemoExhibitions(db, storage);
+  await seedDemoCollections(db);
 }
 
 const DEMO_BUCKET = 'archive-demo';
@@ -417,5 +418,54 @@ async function seedDemoExhibitions(db: PrismaClient, storage: ObjectStorage): Pr
         })),
       });
     }
+  }
+}
+
+/**
+ * Демо-коллекции «Архива памяти» (F-081): показывают механизм подборки. Состав подборки — демонстрационный,
+ * элементы — существующие записи: синтетические документы (если загружен набор synthetic) и личности из календаря архива.
+ * Закрытый документ включён намеренно: сайт обязан его не показать.
+ */
+const COLLECTIONS: Array<{ slug: string; title: Tri<string>; description: Tri<string>; documents: string[]; persons: string[] }> = [
+  {
+    slug: 'demo-creamery-records',
+    title: { ru: 'Маслозавод в документах', kk: 'Май зауыты құжаттарда', en: 'The creamery in documents' },
+    description: {
+      ru: 'Пример подборки документов одного фонда: протокол, личные дела и фотография. Документы синтетические.',
+      kk: 'Бір қор құжаттарының іріктемесіне мысал: хаттама, жеке істер және фотосурет. Құжаттар синтетикалық.',
+      en: 'An example selection from one fond: minutes, personnel files and a photograph. The documents are synthetic.',
+    },
+    documents: ['synthetic:TEST-1/1/1/1', 'synthetic:TEST-1/1/1/2', 'synthetic:TEST-1/1/1/3', 'synthetic:TEST-1/1/1/5'],
+    persons: [],
+  },
+  {
+    slug: 'demo-local-historians',
+    title: { ru: 'Краеведы в календаре памятных дат', kk: 'Атаулы күндер күнтізбесіндегі өлкетанушылар', en: 'Local historians in the calendar of memorable dates' },
+    description: {
+      ru: 'Пример подборки личностей: люди, которых календарь памятных дат архива называет краеведами.',
+      kk: 'Тұлғалар іріктемесіне мысал: мұрағаттың атаулы күндер күнтізбесі өлкетанушы деп атаған адамдар.',
+      en: 'An example selection of people whom the archive’s calendar of memorable dates describes as local historians.',
+    },
+    documents: [],
+    persons: ['pankratyev-dmitry', 'gerasimov-boris', 'kharlamov-prokofy'],
+  },
+];
+
+async function seedDemoCollections(db: PrismaClient): Promise<void> {
+  for (const [i, c] of COLLECTIONS.entries()) {
+    const data = { sortOrder: i, isFeatured: i === 0, publicationStatus: 'published' as const, dataOrigin: 'demo' as const };
+    const row = await db.collection.upsert({ where: { slug: c.slug }, update: data, create: { slug: c.slug, ...data } });
+    await db.collectionTranslation.deleteMany({ where: { collectionId: row.id } });
+    await db.collectionTranslation.createMany({
+      data: LOCALES.map((locale) => ({ collectionId: row.id, locale, title: title(c.title, locale), description: c.description[locale], translationStatus: statusFor(locale) })),
+    });
+    const docs = await db.document.findMany({ where: { sourceSystemId: { in: c.documents } }, select: { id: true, sourceSystemId: true } });
+    const persons = await db.historicalPerson.findMany({ where: { slug: { in: c.persons } }, select: { id: true, slug: true } });
+    const items = [
+      ...c.documents.flatMap((key) => docs.filter((d) => d.sourceSystemId === key).map((d) => ({ itemType: 'document' as const, itemId: d.id }))),
+      ...c.persons.flatMap((slug) => persons.filter((p) => p.slug === slug).map((p) => ({ itemType: 'person' as const, itemId: p.id }))),
+    ];
+    await db.collectionItem.deleteMany({ where: { collectionId: row.id } });
+    await db.collectionItem.createMany({ data: items.map((it, sortOrder) => ({ ...it, sortOrder, collectionId: row.id })) });
   }
 }

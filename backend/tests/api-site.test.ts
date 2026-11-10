@@ -86,6 +86,30 @@ describe('цифровая история региона (F-080–F-082)', () =>
     expect((await t.get('/api/v1/history/persons/no-such-person')).status).toBe(404);
   });
 
+  it('коллекции (F-081): только публичные элементы, закрытый документ не виден ни в составе, ни в счётчике', async () => {
+    const list = await t.get('/api/v1/history/collections?lang=ru');
+    const items = list.body['items'] as Array<{ slug: string; title: string; itemCount: number; dataOrigin: string }>;
+    expect(items.map((c) => [c.slug, c.itemCount])).toEqual([['demo-creamery-records', 3], ['demo-local-historians', 3]]);
+    expect(items[0]).toMatchObject({ title: '[Демо] Маслозавод в документах', dataOrigin: 'demo' });
+    const closed = await idOf(t.db, 'documents', 'TEST-1/1/1/3');
+    const res = await t.get('/api/v1/history/collections/demo-creamery-records?lang=ru');
+    const docs = res.body['documents'] as Array<{ id: string; access: string }>;
+    expect(docs).toHaveLength(3);
+    expect(docs.map((d) => d.access)).toEqual(['open', 'restricted', 'open']);
+    expect(res.raw).not.toContain(closed);
+    expect(res.raw).not.toContain('Закрытый документ');
+    const people = await t.get('/api/v1/history/collections/demo-local-historians?lang=kk');
+    expect((people.body['persons'] as Array<{ slug: string; fullName: string }>).map((p) => p.slug)).toEqual(['pankratyev-dmitry', 'gerasimov-boris', 'kharlamov-prokofy']);
+    // Снятая коллекция — 404, как несуществующая.
+    await t.db.collection.update({ where: { slug: 'demo-local-historians' }, data: { publicationStatus: 'archived' } });
+    try {
+      expect((await t.get('/api/v1/history/collections/demo-local-historians')).status).toBe(404);
+    } finally {
+      await t.db.collection.update({ where: { slug: 'demo-local-historians' }, data: { publicationStatus: 'published' } });
+    }
+    expect((await t.get('/api/v1/history/collections/nothing')).status).toBe(404);
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

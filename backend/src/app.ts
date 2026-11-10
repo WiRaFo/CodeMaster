@@ -10,6 +10,7 @@ import { branchRoutes } from './modules/branches/branches.routes.ts';
 import { contentRoutes } from './modules/content/content.routes.ts';
 import { exhibitionRoutes } from './modules/exhibitions/exhibitions.routes.ts';
 import { assistantRoutes } from './modules/assistant/assistant.routes.ts';
+import { collectionRoutes } from './modules/history/collections.routes.ts';
 import { historyRoutes } from './modules/history/history.routes.ts';
 import { siteRoutes } from './modules/content/site.routes.ts';
 import { catalogRoutes } from './modules/catalog/catalog.routes.ts';
@@ -84,6 +85,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(exhibitionRoutes, { db, storage });
       await api.register(assistantRoutes, { db, embeddings, ...(aiTimeoutMs ? { aiTimeoutMs } : {}) });
       await api.register(historyRoutes, { db });
+      await api.register(collectionRoutes, { db });
       await api.register(siteRoutes, { db, allowedOrigins });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
       await api.register(adminRoutes, { db, storage, allowedOrigins });

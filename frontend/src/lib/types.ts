@@ -450,3 +450,16 @@ export interface PersonDetail extends PersonSummary {
   sourceNote: string | null;
   memorableDates: Array<{ calendarYear: number; dateLabel: string; text: string; contentLang: string }>;
 }
+
+/** Тематическая коллекция (GET /history/collections, F-081). itemCount — только видимые на сайте элементы. */
+export interface CollectionSummary extends Localized {
+  slug: string;
+  title: string | null;
+  description: string | null;
+  itemCount: number;
+  dataOrigin: DataOrigin;
+}
+export interface CollectionDetail extends CollectionSummary {
+  documents: DocumentSummary[];
+  persons: Array<{ slug: string; fullName: string; lifeYears: string | null; contentLang: string | null }>;
+}
