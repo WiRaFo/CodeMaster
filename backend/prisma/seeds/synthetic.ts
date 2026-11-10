@@ -27,6 +27,9 @@ interface DocSeed {
   /** slug населённых пунктов и тематик (для фасетов каталога, ЭТАП 5). */
   settlements?: string[];
   topics?: string[];
+  /** Автор или составитель (свободный текст) и slug организации из ORGANIZATIONS (фильтры F-034). */
+  author?: string;
+  organization?: string;
 }
 
 interface CaseSeed {
@@ -58,6 +61,11 @@ const RESTRICTED_CONDITIONS = tri(
   'Contains personal data. Available in the reading room on written request; no digital copy is published.',
 );
 
+/** Синтетические организации-фондообразователи. Не реальные предприятия. */
+const ORGANIZATIONS: Array<{ slug: string; name: Tri<string> }> = [
+  { slug: 'synthetic-creamery', name: tri('Маслозавод (тестовая организация)', 'Май зауыты (сынақ ұйымы)', 'Creamery (test organisation)') },
+];
+
 const FONDS: FondSeed[] = [
   {
     number: 'TEST-1',
@@ -79,6 +87,8 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'organization_record',
+            author: 'Тестов Т. Т., секретарь правления (синтетика)',
+            organization: 'synthetic-creamery',
             title: tri('Протокол заседания правления маслозавода', 'Май зауыты басқармасы отырысының хаттамасы', 'Minutes of the creamery board meeting'),
             description: tri(
               'Обсуждение плана выпуска сливочного масла и ремонта цеха.',
@@ -94,6 +104,7 @@ const FONDS: FondSeed[] = [
             year: 1957,
             settlements: ['ust-kamenogorsk'],
             topics: ['people'],
+            organization: 'synthetic-creamery',
             title: tri('Личные дела работников маслозавода', 'Май зауыты қызметкерлерінің жеке істері', 'Personnel files of creamery workers'),
             accessConditions: RESTRICTED_CONDITIONS,
             transcription: tri(
@@ -109,6 +120,8 @@ const FONDS: FondSeed[] = [
             year: 1958,
             settlements: ['ridder'],
             topics: ['military'],
+            author: 'Закрытов З. З. (синтетика)',
+            organization: 'synthetic-creamery',
             title: tri('Закрытый документ (не должен появляться публично)', 'Жабық құжат (жарияланбауы тиіс)', 'Closed document (must never be public)'),
             description: tri('Служебная переписка о проверке.', 'Тексеру туралы қызметтік хат алмасу.', 'Internal correspondence about an inspection.'),
           },
@@ -126,6 +139,7 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'photo',
+            author: 'Фотографов Ф. Ф. (синтетика)',
             title: tri('Фотография коллектива маслозавода', 'Май зауыты ұжымының фотосуреті', 'Photograph of the creamery staff'),
             copy: { antivirus: 'pending' },
           },
@@ -283,6 +297,15 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
   const topicIds = new Map(
     (await db.category.findMany({ where: { kind: 'history_topic' }, select: { id: true, slug: true } })).map((x) => [x.slug, x.id]),
   );
+  const organizationIds = new Map<string, string>();
+  for (const o of ORGANIZATIONS) {
+    const org = await db.organization.upsert({ where: { slug: o.slug }, update: {}, create: { slug: o.slug } });
+    await db.organizationTranslation.deleteMany({ where: { organizationId: org.id } });
+    await db.organizationTranslation.createMany({
+      data: LOCALES.map((locale) => ({ organizationId: org.id, locale, name: prefixed(o.name)[locale], translationStatus: statusFor(locale) })),
+    });
+    organizationIds.set(o.slug, org.id);
+  }
   const need = (map: Map<string, string>, key: string) => {
     const id = map.get(key);
     if (!id) throw new Error(`Нет справочной записи ${key}; сначала запустите справочники и набор migrated`);
@@ -362,6 +385,8 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
           datePrecision: 'year' as const,
           periodId: periodFor(d.year),
           originalLanguages: ['ru'],
+          authorText: d.author ?? null,
+          organizationId: d.organization ? need(organizationIds, d.organization) : null,
           accessLevel: d.access,
           publicationStatus: d.status ?? 'published',
           dataOrigin: 'synthetic' as const,

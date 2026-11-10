@@ -167,6 +167,8 @@ export interface CatalogFacets {
   branches: FacetValue[];
   settlements: FacetValue[];
   topics: FacetValue[];
+  /** 30 самых частых организаций выдачи; value — id. Старый API поле не отдаёт. */
+  organizations?: FacetValue[];
   access: Array<{ value: 'open' | 'restricted'; count: number }>;
   hasDigitalCopy: { true: number; false: number };
 }

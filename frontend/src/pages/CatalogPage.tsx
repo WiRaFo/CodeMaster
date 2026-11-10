@@ -172,11 +172,11 @@ export function CatalogPage() {
 function ActiveFilters({ query, facets, onChange }: { query: CatalogQuery; facets: CatalogFacets | null; onChange: (q: CatalogQuery) => void }) {
   const { t } = useTranslation();
   const lists: Record<string, FacetValue[]> = facets
-    ? { branch: facets.branches, type: facets.types, period: facets.periods, settlement: facets.settlements, topic: facets.topics }
+    ? { branch: facets.branches, type: facets.types, period: facets.periods, settlement: facets.settlements, topic: facets.topics, organization: facets.organizations ?? [] }
     : {};
   const nameOf = (key: string, value: string) => {
     if (key === 'access') return t(`catalog.accessValue.${value}`);
-    const item = lists[key]?.find((x) => (x.slug ?? x.code) === value);
+    const item = lists[key]?.find((x) => (x.slug ?? x.code ?? x.value) === value);
     return item?.name ?? value;
   };
 
@@ -186,6 +186,7 @@ function ActiveFilters({ query, facets, onChange }: { query: CatalogQuery; facet
       chips.push({ id: `${key}:${value}`, label: `${t(`catalog.filter.${key}`)}: ${nameOf(key, value)}`, next: toggleValue(query, key, value) });
     }
   }
+  if (query.author) chips.push({ id: 'author', label: `${t('catalog.filter.author')}: ${query.author}`, next: { ...query, author: '', page: 1 } });
   if (query.hasDigitalCopy) chips.push({ id: 'copy', label: t('catalog.filter.hasDigitalCopy'), next: { ...query, hasDigitalCopy: false, page: 1 } });
   if (query.yearFrom !== null || query.yearTo !== null) {
     chips.push({

@@ -23,6 +23,7 @@ export function CatalogFilters({ query, facets, onChange, idPrefix }: {
         { key: 'period', values: facets.periods },
         { key: 'settlement', values: facets.settlements },
         { key: 'topic', values: facets.topics },
+        { key: 'organization', values: facets.organizations ?? [] },
         {
           key: 'access',
           values: facets.access.map((a) => ({ value: a.value, name: t(`catalog.accessValue.${a.value}`), count: a.count })),
@@ -33,6 +34,7 @@ export function CatalogFilters({ query, facets, onChange, idPrefix }: {
   return (
     <div className="flex flex-col gap-5">
       <YearRange key={`${query.yearFrom}-${query.yearTo}`} query={query} onChange={onChange} idPrefix={idPrefix} />
+      <AuthorFilter key={query.author} query={query} onChange={onChange} idPrefix={idPrefix} />
 
       <div>
         <label className="choice w-full">
@@ -80,6 +82,27 @@ export function CatalogFilters({ query, facets, onChange, idPrefix }: {
 }
 
 const valueOf = (item: FacetValue): string => item.slug ?? item.code ?? item.value ?? '';
+
+/** Автор или составитель: часть имени, без учёта регистра. Пустое поле снимает фильтр. */
+function AuthorFilter({ query, onChange, idPrefix }: { query: CatalogQuery; onChange: (next: CatalogQuery) => void; idPrefix: string }) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(query.author);
+  const id = `${idPrefix}-author`;
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    onChange({ ...query, author: value.trim().slice(0, 200), page: 1 });
+  };
+  return (
+    <form onSubmit={onSubmit} noValidate>
+      <label htmlFor={id} className="mb-2 block font-semibold">{t('catalog.filter.author')}</label>
+      <div className="flex flex-wrap items-end gap-2">
+        <input id={id} className="input min-w-0 grow" maxLength={200} value={value} onChange={(e) => setValue(e.target.value)} aria-describedby={`${id}-hint`} />
+        <button type="submit" className="btn-secondary">{t('catalog.filter.apply')}</button>
+      </div>
+      <p id={`${id}-hint`} className="mt-1 text-sm text-muted">{t('catalog.filter.authorHint')}</p>
+    </form>
+  );
+}
 
 function YearRange({ query, onChange, idPrefix }: { query: CatalogQuery; onChange: (next: CatalogQuery) => void; idPrefix: string }) {
   const { t } = useTranslation();

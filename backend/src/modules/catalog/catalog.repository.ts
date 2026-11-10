@@ -197,12 +197,12 @@ export class CatalogRepository {
     const plan = planSearch(filters);
     const base = (without: keyof DocumentFilters) => {
       const f: DocumentFilters = { ...filters, [without]: undefined };
-      return Prisma.sql`SELECT p.id, p.document_type_id, p.period_id, p.branch_id, p.effective_access,
+      return Prisma.sql`SELECT p.id, p.document_type_id, p.period_id, p.branch_id, p.organization_id, p.effective_access,
           EXISTS (SELECT 1 FROM public_document_pages_v pg WHERE pg.document_id = p.id) AS online_copy
         FROM public_documents_v p ${textMatchJoin(plan.text)} ${and(documentConditions(f, plan))}`;
     };
     type Row = { key: string; name: string | null; count: bigint };
-    const [types, periods, branches, settlements, topics, access, copies] = await Promise.all([
+    const [types, periods, branches, settlements, topics, organizations, access, copies] = await Promise.all([
       this.db.$queryRaw<Row[]>`
         WITH f AS (${base('type')}) SELECT dty.code AS key, n.name, count(*) AS count FROM f
         JOIN document_types dty ON dty.id = f.document_type_id
@@ -230,12 +230,18 @@ export class CatalogRepository {
         JOIN categories c ON c.id = dc.category_id AND c.kind IN ('catalog_topic', 'history_topic')
         ${bestTranslation('category', 'n', 'c.id', lang, ['name'])}
         GROUP BY c.slug, n.name, c.kind, c.sort_order ORDER BY c.kind, c.sort_order`,
+      // Организаций может быть много: в панель попадают 30 самых частых в текущей выдаче.
+      this.db.$queryRaw<Row[]>`
+        WITH f AS (${base('organization')}) SELECT f.organization_id::text AS key, n.name, count(*) AS count FROM f
+        ${bestTranslation('organization', 'n', 'f.organization_id', lang, ['name'])}
+        WHERE f.organization_id IS NOT NULL
+        GROUP BY f.organization_id, n.name ORDER BY count(*) DESC, n.name LIMIT 30`,
       this.db.$queryRaw<Array<{ key: string; count: bigint }>>`
         WITH f AS (${base('access')}) SELECT effective_access::text AS key, count(*) AS count FROM f GROUP BY 1 ORDER BY 1`,
       this.db.$queryRaw<Array<{ key: boolean; count: bigint }>>`
         WITH f AS (${base('hasDigitalCopy')}) SELECT online_copy AS key, count(*) AS count FROM f GROUP BY 1`,
     ]);
-    return { types, periods, branches, settlements, topics, access, copies };
+    return { types, periods, branches, settlements, topics, organizations, access, copies };
   }
 
   async findDocument(id: string, lang: Locale) {
