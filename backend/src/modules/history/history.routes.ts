@@ -127,6 +127,38 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     };
   });
 
+  /**
+   * Хронологическая лента (F-083): опубликованные события по годам, раньше — выше.
+   * Сейчас это события истории архива из переданного архивом текста; события по региону добавятся тем же путём.
+   */
+  app.get('/history/timeline', async (request, reply) => {
+    const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const rows = await db.$queryRaw<Array<{
+      slug: string; year: number; event_date: Date | null; date_precision: string; data_origin: string; source_note: string | null;
+      title: string | null; description: string | null; content_lang: string | null; translation_status: string | null;
+    }>>`
+      SELECT e.slug, e.year, e.event_date, e.date_precision::text AS date_precision, e.data_origin::text AS data_origin, e.source_note,
+             t.title, t.description, t.locale AS content_lang, t.translation_status
+      FROM historical_events e
+      ${bestTranslation('historicalEvent', 't', 'e.id', lang, ['title', 'description'])}
+      WHERE e.publication_status = 'published' AND e.deleted_at IS NULL AND t.title IS NOT NULL
+      ORDER BY e.year, e.event_date NULLS FIRST, e.slug`;
+    return {
+      items: rows.map((r) => ({
+        slug: r.slug,
+        year: r.year,
+        date: r.event_date ? r.event_date.toISOString().slice(0, 10) : null,
+        precision: r.date_precision,
+        title: r.title,
+        description: r.description,
+        sourceNote: r.source_note,
+        dataOrigin: r.data_origin,
+        contentLang: r.content_lang,
+        translationStatus: r.translation_status,
+      })),
+    };
+  });
+
   app.get('/history/:slug', async (request, reply) => {
     const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);

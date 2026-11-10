@@ -46,6 +46,24 @@ describe('цифровая история региона (F-080–F-082)', () =>
     }
   });
 
+  it('хронология (F-083): события архива по годам из переданного текста, снятое событие не видно', async () => {
+    const res = await t.get('/api/v1/history/timeline?lang=kk');
+    const items = res.body['items'] as Array<{ slug: string; year: number; date: string | null; title: string; description: string; contentLang: string; dataOrigin: string }>;
+    expect(items.length).toBe(12);
+    expect(items.map((e) => e.year)).toEqual([...items.map((e) => e.year)].sort((a, b) => a - b));
+    expect(items[0]).toMatchObject({ slug: 'archive-founded-1940', year: 1940, date: null, contentLang: 'ru', dataOrigin: 'verified' });
+    expect(items[0]?.description).toContain('образован в 1940 году');
+    expect(items.find((e) => e.slug === 'archives-administration-1992')?.date).toBe('1992-08-13');
+    expect(items.find((e) => e.slug === 'network-formed-1967')?.description).toContain('— Государственного архива Восточно-Казахстанской области');
+    await t.db.historicalEvent.update({ where: { slug: 'abai-region-2022' }, data: { publicationStatus: 'draft' } });
+    try {
+      const after = (await t.get('/api/v1/history/timeline')).body['items'] as Array<{ slug: string }>;
+      expect(after.map((e) => e.slug)).not.toContain('abai-region-2022');
+    } finally {
+      await t.db.historicalEvent.update({ where: { slug: 'abai-region-2022' }, data: { publicationStatus: 'published' } });
+    }
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

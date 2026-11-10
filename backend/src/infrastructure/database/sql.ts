@@ -19,6 +19,7 @@ const TRANSLATION_TABLES = {
   organization: ['organization_translations', 'organization_id'],
   news: ['news_translations', 'news_id'],
   publication: ['publication_translations', 'publication_id'],
+  historicalEvent: ['historical_event_translations', 'event_id'],
   exhibition: ['exhibition_translations', 'exhibition_id'],
   exhibitionItem: ['exhibition_item_translations', 'item_id'],
 } as const;

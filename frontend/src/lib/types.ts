@@ -425,3 +425,15 @@ export interface CaseDetail extends Localized {
   inventory: { id: string; number: string; title: string | null };
   documents: DocumentSummary[];
 }
+
+/** Событие хронологической ленты (GET /history/timeline, F-083). date — только если день известен. */
+export interface TimelineEvent extends Localized {
+  slug: string;
+  year: number;
+  date: string | null;
+  precision: string;
+  title: string | null;
+  description: string | null;
+  sourceNote: string | null;
+  dataOrigin: DataOrigin;
+}

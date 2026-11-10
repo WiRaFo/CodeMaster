@@ -5,6 +5,7 @@ import {
 import { ANTICORRUPTION_SETTING, ANTICORRUPTION_TEXT } from './archive-anticorruption.ts';
 import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
 import { ARCHIVE_HISTORY_RU, type HistoryBlock } from './archive-history.ts';
+import { ARCHIVE_TIMELINE, timelineText } from './archive-timeline.ts';
 import { INFO_PAGES, type InfoBlock } from './info-pages.ts';
 import { names, translationRows, OLD_SITE_CONTACTS_URL, type Tri } from './lib.ts';
 
@@ -160,6 +161,7 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
   await seedStaff(db, branchIds);
   await seedAboutPages(db);
   await seedCalendar(db);
+  await seedTimeline(db);
   await seedAnticorruption(db);
   await seedInfoPages(db);
   await db.siteSetting.upsert({
@@ -211,6 +213,23 @@ async function seedAboutPages(db: PrismaClient): Promise<void> {
 }
 
 /** Календарь памятных дат: русский и казахский тексты из источника, порядок строк сохраняется. */
+/** Хронология архива (F-083): события из «Истории архива», только на русском. */
+async function seedTimeline(db: PrismaClient): Promise<void> {
+  for (const e of ARCHIVE_TIMELINE) {
+    const data = {
+      year: e.year,
+      eventDate: e.date ? new Date(`${e.date}T00:00:00Z`) : null,
+      datePrecision: e.date ? ('day' as const) : ('year' as const),
+      sourceNote: 'Текст «История архива», передан архивом 10.11.2026',
+      publicationStatus: 'published' as const,
+      dataOrigin: 'verified' as const,
+    };
+    const row = await db.historicalEvent.upsert({ where: { slug: e.slug }, update: data, create: { slug: e.slug, ...data } });
+    await db.historicalEventTranslation.deleteMany({ where: { eventId: row.id } });
+    await db.historicalEventTranslation.create({ data: { eventId: row.id, locale: 'ru', title: e.title, description: timelineText(e), translationStatus: 'reviewed' } });
+  }
+}
+
 async function seedCalendar(db: PrismaClient): Promise<void> {
   await db.memorableDate.deleteMany({ where: { dataOrigin: 'verified' } });
   for (const [i, e] of ARCHIVE_CALENDAR.entries()) {

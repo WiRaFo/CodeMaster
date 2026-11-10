@@ -636,5 +636,13 @@
     "documents": "Documents",
     "noDocuments": "Document descriptions for this file have not been added to the website yet. The file can be requested in the reading room by its reference code.",
     "guide": "Guide to the fonds"
+  },
+  "timeline": {
+    "title": "Timeline",
+    "lead": "Key events in the history of the State Archive of East Kazakhstan Region, year by year.",
+    "decades": "Decades",
+    "decade": "{{decade}}s",
+    "empty": "No events yet.",
+    "fullHistory": "Full history of the archive"
   }
 }
