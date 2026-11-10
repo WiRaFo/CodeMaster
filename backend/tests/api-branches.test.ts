@@ -111,3 +111,19 @@ describe('справочники', () => {
     });
   });
 });
+
+describe('календарь памятных дат (сведения архива)', () => {
+  it('годы 2022–2026; записи года по порядку источника; фильтр по месяцу; английский — русский текст с contentLang', async () => {
+    const all = await t.get('/api/v1/calendar?year=2026&lang=kk');
+    expect(all.body['years']).toEqual([2026, 2025, 2024, 2023, 2022]);
+    const items = all.body.items ?? [];
+    expect(items).toHaveLength(42);
+    expect(items[0]).toMatchObject({ month: 1, day: 8, dateLabel: '8 қаңтар', contentLang: 'kk' });
+    expect(items.filter((x) => x['month'] === null).length).toBeGreaterThan(0);
+    const nov = await t.get('/api/v1/calendar?year=2026&month=11&lang=en');
+    expect(nov.body.items?.map((x) => [x['dateLabel'], x['contentLang']])).toEqual([['ноябрь', 'ru']]);
+    expect((await t.get('/api/v1/calendar?year=1999')).body.items).toEqual([]);
+    expect((await t.get('/api/v1/calendar?month=13')).status).toBe(400);
+  });
+});
+

@@ -51,6 +51,15 @@ describe('главная (ТЗ §5.1)', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/home?lang=ru', expect.anything());
   });
 
+  it('памятные даты текущего месяца из календаря архива, со ссылкой на весь календарь', async () => {
+    renderAt('/ru');
+    const block = await screen.findByRole('region', { name: /^Памятные даты: / });
+    expect(within(block).getByText(/Ефима Николаевича Пермитина/)).toBeInTheDocument();
+    expect(within(block).getByRole('link', { name: /Весь календарь/ })).toHaveAttribute('href', '/ru/calendar');
+    const month = fetchMock.mock.calls.map(([u]) => String(u)).find((u) => u.startsWith('/api/v1/calendar?'));
+    expect(month).toBe(`/api/v1/calendar?lang=ru&month=${new Date().getMonth() + 1}`);
+  });
+
   it('без данных пустые блоки не показываются, при ошибке — понятное сообщение', async () => {
     fetchMock.mockImplementation(apiMock({ '/api/v1/home?': { news: [], exhibitions: [], history: { topics: [], publications: [], documents: [] } } }));
     renderAt('/ru');

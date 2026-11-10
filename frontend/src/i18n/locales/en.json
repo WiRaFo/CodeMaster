@@ -511,5 +511,29 @@
     "structureLink": "Archive structure and management",
     "source": "Information provided by the archive on 10 November 2026.",
     "unavailable": "This section has not been filled in yet."
+  },
+  "calendar": {
+    "title": "Calendar of memorable dates",
+    "lead": "Anniversaries and memorable dates of East Kazakhstan Region compiled by the archive for each year.",
+    "years": "Calendar year",
+    "empty": "There are no entries for this year.",
+    "undated": "Anniversaries of the year without an exact date",
+    "source": "Compiled by the State Archive of East Kazakhstan Region.",
+    "homeTitle": "Memorable dates: {{month}} {{year}}",
+    "all": "Full calendar",
+    "month": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    }
   }
 }

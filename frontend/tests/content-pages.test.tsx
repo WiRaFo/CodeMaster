@@ -124,3 +124,16 @@ describe('«Посетителям» и «Об архиве»', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+describe('«Календарь памятных дат»', () => {
+  it('годы — ссылки, текущий отмечен; записи по месяцам, юбилеи без даты в конце; английская версия с пометкой языка', async () => {
+    const { container } = renderAt('/en/calendar');
+    expect(await screen.findByRole('heading', { level: 2, name: 'January' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Anniversaries of the year without an exact date' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '2026' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: '2025' })).toHaveAttribute('href', '/en/calendar?year=2025');
+    expect(screen.getByText(/This text is available only in/)).toBeInTheDocument();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+

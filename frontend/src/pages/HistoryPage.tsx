@@ -48,6 +48,7 @@ export function HistoryPage() {
     <>
       <PageHeading title={t('nav.history')}>
         <p className="mt-2 max-w-3xl">{t('history.lead')}</p>
+        <p className="mt-2"><Link to={`/${lang}/calendar`}>{t('calendar.title')}</Link></p>
       </PageHeading>
 
       <section aria-labelledby="history-topics" className="mb-8">

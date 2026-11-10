@@ -13,6 +13,11 @@ const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
   z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
 ]));
 
+const calendarQuerySchema = langOnlySchema.extend({
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+});
+
 const socialLinksSchema = z.array(z.object({
   network: z.enum(['instagram', 'facebook']),
   label: z.string(),
@@ -69,6 +74,34 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
       } : null,
       staff: main ? await publicStaff(db, main.id, lang) : [],
       social: links.success ? links.data : [],
+    };
+  });
+
+  /**
+   * Календарь юбилейных и памятных дат области (сведения архива). Без года — текущий год, если он есть,
+   * иначе последний. month — только записи этого месяца (для блока на главной); без даты в году — month IS NULL.
+   */
+  app.get('/calendar', async (request, reply) => {
+    const query = calendarQuerySchema.parse(request.query);
+    const lang: Locale = resolveLang(request, reply, query.lang);
+    const published = { publicationStatus: 'published' as const, deletedAt: null };
+    const years = (await db.memorableDate.groupBy({ by: ['calendarYear'], where: published, orderBy: { calendarYear: 'desc' } }))
+      .map((y) => y.calendarYear);
+    const current = new Date().getFullYear();
+    const year = query.year ?? (years.includes(current) ? current : years[0]);
+    if (year === undefined || !years.includes(year)) return { years, year: year ?? null, items: [] };
+    const rows = await db.memorableDate.findMany({
+      where: { ...published, calendarYear: year, ...(query.month ? { month: query.month } : {}) },
+      orderBy: { sortOrder: 'asc' },
+      include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+    });
+    return {
+      years,
+      year,
+      items: rows.flatMap((r) => {
+        const t = r.translations.find((x) => x.locale === lang) ?? r.translations.find((x) => x.locale === 'ru') ?? r.translations[0];
+        return t ? [{ id: r.id, month: r.month, day: r.day, dateLabel: t.dateLabel, text: t.text, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
+      }),
     };
   });
 

@@ -317,3 +317,20 @@ export interface PublicationDetail extends PublicationSummary {
   document: { id: string; title: string | null; access: 'open' | 'restricted'; code: { formatted: string } } | null;
   related: PublicationSummary[];
 }
+
+export interface CalendarItem {
+  id: string;
+  month: number | null;
+  day: number | null;
+  dateLabel: string;
+  text: string;
+  contentLang: string;
+  translationStatus: string;
+}
+
+/** Ответ /calendar: доступные годы, выбранный год и записи. */
+export interface CalendarData {
+  years: number[];
+  year: number | null;
+  items: CalendarItem[];
+}

@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import {
   ARCHIVE_BRANCHES, ARCHIVE_DATA_DATE, ARCHIVE_MAIN, ARCHIVE_SETTLEMENTS, ARCHIVE_SOCIAL, ARCHIVE_STAFF, BRANCH_DIRECTOR,
 } from './archive-data.ts';
+import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
 import { ARCHIVE_HISTORY_RU } from './archive-history.ts';
 import { names, translationRows, OLD_SITE_CONTACTS_URL, type Tri } from './lib.ts';
 
@@ -156,6 +157,7 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
 
   await seedStaff(db, branchIds);
   await seedAboutPages(db);
+  await seedCalendar(db);
   await db.siteSetting.upsert({
     where: { key: 'social_links' },
     update: { value: ARCHIVE_SOCIAL },
@@ -202,4 +204,25 @@ async function seedAboutPages(db: PrismaClient): Promise<void> {
       translationStatus: 'reviewed',
     },
   });
+}
+
+/** Календарь памятных дат: русский и казахский тексты из источника, порядок строк сохраняется. */
+async function seedCalendar(db: PrismaClient): Promise<void> {
+  await db.memorableDate.deleteMany({ where: { dataOrigin: 'verified' } });
+  for (const [i, e] of ARCHIVE_CALENDAR.entries()) {
+    if (e.month !== null && (e.month < 1 || e.month > 12)) throw new Error(`Неверный месяц в календаре: ${e.ru.dateLabel}`);
+    if (e.day !== null && (e.day < 1 || e.day > 31)) throw new Error(`Неверный день в календаре: ${e.ru.dateLabel}`);
+    await db.memorableDate.create({
+      data: {
+        calendarYear: e.calendarYear, month: e.month, day: e.day, sortOrder: i,
+        publicationStatus: 'published', dataOrigin: 'verified',
+        translations: {
+          create: [
+            { locale: 'ru', ...e.ru, translationStatus: 'reviewed' },
+            { locale: 'kk', ...e.kk, translationStatus: 'reviewed' },
+          ],
+        },
+      },
+    });
+  }
 }

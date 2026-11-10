@@ -16,6 +16,15 @@ export const MAIN_BRANCH = {
   sites: [],
 };
 
+export const CALENDAR = {
+  years: [2026, 2025],
+  year: 2026,
+  items: [
+    { id: 'c1', month: 1, day: 8, dateLabel: '8 января', text: '130 лет (1896-1971) со дня рождения Ефима Николаевича Пермитина, писателя', contentLang: 'ru', translationStatus: 'reviewed' },
+    { id: 'c2', month: null, day: null, dateLabel: '1761 г.', text: '265 лет со дня основания п.Глубокое', contentLang: 'ru', translationStatus: 'reviewed' },
+  ],
+};
+
 export const ABOUT = {
   history: { title: 'История архива', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified', blocks: [
     { type: 'p', text: 'Государственный архив Восточно-Казахстанской области образован в 1940 году.' },
@@ -161,6 +170,7 @@ export function apiMock(overrides: Record<string, unknown> = {}) {
     [`/api/v1/catalog/documents/${DOCUMENTS.restricted.id}?`, DOCUMENTS.restricted],
     ['/api/v1/branches/main', MAIN_BRANCH],
     ['/api/v1/about?', ABOUT],
+    ['/api/v1/calendar?', CALENDAR],
     ['/api/v1/branches?', FIXTURES.branches],
     ['/api/v1/home?', FIXTURES.home],
     ['/api/v1/catalog/documents?', FIXTURES.catalog],

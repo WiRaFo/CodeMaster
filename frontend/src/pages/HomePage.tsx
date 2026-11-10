@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { CatalogSearchForm } from '../components/catalog/CatalogSearchForm.tsx';
 import { BlockHeading, LinkCard } from '../components/home/cards.tsx';
+import { MonthDates } from '../components/home/MonthDates.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -167,6 +168,8 @@ function HomeBlocks({ data, lang }: { data: HomeData; lang: string }) {
           ) : null}
         </section>
       ) : null}
+
+      <MonthDates />
 
       {data.exhibitions.length > 0 ? (
         <section aria-labelledby="home-exhibitions" className="mb-10">
