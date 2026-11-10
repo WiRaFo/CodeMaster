@@ -335,6 +335,8 @@ export interface PublicationDetail extends PublicationSummary {
   sourceUrl: string | null;
   document: { id: string; title: string | null; access: 'open' | 'restricted'; code: { formatted: string } } | null;
   related: PublicationSummary[];
+  persons: Array<{ slug: string; fullName: string; lifeYears: string | null }>;
+  events: Array<{ slug: string; year: number; title: string }>;
 }
 
 export interface CalendarItem {
@@ -436,6 +438,7 @@ export interface TimelineEvent extends Localized {
   description: string | null;
   sourceNote: string | null;
   dataOrigin: DataOrigin;
+  publications: Array<{ slug: string; title: string | null }>;
 }
 
 /** Историческая личность (GET /history/persons, F-086). */
@@ -449,6 +452,7 @@ export interface PersonDetail extends PersonSummary {
   biography: string | null;
   sourceNote: string | null;
   memorableDates: Array<{ calendarYear: number; dateLabel: string; text: string; contentLang: string }>;
+  publications: PublicationSummary[];
 }
 
 /** Тематическая коллекция (GET /history/collections, F-081). itemCount — только видимые на сайте элементы. */

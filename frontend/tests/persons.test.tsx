@@ -8,6 +8,10 @@ const BASE = { dataOrigin: 'verified', contentLang: 'ru', translationStatus: 're
 const BUROV: PersonDetail = {
   ...BASE, slug: 'burov-pavel', fullName: 'Буров Павел Петрович', lifeYears: '1902–1944', biography: null, sourceNote: 'Календарь',
   memorableDates: [{ calendarYear: 2022, dateLabel: '4 марта', text: '120 лет со дня рождения геолога', contentLang: 'ru' }],
+  publications: [{
+    slug: 'demo-geology', kind: 'article', title: '[Демо] Геологи области', lead: null, periodText: null, yearFrom: null, yearTo: null,
+    publishedAt: '2026-11-09T00:00:00.000Z', topics: [], settlements: [], dataOrigin: 'demo', contentLang: 'ru', translationStatus: 'reviewed',
+  }],
 };
 
 beforeEach(() => {
@@ -40,6 +44,8 @@ describe('исторические личности (F-086)', () => {
     expect(within(dates).getByText('4 марта, 2022')).toBeInTheDocument();
     expect(within(dates).getByRole('link', { name: 'Календарь памятных дат' })).toHaveAttribute('href', '/ru/calendar?year=2022');
     expect(screen.getByText(/переданного Государственным архивом/)).toBeInTheDocument();
+    const pubs = screen.getByRole('region', { name: 'Публикации' });
+    expect(within(pubs).getByRole('link', { name: '[Демо] Геологи области' })).toHaveAttribute('href', '/ru/history/demo-geology');
     expect(await axeViolations(container)).toEqual([]);
   });
 

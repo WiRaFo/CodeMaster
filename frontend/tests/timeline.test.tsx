@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TimelineEvent } from '../src/lib/types.ts';
 import { apiMock, renderAt } from './render.tsx';
 
-const BASE = { precision: 'year', sourceNote: 'Текст «История архива», передан архивом 10.11.2026', dataOrigin: 'verified', contentLang: 'ru', translationStatus: 'reviewed' } as const;
+const NO_PUBLICATIONS: TimelineEvent['publications'] = [];
+const BASE = { publications: NO_PUBLICATIONS, precision: 'year', sourceNote: 'Текст «История архива», передан архивом 10.11.2026', dataOrigin: 'verified', contentLang: 'ru', translationStatus: 'reviewed' } as const;
 const EVENTS: TimelineEvent[] = [
-  { ...BASE, slug: 'founded', year: 1940, date: null, title: 'Образован архив', description: 'Архив образован в 1940 году.' },
+  { ...BASE, slug: 'founded', year: 1940, date: null, title: 'Образован архив', description: 'Архив образован в 1940 году.', publications: [{ slug: 'demo-a', title: '[Демо] Как читать шифр' }] },
   { ...BASE, slug: 'renamed', year: 1941, date: '1941-10-31', precision: 'day', title: 'Переименование', description: 'Приказ от 31 октября 1941 года.' },
   { ...BASE, slug: 'network', year: 1967, date: null, title: 'Сеть сформирована', description: 'Сеть состояла из:\n— Архивного отдела\n— Госархива области' },
 ];
@@ -26,6 +27,7 @@ describe('хронологическая лента (F-083)', () => {
     expect(within(forties).getByText('31 октября 1941 г.').closest('time')).toHaveAttribute('dateTime', '1941-10-31');
     expect(within(screen.getByRole('region', { name: '1960-е' })).getAllByRole('listitem').map((li) => li.textContent)).toContain('Архивного отдела');
     expect(screen.getByText(/передан архивом/)).toBeInTheDocument();
+    expect(within(forties).getByRole('link', { name: '[Демо] Как читать шифр' })).toHaveAttribute('href', '/ru/history/demo-a');
     const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } });
     expect(result.violations.map((v) => v.id)).toEqual([]);
   });

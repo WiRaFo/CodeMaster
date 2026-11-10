@@ -19,6 +19,8 @@ const DETAIL: PublicationDetail = {
   ...STORY, bodyText: 'Первый абзац.\n\nВторой абзац.', sourceNote: 'Демонстрационный материал.', authorship: 'Команда (демо)', sourceUrl: null,
   document: { id: '11111111-1111-4111-8111-111111111111', title: 'Протокол', access: 'restricted', code: { formatted: 'Ф. 1. Оп. 1. Д. 1.' } },
   related: [],
+  persons: [{ slug: 'auezov-mukhtar', fullName: 'Ауэзов Мухтар Омарханович', lifeYears: '1897–1961' }],
+  events: [{ slug: 'archive-founded', year: 1940, title: 'Образован архив' }],
 };
 const FAQ = { items: [{ id: 'f1', question: 'Можно ли подать заявление через сайт?', answer: 'Нет. Сайт справочный.', dataOrigin: 'demo', contentLang: 'ru', translationStatus: 'reviewed' }] };
 
@@ -79,6 +81,8 @@ describe('цифровая история региона (F-080–F-084)', () =>
     expect(screen.getByRole('link', { name: 'Ф. 1. Оп. 1. Д. 1. — Протокол' })).toHaveAttribute('href', '/ru/catalog/documents/11111111-1111-4111-8111-111111111111');
     expect(screen.getByText('Доступ ограничен')).toBeInTheDocument();
     expect(screen.getByText('Демонстрационный материал.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ауэзов Мухтар Омарханович (1897–1961)' })).toHaveAttribute('href', '/ru/history/persons/auezov-mukhtar');
+    expect(screen.getByRole('link', { name: '1940: Образован архив' })).toHaveAttribute('href', '/ru/history/timeline#event-archive-founded');
     expect(await axeViolations(container)).toEqual([]);
   });
 });

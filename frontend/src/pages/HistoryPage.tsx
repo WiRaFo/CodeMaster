@@ -9,7 +9,7 @@ import { useApi } from '../lib/useApi.ts';
 import { yearsLabel } from './ExhibitionsPage.tsx';
 import { NotFoundPage } from './NotFoundPage.tsx';
 
-function PublicationCard({ p }: { p: PublicationSummary }) {
+export function PublicationCard({ p }: { p: PublicationSummary }) {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const years = p.periodText ?? yearsLabel(p.yearFrom, p.yearTo);
@@ -164,6 +164,14 @@ export function PublicationPage() {
           <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.document')}</dt>
             <dd><Link to={`/${lang}/catalog/documents/${p.document.id}`}>{`${p.document.code.formatted} — ${p.document.title ?? ''}`}</Link>
               {p.document.access === 'restricted' ? <span className="ml-2 font-semibold">{t('catalog.restricted')}</span> : null}</dd></div>
+        ) : null}
+        {p.persons.length > 0 ? (
+          <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.persons')}</dt>
+            <dd>{p.persons.map((x, i) => <span key={x.slug}>{i > 0 ? ', ' : ''}<Link to={`/${lang}/history/persons/${x.slug}`}>{x.lifeYears ? `${x.fullName} (${x.lifeYears})` : x.fullName}</Link></span>)}</dd></div>
+        ) : null}
+        {p.events.length > 0 ? (
+          <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.events')}</dt>
+            <dd><ul>{p.events.map((x) => <li key={x.slug}><Link to={`/${lang}/history/timeline#event-${x.slug}`}>{`${x.year}: ${x.title}`}</Link></li>)}</ul></dd></div>
         ) : null}
         {p.authorship ? <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.authorship')}</dt><dd>{p.authorship}</dd></div> : null}
         {p.sourceNote ? <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.source')}</dt><dd>{p.sourceNote}</dd></div> : null}

@@ -262,3 +262,39 @@ export const collectionInputSchema = z.object({
   .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
   .refine((v) => new Set(v.items.map((i) => `${i.type}:${i.id}`)).size === v.items.length, { path: ['items'], message: 'duplicate' });
 export type CollectionInput = z.infer<typeof collectionInputSchema>;
+
+/**
+ * Публикация «Цифровой истории» в панели (ТЗ §5.6, §6.6; F-149). Источник обязателен (в базе — CHECK для опубликованных).
+ * Связи: тематики и населённые пункты — по адресу справочника, документ каталога, личности и события — по id.
+ */
+export const PUBLICATION_KINDS = ['article', 'photo_story', 'biography', 'memoir'] as const;
+const uniqueList = <T extends z.ZodType>(item: T, max: number) =>
+  z.array(item).max(max).refine((v) => new Set(v).size === v.length, { message: 'duplicate' });
+
+export const publicationInputSchema = z.object({
+  slug: slugSchema,
+  kind: z.enum(PUBLICATION_KINDS),
+  periodText: optionalLongText(200),
+  yearFrom: optionalYear,
+  yearTo: optionalYear,
+  published: z.boolean(),
+  featured: z.boolean(),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  sourceNote: z.string().trim().min(5).max(500),
+  authorship: optionalLongText(300),
+  sourceUrl: z.string().trim().max(500).transform((v) => (v === '' ? null : v)).nullish()
+    .refine((v) => v == null || /^https:\/\/[^\s]+$/.test(v), { message: 'https' }).transform((v) => v ?? null),
+  documentId: z.union([z.literal(''), z.null(), z.uuid()]).optional().transform((v) => (v ? v.toLowerCase() : null)),
+  topics: uniqueList(z.string().trim().min(1).max(60), 10),
+  settlements: uniqueList(z.string().trim().min(1).max(60), 30),
+  personIds: uniqueList(z.uuid(), 50),
+  eventIds: uniqueList(z.uuid(), 50),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    title: z.string().trim().min(5).max(300),
+    lead: optionalLongText(1000),
+    bodyText: z.string().trim().min(10).max(50_000),
+  })),
+})
+  .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
+  .refine((v) => v.yearFrom === null || v.yearTo === null || v.yearFrom <= v.yearTo, { path: ['yearTo'], message: 'order' });
+export type PublicationInput = z.infer<typeof publicationInputSchema>;

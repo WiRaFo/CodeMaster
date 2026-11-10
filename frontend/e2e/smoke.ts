@@ -824,6 +824,32 @@ async function memoryAdminScenario(browser: Browser) {
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
   await page.getByRole('status').filter({ hasText: 'удалено' }).waitFor();
   check(true, 'архив памяти: удаление события с подтверждением');
+
+  // Публикация «Цифровой истории» с привязкой к личности: видна на странице личности, затем удаляется.
+  const pubTitle = `[Демо] Публикация e2e ${tag}`;
+  await page.goto(`${BASE}/admin/memory`);
+  await page.getByRole('button', { name: 'Добавить публикацию' }).click();
+  const pubForm = page.getByRole('form', { name: 'Новая публикация' });
+  await pubForm.getByLabel('Адрес').fill(`e2e-publication-${tag}`);
+  await pubForm.getByLabel('Происхождение').selectOption('demo');
+  await pubForm.getByLabel('Источник', { exact: true }).fill('[Демо] Проверка e2e');
+  await pubForm.getByLabel('Опубликовано на сайте').check();
+  await pubForm.getByRole('checkbox', { name: 'Ауэзов Мухтар Омарханович' }).check();
+  await pubForm.getByLabel('Заголовок').first().fill(pubTitle);
+  await pubForm.getByLabel('Текст', { exact: true }).first().fill('Проверочный текст публикации из панели.');
+  check((await axe(page)).length === 0, `axe публикация в панели: ${(await axe(page)).join('; ')}`);
+  await pubForm.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Публикация сохранена' }).waitFor();
+
+  const personPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await personPage.goto(`${BASE}/ru/history/persons/auezov-mukhtar`);
+  check(await personPage.getByRole('region', { name: 'Публикации' }).getByRole('link', { name: pubTitle }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: публикация из панели на странице личности');
+  await personPage.close();
+
+  await page.getByRole('button', { name: `Удалить: ${pubTitle}` }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('status').filter({ hasText: 'удалено' }).waitFor();
+  check(true, 'архив памяти: удаление публикации с подтверждением');
   await page.close();
 }
 
