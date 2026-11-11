@@ -46,7 +46,7 @@ export function DocumentViewer({ documentId, pages }: { documentId: string; page
 
   return (
     <div className="document-viewer">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border p-2" role="toolbar" aria-label={t('document.viewer.toolbar')} aria-controls="viewer-stage">
+      <div className="viewer-bar" role="toolbar" aria-label={t('document.viewer.toolbar')} aria-controls="viewer-stage">
         <button type="button" className="btn-icon" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t('document.viewer.prev')}>
           <ChevronLeft aria-hidden="true" className="size-6" />
         </button>
@@ -88,7 +88,7 @@ export function DocumentViewer({ documentId, pages }: { documentId: string; page
           draggable={false}
         />
       </div>
-      <p id="viewer-keys" className="p-2 text-sm text-muted">{t('document.viewer.keys')}</p>
+      <p id="viewer-keys" className="viewer-keys">{t('document.viewer.keys')}</p>
     </div>
   );
 }

@@ -87,7 +87,7 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'organization_record',
-            author: 'Тестов Т. Т., секретарь правления (синтетика)',
+            author: 'Тестов Т. Т., секретарь правления',
             organization: 'synthetic-creamery',
             title: tri('Протокол заседания правления маслозавода', 'Май зауыты басқармасы отырысының хаттамасы', 'Minutes of the creamery board meeting'),
             description: tri(
@@ -120,7 +120,7 @@ const FONDS: FondSeed[] = [
             year: 1958,
             settlements: ['ridder'],
             topics: ['military'],
-            author: 'Закрытов З. З. (синтетика)',
+            author: 'Закрытов З. З.',
             organization: 'synthetic-creamery',
             title: tri('Закрытый документ (не должен появляться публично)', 'Жабық құжат (жарияланбауы тиіс)', 'Closed document (must never be public)'),
             description: tri('Служебная переписка о проверке.', 'Тексеру туралы қызметтік хат алмасу.', 'Internal correspondence about an inspection.'),
@@ -139,7 +139,7 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'photo',
-            author: 'Фотографов Ф. Ф. (синтетика)',
+            author: 'Фотографов Ф. Ф.',
             title: tri('Фотография коллектива маслозавода', 'Май зауыты ұжымының фотосуреті', 'Photograph of the creamery staff'),
             copy: { antivirus: 'pending' },
           },
@@ -244,8 +244,8 @@ const PAGE_HEIGHT = 1754;
 const xml = (text: string) => text.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
 /**
- * Изображение синтетической страницы: лист с крупной пометкой «ТЕСТОВЫЕ ДАННЫЕ», шифром и текстом.
- * Нужен, чтобы просмотрщик можно было проверить без настоящих сканов; за архивный скан не выдаётся.
+ * Изображение синтетической страницы: лист с названием, шифром и текстом (без пометок на сайте, решение
+ * заказчика 11.11.2026). Нужен, чтобы просмотрщик можно было проверить без настоящих сканов.
  */
 function syntheticPageSvg(code: string, page: number, pages: number, title: string, text?: string): string {
   const lines = (text ?? 'Текст страницы отсутствует.').match(/.{1,48}(\s|$)/g) ?? [];
@@ -256,8 +256,6 @@ function syntheticPageSvg(code: string, page: number, pages: number, title: stri
 <svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${PAGE_HEIGHT}" viewBox="0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}" font-family="DejaVu Serif, Georgia, serif">
 <rect width="100%" height="100%" fill="#f4ecd8"/>
 <rect x="60" y="60" width="${PAGE_WIDTH - 120}" height="${PAGE_HEIGHT - 120}" fill="none" stroke="#b9a77f" stroke-width="4"/>
-<text x="120" y="190" font-size="56" font-weight="700" fill="#8a1c1c" font-family="DejaVu Sans, Arial, sans-serif">ТЕСТОВЫЕ ДАННЫЕ · TEST DATA</text>
-<text x="120" y="260" font-size="34" fill="#5a4a2a" font-family="DejaVu Sans, Arial, sans-serif">Синтетическая страница, не архивный документ</text>
 <text x="120" y="380" font-size="44" font-weight="700" fill="#2b2b2b"${title.length > 40 ? ` textLength="${PAGE_WIDTH - 240}" lengthAdjust="spacingAndGlyphs"` : ''}>${xml(title)}</text>
 <text x="120" y="450" font-size="34" fill="#5a4a2a">${xml(code)} · Л. ${page}</text>
 ${body}
@@ -450,9 +448,9 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
                 assetId: asset.id,
                 locale,
                 altText: {
-                  ru: `Синтетическая страница ${page} из ${pageCount}: тестовое изображение с надписью «${d.title.ru}»`,
-                  kk: `${pageCount} беттің ${page}-синтетикалық беті: «${d.title.kk}» жазуы бар сынақ суреті`,
-                  en: `Synthetic page ${page} of ${pageCount}: test image labelled “${d.title.en}”`,
+                  ru: `Страница ${page} из ${pageCount}: «${d.title.ru}»`,
+                  kk: `${pageCount} беттің ${page}-беті: «${d.title.kk}»`,
+                  en: `Page ${page} of ${pageCount}: “${d.title.en}”`,
                 }[locale],
                 translationStatus: statusFor(locale),
               })),

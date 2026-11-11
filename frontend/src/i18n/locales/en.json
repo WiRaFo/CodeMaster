@@ -423,7 +423,8 @@
       "stage": "Page image",
       "keys": "Keys in the image area: left and right arrows turn pages, “+” and “−” zoom, “0” resets.",
       "fallbackAlt": "Page {{page}} of the digital copy"
-    }
+    },
+    "hierarchyLabel": "Where the document is kept in the archive"
   },
   "exhibitions": {
     "listLead": "Themed displays of archival documents and photographs. Each exhibition can be viewed in order, from the first exhibit to the last.",

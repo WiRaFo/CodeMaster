@@ -134,7 +134,7 @@ describe('открытый доступ', () => {
     const pages = await t.get(`/api/v1/catalog/documents/${id}/pages?lang=ru`);
     expect(pages.body.items?.map((p) => p['pageNumber'])).toEqual([1, 2, 3]);
     expect(pages.body.items?.[0]).toMatchObject({ pageNumber: 1, sheetLabel: '1', mimeType: 'image/svg+xml', width: 1240, height: 1754 });
-    expect(String(pages.body.items?.[0]?.['alt'])).toMatch(/^Синтетическая страница 1 из 3/);
+    expect(String(pages.body.items?.[0]?.['alt'])).toMatch(/^Страница 1 из 3/);
     const search = await t.get(`/api/v1/catalog/documents?q=${encodeURIComponent('сепаратора')}`);
     expect(search.body.items?.map((d) => d['id'])).toEqual([id]);
   });
@@ -206,7 +206,7 @@ describe('изображения страниц (ЭТАП 6, F-041)', () => {
     expect(res.headers['content-type']).toBe('image/svg+xml');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(String(res.headers['content-security-policy'])).toContain('sandbox');
-    expect(res.body).toContain('ТЕСТОВЫЕ ДАННЫЕ');
+    expect(res.body).toContain('Протокол заседания');
     expect(res.body).toContain('— 2 / 3 —');
     expect(res.body).not.toMatch(/<script/i);
   });
