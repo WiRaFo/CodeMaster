@@ -151,7 +151,7 @@ html.a11y .news{border:2px solid #000}
 .info-dl dt{font-size:calc(15px * var(--fs,1));color:var(--muted)}
 .info-dl dd{margin:0;font-weight:600;font-size:calc(17px * var(--fs,1))}
 .info-phone{display:inline-flex;gap:8px;align-items:center;font-weight:800;font-size:calc(22px * var(--fs,1))}
-.info-card .btn{text-decoration:none!important}.info-card .btn:not(.line){color:#fff}.info-card .btn.line{color:var(--brand)}
+.info-card .btn{text-decoration:none!important}.info-card .btn:not(.line):not(.ghost){color:#fff}.info-card .btn.ghost{color:var(--brand)}.info-card .btn.line{color:var(--brand)}
 .year-tape{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:thin}
 .year-btn{flex:0 0 auto;display:inline-flex;gap:10px;align-items:center;min-height:48px;padding:0 18px;border-radius:14px;border:2px solid var(--line2);background:#fff;color:var(--ink);font:700 calc(17px * var(--fs,1)) 'Inter Variable','Inter',sans-serif;cursor:pointer;transition:transform .2s,background-color .2s}
 .year-btn:hover{transform:translateY(-2px)}
@@ -293,3 +293,25 @@ html.a11y .asst-you{border:2px solid #000}
 .br-line{display:flex;gap:10px;margin:0;color:var(--muted);font-size:calc(17px * var(--fs,1))}
 .br-ico{flex:0 0 auto;width:20px;height:20px;margin-top:3px;color:var(--brand)}
 html.a11y .br-tab{border:2px solid #000}
+
+/* Справочные страницы: госуслуга, читальный зал, платные услуги (Services.dc.html) */
+.ref-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:40px;align-items:start}
+.ref-layout.one{grid-template-columns:minmax(0,1fr);max-width:960px}
+@media (max-width:1000px){.ref-layout{grid-template-columns:minmax(0,1fr)}}
+.ref-aside{position:sticky;top:96px}
+.ref-aside .btn{width:100%;justify-content:center}
+.ref-body{display:flex;flex-direction:column;gap:14px;margin:0 0 32px;font-size:calc(18px * var(--fs,1));line-height:1.6}
+.ref-body>p{margin:0}
+.ref-h2{margin:22px 0 4px;font-weight:800;font-size:calc(28px * var(--fs,1));line-height:1.2;color:var(--ink)}
+.ref-body>.ref-h2:first-child{margin-top:0}
+.ref-h3{margin:12px 0 0;font-weight:800;font-size:calc(21px * var(--fs,1))}
+.ref-pending{display:flex;gap:12px;margin:0;padding:18px 22px;border:2px dashed var(--line2);border-radius:18px;background:transparent}
+.ref-links{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.ref-link{display:flex;gap:16px;align-items:flex-start;padding:20px 22px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+.ref-link-ico{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--tint);color:var(--brand)}
+.ref-link-a{font-weight:800;font-size:calc(19px * var(--fs,1));overflow-wrap:anywhere}
+.ref-sheet{position:relative;flex:0 0 auto;width:150px;height:190px;padding:22px 18px;background:#fff;border-radius:10px;transform:rotate(-6deg);box-shadow:0 30px 40px -24px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:9px}
+.ref-sheet-l{height:6px;border-radius:3px;background:var(--line2)}
+.ref-sheet-l.w1{width:70%;height:8px;background:var(--ink)}.ref-sheet-l.w2{width:60%}
+.ref-sheet img{position:absolute;right:14px;bottom:14px;width:58px;height:58px}
+html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}

@@ -15,7 +15,7 @@ import { InfoBlockView, headingBefore } from './ReferencePage.tsx';
  * Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте.
  * Карточка по дизайну (About.dc.html, Visitors.dc.html): подписи слева сверху, телефон крупно.
  */
-export function MainContacts({ withReadingRoom, title, children }: { withReadingRoom: boolean; title?: string; children?: ReactNode }) {
+export function MainContacts({ withReadingRoom, title, titleId, children }: { withReadingRoom: boolean; title?: string; titleId?: string; children?: ReactNode }) {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);
@@ -23,7 +23,7 @@ export function MainContacts({ withReadingRoom, title, children }: { withReading
   const b = main.data;
   return (
     <div className="info-card">
-      {title ? <h2 className="info-card-h">{title}</h2> : null}
+      {title ? <h2 id={titleId} className="info-card-h">{title}</h2> : null}
       <p className="m-0 font-bold"><Link to={`/${lang}/branches/main`} className="text-inherit">{b.name}</Link></p>
       <dl className="info-dl">
         {b.address ? (<div><dt>{t('branches.address')}</dt><dd>{b.address}</dd></div>) : null}
@@ -193,12 +193,12 @@ export function AboutPage() {
         <aside className="about-aside" aria-label={t('about.contactsTitle')}>
           <MainContacts withReadingRoom title={t('about.contactsTitle')}>
             {ready && ready.social.length > 0 ? (
-              <div className="info-dl"><div>
+              <dl className="info-dl"><div>
                 <dt>{t('about.socialTitle')}</dt>
                 <dd><ul className="m-0 p-0">{ready.social.map((s) => (
                   <li key={s.network}>{t(`about.network.${s.network}`)}: <a href={s.url} rel="noopener noreferrer">{s.label}</a></li>
                 ))}</ul></dd>
-              </div></div>
+              </div></dl>
             ) : null}
             <Link to={`/${lang}/branches`} className="btn mt-5 w-full">{t('about.allOnMap')}</Link>
           </MainContacts>

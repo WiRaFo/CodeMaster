@@ -49,8 +49,8 @@ export function FaqPage() {
           <section key={topic} aria-labelledby={`faq-${topic}`} className={`faq-group fg${i % 4}`}>
             <h2 id={`faq-${topic}`} className="faq-tab">{t(`faq.topic.${topic}`)}</h2>
             <div className="faq-box">
-              {items.map((f, j) => (
-                <details key={f.id} className="faq-q" open={i === 0 && j === 0}>
+              {items.map((f) => (
+                <details key={f.id} className="faq-q">
                   <summary>
                     <span>{f.question}</span>
                     <span className="faq-chev" aria-hidden="true"><ChevronDown className="size-5" /></span>

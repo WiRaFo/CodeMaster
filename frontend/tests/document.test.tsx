@@ -25,7 +25,8 @@ describe('карточка открытого документа (F-040 – F-04
     const crumbs = screen.getByRole('navigation', { name: 'Навигационная цепочка' });
     expect(within(crumbs).getByRole('link', { name: 'Главная' })).toHaveAttribute('href', '/ru');
     expect(within(crumbs).getByRole('link', { name: 'Фонды и электронный каталог' })).toHaveAttribute('href', '/ru/catalog');
-    expect(within(crumbs).getByRole('link', { name: 'Фонд TEST-1' }).getAttribute('href')).toMatch(/^\/ru\/catalog\/fonds\/[0-9a-f-]+$/);
+    const folders = screen.getByRole('navigation', { name: 'Положение документа в архиве' });
+    expect(within(folders).getByRole('link', { name: /^Фонд TEST-1/ }).getAttribute('href')).toMatch(/^\/ru\/catalog\/fonds\/[0-9a-f-]+$/);
     expect(within(crumbs).getByText('[Синтетика] Протокол заседания правления маслозавода')).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByText('Тестовые данные')).toBeNull();
     expect(screen.queryByTestId('origin-note')).toBeNull();

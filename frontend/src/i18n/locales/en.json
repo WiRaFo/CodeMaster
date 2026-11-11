@@ -342,7 +342,8 @@
       "title": "Similar in meaning",
       "note": "Selected by a local AI model by the meaning of the query, even when the query words are not in the text. Matches may be imprecise."
     },
-    "reset": "Reset"
+    "reset": "Reset",
+    "boxLabel": "F. · Inv. · File"
   },
   "news": {
     "empty": "No news yet.",
@@ -753,7 +754,9 @@
       "paid": "Paid services"
     },
     "pdf": "PDF document on this website",
-    "table": "Table"
+    "table": "Table",
+    "allBranches": "All sites and branches",
+    "askAssistant": "Ask the AI assistant"
   },
   "breadcrumbs": {
     "label": "Breadcrumb"

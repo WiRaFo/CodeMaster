@@ -24,26 +24,43 @@ export function ReferencePage({ pageKey }: { pageKey: ReferenceKey }) {
   if (page.status === 'error' && page.notFound) return <NotFoundPage />;
   if (page.status !== 'ready') return <LoadStatus status={page.status} />;
   const p = page.data;
+  const withContacts = pageKey === 'reading-room' || pageKey === 'services';
   return (
     <>
-      <PageHeading title={p.title}>
-        {p.lead ? <p className="mt-2 max-w-3xl" lang={p.contentLang}>{p.lead}</p> : null}
+      <PageHeading title={p.title} art={<DocSheet />}>
+        {p.lead ? <p className="lead m-0 max-w-[720px]" lang={p.contentLang}>{p.lead}</p> : null}
       </PageHeading>
-      <TranslationNote contentLang={p.contentLang} translationStatus={p.translationStatus} />
-      <div className="mt-4 mb-8 flex max-w-[75ch] flex-col gap-3" lang={p.contentLang}>
-        {p.blocks.map((block, i) => <InfoBlockView key={i} block={block} label={headingBefore(p.blocks, i)} />)}
+      <div className={withContacts ? 'ref-layout' : 'ref-layout one'}>
+        <div className="min-w-0">
+          <TranslationNote contentLang={p.contentLang} translationStatus={p.translationStatus} />
+          <div className="ref-body" lang={p.contentLang}>
+            {p.blocks.map((block, i) => <InfoBlockView key={i} block={block} label={headingBefore(p.blocks, i)} />)}
+          </div>
+          {pageKey === 'services' ? (
+            <p className="mb-4"><Link to={`/${lang}/services/paid`} className="btn line">{t('reference.paidLink')}</Link></p>
+          ) : null}
+          <p className="muted text-[calc(15px*var(--fs,1))]">{t('reference.actualized', { date: formatDate(p.actualizedAt, lang) })}</p>
+        </div>
+        {withContacts ? (
+          <aside className="ref-aside" aria-labelledby="ref-contacts">
+            <MainContacts withReadingRoom={pageKey === 'reading-room'} title={t('reference.contactsTitle')} titleId="ref-contacts">
+              <Link to={`/${lang}/branches`} className="btn ghost mt-2">{t('reference.allBranches')}</Link>
+              <Link to={`/${lang}/assistant`} className="btn dark">{t('reference.askAssistant')}</Link>
+            </MainContacts>
+          </aside>
+        ) : null}
       </div>
-      {pageKey === 'reading-room' || pageKey === 'services' ? (
-        <section aria-labelledby="ref-contacts" className="mb-8 max-w-3xl">
-          <h2 id="ref-contacts" className="mb-3 text-xl font-semibold">{t('reference.contactsTitle')}</h2>
-          <MainContacts withReadingRoom={pageKey === 'reading-room'} />
-        </section>
-      ) : null}
-      {pageKey === 'services' ? (
-        <p className="mb-4"><Link to={`/${lang}/services/paid`}>{t('reference.paidLink')}</Link></p>
-      ) : null}
-      <p className="text-sm text-muted">{t('reference.actualized', { date: formatDate(p.actualizedAt, lang) })}</p>
     </>
+  );
+}
+
+/** Лист со штампом печати справа в плашке (Services.dc.html), декоративно. */
+function DocSheet() {
+  return (
+    <div className="ref-sheet floaty hide-m" aria-hidden="true">
+      <span className="ref-sheet-l w1" /><span className="ref-sheet-l" /><span className="ref-sheet-l" /><span className="ref-sheet-l w2" />
+      <img src="/design/logo-seal-256.png" alt="" width={64} height={64} />
+    </div>
   );
 }
 
@@ -68,11 +85,11 @@ export function headingBefore(blocks: readonly InfoBlock[], i: number): string |
 export function InfoBlockView({ block, headingLevel = 2, label }: { block: InfoBlock; headingLevel?: 2 | 3; label?: string | undefined }) {
   const { t } = useTranslation();
   switch (block.type) {
-    case 'h': return headingLevel === 3 ? <h3 className="mt-2 text-lg font-semibold">{block.text}</h3> : <h2 className="mt-3 text-xl font-semibold">{block.text}</h2>;
+    case 'h': return headingLevel === 3 ? <h3 className="ref-h3">{block.text}</h3> : <h2 className="ref-h2">{block.text}</h2>;
     case 'p': return <p>{block.text}</p>;
     case 'pending':
       return (
-        <p className="flex gap-2 rounded-md border-2 border-border bg-surface-2 p-3">
+        <p className="ref-pending">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
           <span><span className="font-semibold">{t('reference.pending')}</span> {block.text}</span>
         </p>
@@ -116,25 +133,29 @@ export function InfoBlockView({ block, headingLevel = 2, label }: { block: InfoB
     }
     case 'links':
       return (
-        <ul className="flex flex-col gap-3">
+        <ul className="ref-links">
           {block.items.map((l, i) => l.url.startsWith('/files/') ? (
-            <li key={i} className="rounded-md border-2 border-border bg-surface p-3">
-              <a href={l.url} type="application/pdf" className="inline-flex flex-wrap items-baseline gap-x-2 font-semibold wrap-anywhere">
-                <FileText aria-hidden="true" className="size-4 shrink-0 self-center" />
+            <li key={i} className="ref-link">
+              <span className="ref-link-ico" aria-hidden="true"><FileText className="size-5" /></span>
+              <div className="min-w-0">
+              <a href={l.url} type="application/pdf" className="ref-link-a">
                 <span>{l.label}</span>
               </a>
               {l.note ? <p className="mt-1 text-sm">{l.note}</p> : null}
               <p className="mt-1 text-sm text-muted">{t('reference.pdf')}</p>
+              </div>
             </li>
           ) : (
-            <li key={i} className="rounded-md border-2 border-border bg-surface p-3">
-              <a href={l.url} rel="noopener noreferrer" className="inline-flex flex-wrap items-baseline gap-x-2 font-semibold wrap-anywhere">
+            <li key={i} className="ref-link">
+              <span className="ref-link-ico" aria-hidden="true"><ExternalLink className="size-5" /></span>
+              <div className="min-w-0">
+              <a href={l.url} rel="noopener noreferrer" className="ref-link-a">
                 <span>{l.label}</span>
-                <ExternalLink aria-hidden="true" className="size-4 shrink-0 self-center" />
                 <span className="visually-hidden">{t('reference.external')}</span>
               </a>
               {l.note ? <p className="mt-1 text-sm">{l.note}</p> : null}
               <p className="mt-1 text-sm text-muted">{t('reference.externalHost', { host: new URL(l.url).host })}</p>
+              </div>
             </li>
           ))}
         </ul>

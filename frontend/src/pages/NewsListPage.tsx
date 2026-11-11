@@ -71,7 +71,6 @@ export function NewsListPage() {
             <div className="card news-empty">
               <Newspaper aria-hidden="true" className="size-14 text-[var(--brand)]" strokeWidth={1.6} />
               <p className="m-0 text-[calc(20px*var(--fs,1))] font-bold">{q || rubric ? t('news.nothingFound') : t('news.empty')}</p>
-              {q || rubric ? <Link to={listHref({})} className="btn ghost">{t('news.reset')}</Link> : null}
             </div>
           ) : (
             <ul className="mb-6 flex flex-col gap-[18px]">

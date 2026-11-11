@@ -222,13 +222,14 @@ function ActiveFilters({ query, facets, onChange }: { query: CatalogQuery; facet
 
 /** Картотечный ящик в плашке каталога (Catalog.dc.html): карточки покачиваются, крышка приоткрывается при наведении. */
 function CatalogBox() {
+  const { t } = useTranslation();
   return (
     <div className="box3d hide-m" aria-hidden="true">
       <div className="cards-fly">
         <span className="bg-white" /><span className="bg-[var(--brand)] [animation-delay:.5s]" /><span className="bg-[var(--tint)] [animation-delay:1s]" />
         <span className="bg-[#A9C4F2] [animation-delay:1.5s]" /><span className="bg-white [animation-delay:2s]" />
       </div>
-      <div className="box3d-body"><span className="mono">Ф. · Оп. · Д.</span></div>
+      <div className="box3d-body"><span className="mono">{t('catalog.boxLabel')}</span></div>
       <div className="lid" />
     </div>
   );
