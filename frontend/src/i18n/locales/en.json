@@ -578,7 +578,13 @@
     "restart": "Start over",
     "notFound": "No answer? See",
     "notFoundFaq": "questions and answers",
-    "notFoundCall": "or call the archive:"
+    "notFoundCall": "or call the archive:",
+    "answerLang": "Answer language",
+    "langName": {
+      "kk": "Kazakh",
+      "ru": "Russian",
+      "en": "English"
+    }
   },
   "history": {
     "lead": "The “Great Archive of Memory”: stories about the region's history based on archival records.",
@@ -648,7 +654,8 @@
       "access": "Access to documents",
       "visit": "Visiting the archive",
       "site": "Using the website"
-    }
+    },
+    "linksLabel": "Go to section"
   },
   "visitors": {
     "lead": "How to prepare for a visit to the archive.",

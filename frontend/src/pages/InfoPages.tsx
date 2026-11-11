@@ -1,5 +1,5 @@
 import { Check, Clock, MapPin, Newspaper, Phone, Search } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type ReactNode, type RefObject, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
@@ -41,13 +41,52 @@ export function MainContacts({ withReadingRoom, title, titleId, children }: { wi
  * делает сам сайт, и контакты из реестра. Правила читального зала и перечень услуг архива
  * не выдумываются: они появятся после передачи архивом действующих редакций (Q-25).
  */
+const STEPS = ['find', 'code', 'access', 'contact'] as const;
+
+/**
+ * Когда список шагов впервые попадает на экран, галочки проставляются по очереди — показать, как работает памятка.
+ * Если посетитель уже нажал на шаг или движение выключено (системная настройка, «Остановить анимацию»,
+ * версия для слабовидящих), ничего само не отмечается.
+ */
+function useStepsAutofill(
+  ref: RefObject<HTMLOListElement | null>,
+  steps: readonly string[],
+  touched: RefObject<boolean>,
+  setDone: Dispatch<SetStateAction<Record<string, boolean>>>,
+) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const reduced = document.documentElement.dataset['motion'] === 'reduce' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    const timers: number[] = [];
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      steps.forEach((s, i) => {
+        timers.push(window.setTimeout(() => {
+          if (!touched.current) setDone((prev) => ({ ...prev, [s]: true }));
+        }, 500 + i * 650));
+      });
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [ref, steps, touched, setDone]);
+}
+
 export function VisitorsPage() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);
-  const steps = ['find', 'code', 'access', 'contact'] as const;
+  const steps = STEPS;
   // Отметки шагов — только памятка для посетителя на этой странице, никуда не отправляются.
   const [done, setDone] = useState<Record<string, boolean>>({});
+  const stepsRef = useRef<HTMLOListElement>(null);
+  const touched = useRef(false);
+  useStepsAutofill(stepsRef, steps, touched, setDone);
   const count = steps.filter((s) => done[s]).length;
   const b = main.status === 'ready' ? main.data : null;
   return (
@@ -70,10 +109,13 @@ export function VisitorsPage() {
           <p className="muted mb-5">{t('visitors.stepsHint')}</p>
           <div className="pbar mb-2" aria-hidden="true"><span style={{ width: `${count * 25}%` }} /></div>
           <p role="status" className="mb-[18px] font-bold">{t('visitors.done', { count, total: steps.length })}</p>
-          <ol className="flex flex-col gap-3">
+          <ol ref={stepsRef} className="flex flex-col gap-3">
             {steps.map((s, i) => (
               <li key={s}>
-                <button type="button" className="step" aria-pressed={!!done[s]} onClick={() => setDone({ ...done, [s]: !done[s] })}>
+                <button type="button" className="step" aria-pressed={!!done[s]} onClick={() => {
+                  touched.current = true;
+                  setDone({ ...done, [s]: !done[s] });
+                }}>
                   <span className="step-n" aria-hidden="true">{i + 1}</span>
                   <span className="flex flex-1 flex-col gap-1.5">
                     <span className="text-[calc(20px*var(--fs,1))] font-extrabold leading-tight">{t(`visitors.stepTitles.${s}`)}</span>

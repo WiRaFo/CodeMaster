@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
@@ -18,6 +18,11 @@ interface FaqItem {
 }
 
 const TOPICS = ['services', 'catalog', 'access', 'visit', 'site'] as const;
+
+/** Раздел по теме вопроса: ссылка показывается под каждым ответом этой темы. */
+const TOPIC_LINK: Record<string, string> = { services: 'services', catalog: 'catalog', access: 'catalog', visit: 'visitors', site: 'accessibility' };
+/** Разделы, на которые можно сослаться из ответа (название раздела в тексте ответа даёт ссылку). */
+const LINKABLE = ['about', 'catalog', 'visitors', 'services', 'history', 'exhibitions', 'news', 'branches', 'assistant', 'feedback', 'accessibility'] as const;
 
 /** Группы в порядке, который задаёт сервер; неизвестная тема попадает в «Работа сайта». */
 function groupByTopic(items: FaqItem[]): Array<[string, FaqItem[]]> {
@@ -57,6 +62,7 @@ export function FaqPage() {
                   </summary>
                   <div className="faq-a">
                     <p className="m-0">{f.answer}</p>
+                    <AnswerLinks topic={topic} answer={f.answer} />
                     <TranslationNote contentLang={f.contentLang} translationStatus={f.translationStatus} />
                   </div>
                 </details>
@@ -71,5 +77,21 @@ export function FaqPage() {
         <Link to={`/${lang}/feedback`}>{t('nav.feedback')}</Link>
       </p>
     </div>
+  );
+}
+
+/** Ссылки на разделы под ответом: раздел темы и разделы, названные в тексте ответа. */
+function AnswerLinks({ topic, answer }: { topic: string; answer: string }) {
+  const { t } = useTranslation();
+  const { lang = 'kk' } = useParams();
+  const text = answer.toLowerCase();
+  const keys = LINKABLE.filter((key) => key === TOPIC_LINK[topic] || text.includes(t(`nav.${key}`).toLowerCase()));
+  if (keys.length === 0) return null;
+  return (
+    <ul className="faq-links" aria-label={t('faq.linksLabel')}>
+      {keys.map((key) => (
+        <li key={key}><Link to={`/${lang}/${key}`} className="btn ghost sm">{t(`nav.${key}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link></li>
+      ))}
+    </ul>
   );
 }

@@ -1,6 +1,8 @@
-import { Info, Send } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Send } from 'lucide-react';
+import { LOCALES, type Locale } from '@archive-vko/shared/enums';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isLocale } from '../i18n/index.ts';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { OriginBadge } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -10,12 +12,19 @@ import { SECTIONS, sectionHref } from '../lib/sections.ts';
 import type { AssistantAnswer, AssistantDocument, AssistantRecognized, AssistantSection } from '../lib/types.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
 
-type Turn = { id: number; question: string } & ({ state: 'loading' } | { state: 'error'; tooMany: boolean } | { state: 'ready'; answer: AssistantAnswer });
+type Turn = { id: number; question: string; lang: Locale } & ({ state: 'loading' } | { state: 'error'; tooMany: boolean } | { state: 'ready'; answer: AssistantAnswer });
+
+/** Язык ответа помощника; без него подписи идут на языке страницы. */
+const AnswerLang = createContext<Locale | null>(null);
+function useAnswerT() {
+  const lng = useContext(AnswerLang);
+  return useTranslation(undefined, lng ? { lng } : {});
+}
 
 const EXAMPLES = ['photos', 'service', 'term', 'branch'] as const;
 
 function SectionLinks({ links }: { links: AssistantSection[] }) {
-  const { t } = useTranslation();
+  const { t } = useAnswerT();
   const { lang = 'kk' } = useParams();
   return (
     <ul className="mt-2 flex flex-wrap gap-2">
@@ -32,7 +41,7 @@ function SectionLinks({ links }: { links: AssistantSection[] }) {
 }
 
 function RecognizedList({ items }: { items: AssistantRecognized[] }) {
-  const { t } = useTranslation();
+  const { t } = useAnswerT();
   if (items.length === 0) return null;
   return (
     <div className="mb-2">
@@ -51,7 +60,7 @@ function RecognizedList({ items }: { items: AssistantRecognized[] }) {
 
 /** Документы ответа: шифр и название ссылкой на карточку, вид, годы, доступ, пометка демо. */
 function DocumentList({ documents, label }: { documents: AssistantDocument[]; label: string }) {
-  const { t } = useTranslation();
+  const { t } = useAnswerT();
   const { lang = 'kk' } = useParams();
   return (
     <ol className="mt-2 flex flex-col gap-2" aria-label={label}>
@@ -72,7 +81,7 @@ function DocumentList({ documents, label }: { documents: AssistantDocument[]; la
 
 /** Дополнение от локальной модели ИИ; без модели блока нет. */
 function SemanticDocuments({ documents }: { documents: AssistantDocument[] | undefined }) {
-  const { t } = useTranslation();
+  const { t } = useAnswerT();
   if (!documents?.length) return null;
   return (
     <div className="mt-4">
@@ -84,7 +93,7 @@ function SemanticDocuments({ documents }: { documents: AssistantDocument[] | und
 }
 
 function Answer({ answer }: { answer: AssistantAnswer }) {
-  const { t } = useTranslation();
+  const { t } = useAnswerT();
   const { lang = 'kk' } = useParams();
   switch (answer.intent) {
     case 'service_request':
@@ -157,6 +166,13 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
   }
 }
 
+const LANG_SHORT: Record<Locale, string> = { kk: 'KZ', ru: 'RU', en: 'EN' };
+
+/** Ответ на выбранном языке: подписи ответа берутся из словаря этого языка; ссылки остаются в текущей языковой версии сайта. */
+function AnswerIn({ lang, children }: { lang: Locale; children: ReactNode }) {
+  return <div lang={lang} className="flex flex-col gap-2.5"><AnswerLang.Provider value={lang}>{children}</AnswerLang.Provider></div>;
+}
+
 /**
  * Архивный помощник (ТЗ §5.8 А, Б; F-120–F-125). Работает по правилам: разбирает вопрос и показывает
  * только открытые материалы сайта со ссылками. Заявления не принимает (§5.8, с. 10; F-122).
@@ -171,18 +187,30 @@ export function AssistantPage() {
   const counter = useRef(0);
   const asked = useRef<string | null>(null);
 
+  const load = (id: number, q: string, answerLang: Locale) => {
+    apiGet<AssistantAnswer>(`/assistant/ask?${new URLSearchParams({ q, lang: answerLang }).toString()}`)
+      .then((answer) => setTurns((list) => list.map((x) => (x.id === id ? { id, question: q, lang: answerLang, state: 'ready', answer } : x))))
+      .catch((error: unknown) => {
+        const tooMany = error instanceof ApiRequestError && error.status === 429;
+        setTurns((list) => list.map((x) => (x.id === id ? { id, question: q, lang: answerLang, state: 'error', tooMany } : x)));
+      });
+  };
+
   const ask = (question: string) => {
     const q = question.trim().slice(0, 300);
     if (!q) return;
     const id = ++counter.current;
-    setTurns((list) => [...list, { id, question: q, state: 'loading' }]);
+    const pageLang: Locale = isLocale(lang) ? lang : 'kk';
+    setTurns((list) => [...list, { id, question: q, lang: pageLang, state: 'loading' }]);
     setDraft('');
-    apiGet<AssistantAnswer>(`/assistant/ask?${new URLSearchParams({ q, lang }).toString()}`)
-      .then((answer) => setTurns((list) => list.map((x) => (x.id === id ? { id, question: q, state: 'ready', answer } : x))))
-      .catch((error: unknown) => {
-        const tooMany = error instanceof ApiRequestError && error.status === 429;
-        setTurns((list) => list.map((x) => (x.id === id ? { id, question: q, state: 'error', tooMany } : x)));
-      });
+    load(id, q, pageLang);
+  };
+
+  /** Тот же вопрос, ответ на другом языке (переключатель в карточке ответа). */
+  const switchLang = (turn: Turn, next: Locale) => {
+    if (turn.lang === next) return;
+    setTurns((list) => list.map((x) => (x.id === turn.id ? { id: x.id, question: x.question, lang: next, state: 'loading' } : x)));
+    load(turn.id, turn.question, next);
   };
 
   useEffect(() => {
@@ -202,7 +230,6 @@ export function AssistantPage() {
       <PageHeading title={t('nav.assistant')} variant="plain">
         <p className="lead mb-6">{t('assistant.lead')}</p>
       </PageHeading>
-      <p className="asst-note"><Info aria-hidden="true" className="size-5 shrink-0" />{t('assistant.disclaimer')}</p>
 
       <ol className="asst-log" aria-live="polite" data-testid="assistant-log">
         {turns.map((turn) => (
@@ -212,10 +239,19 @@ export function AssistantPage() {
               {turn.question}
             </p>
             <div className="card asst-bot" data-testid="assistant-answer">
-              <span className="visually-hidden">{t('assistant.bot')}: </span>
-              {turn.state === 'loading' ? <p>{t('common.loading')}</p> : null}
-              {turn.state === 'error' ? <p role="alert">{turn.tooMany ? t('assistant.tooMany') : t('common.loadError')}</p> : null}
-              {turn.state === 'ready' ? <Answer answer={turn.answer} /> : null}
+              <div className="asst-langs" role="group" aria-label={t('assistant.answerLang')}>
+                {LOCALES.map((l) => (
+                  <button key={l} type="button" className="asst-lang" aria-pressed={turn.lang === l} onClick={() => switchLang(turn, l)}>
+                    <span aria-hidden="true">{LANG_SHORT[l]}</span><span className="sr-only">{t(`assistant.langName.${l}`)}</span>
+                  </button>
+                ))}
+              </div>
+              <AnswerIn lang={turn.lang}>
+                <span className="visually-hidden">{t('assistant.bot')}: </span>
+                {turn.state === 'loading' ? <p>{t('common.loading')}</p> : null}
+                {turn.state === 'error' ? <p role="alert">{turn.tooMany ? t('assistant.tooMany') : t('common.loadError')}</p> : null}
+                {turn.state === 'ready' ? <Answer answer={turn.answer} /> : null}
+              </AnswerIn>
             </div>
           </li>
         ))}

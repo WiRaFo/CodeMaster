@@ -315,3 +315,9 @@ html.a11y .br-tab{border:2px solid #000}
 .ref-sheet-l.w1{width:70%;height:8px;background:var(--ink)}.ref-sheet-l.w2{width:60%}
 .ref-sheet img{position:absolute;right:14px;bottom:14px;width:58px;height:58px}
 html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
+.faq-links{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.asst-langs{display:flex;gap:6px;align-self:flex-end;margin:-6px -6px 0 0;padding:4px;border-radius:12px;background:var(--tint)}
+.asst-lang{min-width:44px;min-height:36px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--brand);font-weight:800;cursor:pointer;transition:background-color .2s,color .2s}
+.asst-lang:hover{background:#fff}
+.asst-lang[aria-pressed="true"]{background:var(--ink);color:#fff}
+.tile-grid{grid-auto-rows:1fr}.tile-grid>li{display:flex}.tile-grid .tile{flex:1}
