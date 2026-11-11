@@ -844,7 +844,6 @@
     "faq": "Questions"
   },
   "lowVision": {
-    "region": "Low-vision version settings",
     "size": "Text size",
     "sizeL": "Large",
     "sizeXl": "Extra large",
@@ -853,8 +852,7 @@
     "bw": "Black on white",
     "wb": "White on black",
     "blue": "Dark blue on light blue",
-    "swatch": "A",
-    "exit": "Standard version"
+    "swatch": "A"
   },
   "access": {
     "menu": "Accessibility",
@@ -864,8 +862,7 @@
     "textL": "Large",
     "textXl": "Extra large",
     "modeTitle": "Low-vision version",
-    "modeHint": "Large text, high contrast and colour are set in the yellow bar at the top of the page.",
-    "sizeInMode": "In the low-vision version, text size is chosen in the yellow bar.",
+    "modeHint": "Large text and high contrast.",
     "reset": "Reset settings"
   }
 }

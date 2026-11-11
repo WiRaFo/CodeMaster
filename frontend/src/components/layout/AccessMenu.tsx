@@ -2,7 +2,13 @@ import { Accessibility, Pause, Play } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useA11y } from '../../app/A11yProvider.tsx';
-import { TEXTS } from '../../lib/a11y-prefs.ts';
+import { SCHEMES, SIZES, TEXTS, type A11yPrefs } from '../../lib/a11y-prefs.ts';
+
+const SCHEME_SWATCH: Record<A11yPrefs['scheme'], string> = {
+  bw: 'bg-white text-black',
+  wb: 'bg-black text-white',
+  blue: 'bg-[#9dd1ff] text-[#063462]',
+};
 
 /** Буква-образец размера текста. */
 const GLYPH = 'A';
@@ -51,11 +57,17 @@ export function AccessMenu({ variant, tabIndex }: { variant: 'main' | 'top' | 'b
       </button>
       {open ? (
         <div id={panelId} className="am-panel" role="group" aria-label={t('access.menuAria')}>
-          {prefs.mode ? (
-            <p className="am-note m-0">{t('access.sizeInMode')}</p>
-          ) : (
-            <div role="group" aria-label={t('access.textSize')}>
-              <p className="am-h">{t('access.textSize')}</p>
+          <div role="group" aria-label={t('access.textSize')}>
+            <p className="am-h">{t('access.textSize')}</p>
+            {prefs.mode ? (
+              <div className="am-row">
+                {SIZES.map((size) => (
+                  <button key={size} type="button" className="am-opt" aria-pressed={prefs.size === size} onClick={() => update({ size })}>
+                    {t(size === 'l' ? 'lowVision.sizeL' : 'lowVision.sizeXl')}
+                  </button>
+                ))}
+              </div>
+            ) : (
               <div className="am-row">
                 {TEXTS.map((size, i) => (
                   <button key={size} type="button" className="am-opt" aria-pressed={prefs.text === size} onClick={() => update({ text: size })}>
@@ -65,16 +77,29 @@ export function AccessMenu({ variant, tabIndex }: { variant: 'main' | 'top' | 'b
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
           <div>
             <button type="button" className="am-switch" aria-pressed={prefs.mode} onClick={() => update({ mode: !prefs.mode })}>
               <span>{t('access.modeTitle')}</span><span className="knob" aria-hidden="true" />
             </button>
             <p className="am-note">{t('access.modeHint')}</p>
           </div>
+          {prefs.mode ? (
+            <div role="group" aria-label={t('lowVision.colorGroup')}>
+              <p className="am-h">{t('lowVision.color')}</p>
+              <div className="am-colors">
+                {SCHEMES.map((scheme) => (
+                  <button key={scheme} type="button" className="am-opt am-color" aria-pressed={prefs.scheme === scheme} onClick={() => update({ scheme })}>
+                    <span className={`am-sw ${SCHEME_SWATCH[scheme]}`} aria-hidden="true">{t('lowVision.swatch')}</span>
+                    {t(`lowVision.${scheme}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <button type="button" className="am-switch" aria-pressed={prefs.still} onClick={() => update({ still: !prefs.still })}>
-            <span className="d-row gap-2">
+            <span className="am-sw-l">
               {prefs.still ? <Play aria-hidden="true" className="size-4" /> : <Pause aria-hidden="true" className="size-4" />}
               {t(prefs.still ? 'header.motionStart' : 'header.motionStop')}
             </span>

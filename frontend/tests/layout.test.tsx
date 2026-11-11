@@ -117,26 +117,25 @@ async function openAccessMenu(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('версия для слабовидящих', () => {
-  it('кнопка в шапке включает режим, панель меняет размер и цвет, выход возвращает обычную версию', async () => {
+  it('меню включает режим, меняет размер и цвет, выключатель возвращает обычную версию', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/ru');
     const root = document.documentElement;
     await openAccessMenu(user);
     await user.click(screen.getByRole('button', { name: /Версия для слабовидящих/ }));
     expect(root.classList.contains('a11y')).toBe(true);
-    const bar = screen.getByRole('region', { name: 'Настройки версии для слабовидящих' });
-    await user.click(within(bar).getByRole('button', { name: 'Очень крупный' }));
+    const menu = screen.getByRole('group', { name: 'Настройки доступности сайта' });
+    await user.click(within(menu).getByRole('button', { name: 'Очень крупный' }));
     expect(root.classList.contains('a11y-xl')).toBe(true);
-    await user.click(within(bar).getByRole('button', { name: /Белым по чёрному/ }));
+    await user.click(within(menu).getByRole('button', { name: /Белым по чёрному/ }));
     expect(root.classList.contains('a11y-wb')).toBe(true);
-    expect(within(bar).getByRole('button', { name: /Белым по чёрному/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(bar).queryByRole('button', { name: 'Скрыть' })).toBeNull();
+    expect(within(menu).getByRole('button', { name: /Белым по чёрному/ })).toHaveAttribute('aria-pressed', 'true');
     await within(screen.getByRole('contentinfo')).findByText(MAIN_BRANCH.address);
     expect(await axeViolations(container)).toEqual([]);
-    await user.click(within(bar).getByRole('button', { name: 'Обычная версия сайта' }));
+    await user.click(within(menu).getByRole('button', { name: /Версия для слабовидящих/ }));
     expect(root.classList.contains('a11y')).toBe(false);
     expect(root.classList.contains('a11y-wb')).toBe(false);
-    expect(screen.queryByRole('region', { name: 'Настройки версии для слабовидящих' })).toBeNull();
+    expect(within(menu).queryByRole('button', { name: /Белым по чёрному/ })).toBeNull();
   });
 
   it('меню доступности: размер текста, пауза анимации и сброс; Esc закрывает меню', async () => {

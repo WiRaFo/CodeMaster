@@ -6,7 +6,6 @@ import { telHref, useMainBranch } from '../../lib/main-branch.ts';
 import { SECTIONS, sectionHref, type SectionKey } from '../../lib/sections.ts';
 import { AccessMenu } from './AccessMenu.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
-import { LowVisionBar } from './LowVisionBar.tsx';
 
 /** Короткие подписи пунктов меню (дизайн 11.11.2026): полное название остаётся в title. */
 const SHORT: ReadonlySet<SectionKey> = new Set(['catalog', 'history', 'exhibitions', 'news', 'faq']);
@@ -99,7 +98,6 @@ export function Header() {
 
   return (
     <>
-      <LowVisionBar />
       <header className="hdr">
         <div className="hdr-top">
           <div className="wrap d-row hdr-top-in">
