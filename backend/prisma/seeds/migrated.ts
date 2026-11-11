@@ -288,6 +288,7 @@ async function seedCalendar(db: PrismaClient): Promise<void> {
 const blocksText = (blocks: Array<HistoryBlock | InfoBlock>): string =>
   blocks.map((b) => {
     if (b.type === 'links') return b.items.map((l) => [l.label, l.note].filter(Boolean).join(' — ')).join('\n');
+    if (b.type === 'table') return [b.head, ...b.rows].map((r) => r.filter(Boolean).join(' ')).join('\n');
     return 'items' in b ? b.items.join('\n') : b.text;
   }).join('\n\n');
 

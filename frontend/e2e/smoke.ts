@@ -135,7 +135,7 @@ async function main() {
     }
 
     for (const width of WIDTHS) {
-      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC, '/ru/branches', '/ru/branches/main']) {
+      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC, '/ru/branches', '/ru/branches/main', '/ru/services/paid', '/kk/services/paid']) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         await openWithPrefs(page, path, {});
         const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -154,6 +154,11 @@ async function main() {
       await openWithPrefs(page, '/kk', { fontScale: 200, lineHeight: '2', letterSpacing: '0.16' });
       const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(scroll <= client, `текст 200 % и интервалы 1.4.12 на 320px: прокрутка ${scroll} > ${client}`);
+      // Прейскурант: 218 строк в таблицах — тоже без горизонтальной прокрутки при увеличенном тексте.
+      await openWithPrefs(page, '/kk/services/paid', { fontScale: 200 });
+      check((await page.locator('main table').count()) === 8, 'платные услуги: 8 таблиц прейскуранта');
+      const [ps, pc] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      check(ps <= pc, `прейскурант, текст 200 % на 320px: прокрутка ${ps} > ${pc}`);
       await page.close();
     }
 

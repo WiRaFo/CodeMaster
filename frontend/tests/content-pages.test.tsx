@@ -38,7 +38,11 @@ const SERVICES = {
 };
 const PAID = {
   key: 'services/paid', title: 'Платные услуги', lead: null, actualizedAt: '2026-11-11', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified',
-  blocks: [{ type: 'links', items: [{ label: 'Постановление № 289 с прейскурантом (на русском языке)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 страниц, 1,6 МБ' }] }],
+  blocks: [
+    { type: 'links', items: [{ label: 'Постановление № 289 с прейскурантом (на русском языке)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 страниц, 1,6 МБ' }] },
+    { type: 'h', text: '4. Депозитарное хранение архивных документов' },
+    { type: 'table', head: ['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге'], rows: [['1.1.', 'Разработка номенклатур дел', '', ''], ['1.1.1.', 'Составление типовых (примерных) номенклатур дел', 'позиция', '832,0'], ['5.2.1.1.', 'до 25 экспонатов;', 'выставка / экспонат', '67 620,0 / 2704,8']] },
+  ],
 };
 const READING_ROOM = {
   key: 'reading-room', title: 'Оқу залы', lead: null, actualizedAt: '2026-11-10', contentLang: 'kk', translationStatus: 'machine', dataOrigin: 'verified',
@@ -223,6 +227,13 @@ describe('справочные разделы по дополнению к ТЗ'
     expect(pdf).toHaveAttribute('type', 'application/pdf');
     expect(screen.getByText('Документ PDF на этом сайте')).toBeInTheDocument();
     expect(screen.queryByText(/Внешний ресурс/)).toBeNull();
+    // Таблица прейскуранта: заголовки столбцов и строк, строка группы, число не разрывается внутри.
+    expect(screen.getByRole('region', { name: '4. Депозитарное хранение архивных документов' })).toHaveAttribute('tabindex', '0');
+    const table = screen.getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге']);
+    expect(within(table).getByRole('rowheader', { name: '1.1.1.' })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: /Разработка номенклатур дел/ })).toHaveClass('font-semibold');
+    expect(within(table).getByRole('cell', { name: '67 620,0 / 2704,8' })).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
   });
 

@@ -5,12 +5,29 @@
  *   ! сведения ожидаются от архива (блок «Ожидаются сведения архива»)
  *   [Название](https://адрес) — примечание   (внешняя ссылка; только https)
  *   [Название](/files/documents/файл.pdf) — примечание   (документ, опубликованный на самом сайте)
+ *   | Столбец | Столбец |     (таблица: первая строка — заголовки, следующие подряд строки с «|» — данные)
  * Пустая строка разделяет абзацы.
  */
 export type InfoBlock =
   | { type: 'p' | 'h' | 'pending'; text: string }
   | { type: 'ol' | 'ul'; items: string[] }
-  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> };
+  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> }
+  | { type: 'table'; head: string[]; rows: string[][] };
+
+/** Текст блоков для полнотекстового поиска (body_text). */
+export function blocksPlainText(blocks: readonly InfoBlock[]): string {
+  return blocks.map((b) => {
+    switch (b.type) {
+      case 'links': return b.items.map((l) => [l.label, l.note].filter(Boolean).join(' — ')).join('\n');
+      case 'table': return [b.head, ...b.rows].map((r) => r.filter(Boolean).join(' ')).join('\n');
+      case 'ol': case 'ul': return b.items.join('\n');
+      default: return b.text;
+    }
+  }).join('\n\n');
+}
+
+const MAX_COLUMNS = 6;
+const cells = (line: string) => line.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 
 export interface MarkupIssue { line: number; message: string }
 
@@ -31,10 +48,27 @@ export function parseMarkup(text: string): { blocks: InfoBlock[]; issues: Markup
     if (last && last.type === type) last.items.push(item);
     else blocks.push({ type, items: [item] });
   };
+  let tableOpen = false;
   text.replace(/\r\n?/g, '\n').split('\n').forEach((raw, index) => {
     const line = raw.trim();
     const n = index + 1;
+    const wasTable = tableOpen;
+    tableOpen = false;
     if (!line) return flush();
+    if (line.startsWith('|')) {
+      flush();
+      const row = cells(line);
+      const last = blocks[blocks.length - 1];
+      if (wasTable && last && last.type === 'table') {
+        if (row.length !== last.head.length) { issues.push({ line: n, message: `В строке таблицы ${row.length} ячеек, а в заголовке ${last.head.length}` }); return; }
+        last.rows.push(row);
+      } else {
+        if (row.length < 2 || row.length > MAX_COLUMNS || row.some((c) => !c)) { issues.push({ line: n, message: `Заголовок таблицы: от 2 до ${MAX_COLUMNS} непустых столбцов через «|»` }); return; }
+        blocks.push({ type: 'table', head: row, rows: [] });
+      }
+      tableOpen = true;
+      return;
+    }
     let m: RegExpExecArray | null;
     if (line.startsWith('## ')) { flush(); blocks.push({ type: 'h', text: line.slice(3).trim() }); return; }
     if (line.startsWith('! ')) { flush(); blocks.push({ type: 'pending', text: line.slice(2).trim() }); return; }
@@ -74,6 +108,7 @@ export function toMarkup(blocks: readonly InfoBlock[]): string {
       case 'ul': return b.items.map((i) => `- ${i}`).join('\n');
       case 'ol': return b.items.map((i, k) => `${k + 1}. ${i}`).join('\n');
       case 'links': return b.items.map((l) => `[${l.label}](${l.url})${l.note ? ` — ${l.note}` : ''}`).join('\n');
+      case 'table': return [b.head, ...b.rows].map((r) => `| ${r.join(' | ')} |`).join('\n');
     }
   }).join('\n\n');
 }

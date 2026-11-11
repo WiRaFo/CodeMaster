@@ -22,6 +22,7 @@ export const infoBodySchema = z.object({
     z.object({ type: z.enum(['p', 'h', 'pending']), text: z.string() }),
     z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
     z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.union([z.string().url().startsWith('https://'), z.string().regex(SITE_FILE)]), note: z.string().optional() })) }),
+    z.object({ type: z.literal('table'), head: z.array(z.string()).min(2).max(6), rows: z.array(z.array(z.string())) }),
   ])),
 });
 
