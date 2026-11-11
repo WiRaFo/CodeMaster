@@ -274,3 +274,22 @@ html.a11y .faq-box{border:2px solid #000}html.a11y .faq-tab{border:2px solid #00
 .asst-chip .text-muted{font-weight:500}
 .asst-item{padding:18px 22px;border:2px solid var(--brand);border-radius:16px;background:#fff}
 html.a11y .asst-you{border:2px solid #000}
+
+/* Филиалы и контакты (Branches.dc.html) */
+.br-filter{padding:22px;margin-bottom:28px}
+.br-filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.br-types{display:flex;flex-wrap:wrap;gap:8px}
+.br-type{display:inline-flex;align-items:center;min-height:48px;padding:0 18px;border-radius:12px;border:2px solid var(--line2);background:#fff;color:var(--ink);font-weight:700;text-decoration:none}
+.br-type:hover{border-color:var(--brand);color:var(--brand)}
+.br-type[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.br-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:34px 22px;margin:0;padding:0;list-style:none}
+.br-card{position:relative;flex:1;display:flex;flex-direction:column;padding-top:26px}
+.br-tab{position:absolute;left:0;top:0;height:30px;padding:0 34px 0 14px;display:flex;align-items:center;background:var(--brand);color:#fff;font-weight:700;font-size:calc(14px * var(--fs,1));border-radius:10px 0 0 0;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 100%,0 100%)}
+.br-card.main .br-tab{background:var(--ink)}
+.br-body{flex:1;display:flex;flex-direction:column;gap:10px;padding:22px 24px;background:#fff;border:2px solid var(--brand);border-radius:0 20px 20px 20px}
+.br-card.main .br-body{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.br-name{margin:0;font-weight:800;font-size:calc(21px * var(--fs,1));line-height:1.25}
+.br-name a{color:var(--ink);text-decoration:none}.br-name a:hover{color:var(--brand);text-decoration:underline}
+.br-line{display:flex;gap:10px;margin:0;color:var(--muted);font-size:calc(17px * var(--fs,1))}
+.br-ico{flex:0 0 auto;width:20px;height:20px;margin-top:3px;color:var(--brand)}
+html.a11y .br-tab{border:2px solid #000}
