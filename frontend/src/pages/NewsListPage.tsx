@@ -1,9 +1,9 @@
+import { Newspaper } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { LinkCard } from '../components/home/cards.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
-import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
+import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { formatDate } from '../lib/format.ts';
 import type { NewsList } from '../lib/types.ts';
@@ -35,29 +35,25 @@ export function NewsListPage() {
   };
 
   return (
-    <>
-      <PageHeading title={t('nav.news')} />
+    <div className="news-page">
+      <PageHeading variant="plain" title={t('nav.news')} />
 
-      <form role="search" aria-label={t('news.searchLabel')} onSubmit={search} className="mb-6 flex max-w-2xl flex-wrap items-end gap-2">
-        <div className="flex min-w-0 grow flex-col gap-1">
-          <label htmlFor="news-q" className="font-semibold">{t('news.searchLabel')}</label>
-          <input id="news-q" type="search" className="input" maxLength={200} value={draft} onChange={(e) => setDraft(e.target.value)} />
-        </div>
-        <button type="submit" className="btn-primary">{t('news.searchButton')}</button>
-        {q || rubric ? <Link to={listHref({})} className="btn-secondary">{t('news.reset')}</Link> : null}
+      <form role="search" aria-label={t('news.searchLabel')} onSubmit={search} className="field-row mb-[18px]">
+        <label htmlFor="news-q" className="sr-only">{t('news.searchLabel')}</label>
+        <input id="news-q" type="search" className="field" maxLength={200} value={draft} placeholder={t('news.searchLabel')} onChange={(e) => setDraft(e.target.value)} />
+        <button type="submit" className="btn">{t('news.searchButton')}</button>
+        {q || rubric ? <Link to={listHref({})} className="btn ghost">{t('news.reset')}</Link> : null}
       </form>
 
       {news.status === 'ready' && news.data.rubrics?.length ? (
-        <nav aria-label={t('news.rubrics')} className="mb-6">
-          <ul className="flex flex-wrap gap-2">
+        <nav aria-label={t('news.rubrics')} className="mb-[30px]">
+          <ul className="d-row gap-2.5">
             <li>
-              <Link to={listHref({ q })} aria-current={rubric === '' ? 'true' : undefined} className="topic-link aria-[current=true]:font-semibold">
-                {t('news.allRubrics')}
-              </Link>
+              <Link to={listHref({ q })} aria-current={rubric === '' ? 'true' : undefined} className="rub">{t('news.allRubrics')}</Link>
             </li>
             {news.data.rubrics.map((r) => (
               <li key={r.slug}>
-                <Link to={listHref({ rubric: r.slug, q })} aria-current={rubric === r.slug ? 'true' : undefined} className="topic-link aria-[current=true]:font-semibold">
+                <Link to={listHref({ rubric: r.slug, q })} aria-current={rubric === r.slug ? 'true' : undefined} className="rub">
                   {r.name ?? r.slug} ({r.count})
                 </Link>
               </li>
@@ -70,32 +66,39 @@ export function NewsListPage() {
         <LoadStatus status={news.status} />
       ) : (
         <>
-          <p role="status" className="mb-4">
-            {q || rubric ? t('news.found', { count: news.data.total }) : null}
-          </p>
+          {q || rubric ? <p role="status" className="mb-4 font-bold">{t('news.found', { count: news.data.total })}</p> : <p role="status" className="sr-only" />}
           {news.data.items.length === 0 ? (
-            <p>{q || rubric ? t('news.nothingFound') : t('news.empty')}</p>
+            <div className="card news-empty">
+              <Newspaper aria-hidden="true" className="size-14 text-[var(--brand)]" strokeWidth={1.6} />
+              <p className="m-0 text-[calc(20px*var(--fs,1))] font-bold">{q || rubric ? t('news.nothingFound') : t('news.empty')}</p>
+              {q || rubric ? <Link to={listHref({})} className="btn ghost">{t('news.reset')}</Link> : null}
+            </div>
           ) : (
-            <ul className="mb-6 grid gap-3 md:grid-cols-2">
-              {news.data.items.map((n) => (
-                <li key={n.slug}>
-                  <LinkCard
-                    to={`/${lang}/news/${n.slug}`}
-                    title={n.title ?? n.slug}
-                    headingLevel={2}
-                    meta={
-                      <>
-                        <time dateTime={n.publishedAt}>{formatDate(n.publishedAt, lang)}</time>
-                        {n.rubric?.name ? <span>{n.rubric.name}</span> : null}
-                        <OriginBadge origin={n.dataOrigin} />
-                      </>
-                    }
-                  >
-                    {n.lead ? <p>{n.lead}</p> : null}
-                    <TranslationNote contentLang={n.contentLang} translationStatus={n.translationStatus} />
-                  </LinkCard>
-                </li>
-              ))}
+            <ul className="mb-6 flex flex-col gap-[18px]">
+              {news.data.items.map((n) => {
+                const d = new Date(n.publishedAt);
+                return (
+                  <li key={n.slug}>
+                    <article className="news">
+                      <div className="cal" aria-hidden="true">
+                        <span className="cal-m">{d.toLocaleDateString(locale(lang), { month: 'short' }).replace('.', '')}</span>
+                        <span className="cal-d">{String(d.getDate()).padStart(2, '0')}</span>
+                        <span className="cal-y">{d.getFullYear()}</span>
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-2.5">
+                        <div className="d-row items-center gap-2">
+                          {n.rubric?.name ? <span className="chip">{n.rubric.name}</span> : null}
+                          <time className="muted text-[calc(16px*var(--fs,1))]" dateTime={n.publishedAt}>{formatDate(n.publishedAt, lang)}</time>
+                        </div>
+                        <h2 className="h3 text-[calc(26px*var(--fs,1))]"><Link to={`/${lang}/news/${n.slug}`} className="tlink">{n.title ?? n.slug}</Link></h2>
+                        {n.lead ? <p className="m-0">{n.lead}</p> : null}
+                        <TranslationNote contentLang={n.contentLang} translationStatus={n.translationStatus} />
+                        <Link to={`/${lang}/news/${n.slug}`} className="btn ghost sm self-start">{t('news.readMore')}</Link>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {news.data.totalPages > 1 ? (
@@ -107,6 +110,8 @@ export function NewsListPage() {
           ) : null}
         </>
       )}
-    </>
+    </div>
   );
 }
+
+const locale = (lang: string) => (lang === 'kk' ? 'kk-KZ' : lang === 'en' ? 'en-GB' : 'ru-RU');

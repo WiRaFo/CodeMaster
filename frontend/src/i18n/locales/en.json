@@ -354,7 +354,8 @@
     "allRubrics": "All categories",
     "found_one": "{{count}} news item found",
     "found_other": "{{count}} news items found",
-    "nothingFound": "No news match this query. Change the query or choose another category."
+    "nothingFound": "No news match this query. Change the query or choose another category.",
+    "readMore": "Read more"
   },
   "origin": {
     "demo": "Demo",
@@ -671,7 +672,17 @@
     "source": "Information provided by the archive on 10 November 2026.",
     "unavailable": "This section has not been filled in yet.",
     "galleryTitle": "Archive photo gallery",
-    "actualized": "Information current as of {{date}}."
+    "actualized": "Information current as of {{date}}.",
+    "netTitle": "The archive network today",
+    "statUnits": "units: the archive, its site and branches",
+    "statLangs": "site languages: Kazakh, Russian, English",
+    "allOnMap": "All sites and branches on the map",
+    "pickYear": "Pick a year on the tape to open an event from the archive’s history.",
+    "yearsLabel": "Years of the archive’s history",
+    "earlier": "Earlier",
+    "later": "Later",
+    "fullHistory": "The whole history",
+    "byYears": "History by year"
   },
   "calendar": {
     "title": "Calendar of memorable dates",
