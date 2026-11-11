@@ -356,6 +356,10 @@ html.txt-xl{font-size:130%}html.txt-xl .site{--fs:1.3}
 .am-colors{display:flex;flex-direction:column;gap:8px}
 .am-color{display:flex;align-items:center;justify-content:flex-start;gap:10px;flex:none;text-align:left}
 .am-sw{display:inline-grid;place-items:center;flex:none;width:28px;height:28px;border-radius:6px;border:2px solid currentColor;font-weight:800;font-size:15px}
+.am-anim{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.am-play{flex:none;width:56px;height:56px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--ink);color:#fff;cursor:pointer;transition:background-color .2s,transform .2s}
+.am-play:hover{background:var(--brand);transform:scale(1.06)}
+html.a11y .am-play{border:3px solid #000;background:#000;color:#fff}
 .am-note{margin:8px 0 0;font-size:calc(14px * var(--fs,1));color:var(--muted)}
 .am-reset{align-self:flex-start;min-height:44px;padding:0 14px;border-radius:12px;border:0;background:var(--tint);color:var(--brand);font:700 calc(15px * var(--fs,1)) 'Inter Variable','Inter','Segoe UI',sans-serif;cursor:pointer}
 .am-reset:hover{background:var(--tint2)}

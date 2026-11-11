@@ -98,13 +98,13 @@ export function AccessMenu({ variant, tabIndex }: { variant: 'main' | 'top' | 'b
               </div>
             </div>
           ) : null}
-          <button type="button" className="am-switch" aria-pressed={prefs.still} onClick={() => update({ still: !prefs.still })}>
-            <span className="am-sw-l">
-              {prefs.still ? <Play aria-hidden="true" className="size-4" /> : <Pause aria-hidden="true" className="size-4" />}
-              {t(prefs.still ? 'header.motionStart' : 'header.motionStop')}
-            </span>
-            <span className="knob" aria-hidden="true" />
-          </button>
+          <div className="am-anim">
+            <span className="am-h m-0">{t('access.animation')}</span>
+            <button type="button" className="am-play" aria-label={t(prefs.still ? 'header.motionStart' : 'header.motionStop')} aria-pressed={prefs.still}
+              title={t(prefs.still ? 'header.motionStart' : 'header.motionStop')} onClick={() => update({ still: !prefs.still })}>
+              {prefs.still ? <Play aria-hidden="true" className="size-6" fill="currentColor" /> : <Pause aria-hidden="true" className="size-6" fill="currentColor" />}
+            </button>
+          </div>
           <button type="button" className="am-reset" onClick={reset}>{t('access.reset')}</button>
         </div>
       ) : null}

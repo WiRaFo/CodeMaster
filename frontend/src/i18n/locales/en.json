@@ -863,6 +863,7 @@
     "textXl": "Extra large",
     "modeTitle": "Low-vision version",
     "modeHint": "Large text and high contrast.",
-    "reset": "Reset settings"
+    "reset": "Reset settings",
+    "animation": "Animation"
   }
 }
