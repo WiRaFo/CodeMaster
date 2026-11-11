@@ -335,12 +335,14 @@
       "yearOrder": "The start year must not be later than the end year.",
       "organization": "Organisation",
       "author": "Author or compiler",
-      "authorHint": "Part of a name is enough."
+      "authorHint": "Part of a name is enough.",
+      "copyGroup": "Digital copy"
     },
     "semantic": {
       "title": "Similar in meaning",
       "note": "Selected by a local AI model by the meaning of the query, even when the query words are not in the text. Matches may be imprecise."
-    }
+    },
+    "reset": "Reset"
   },
   "news": {
     "empty": "No news yet.",

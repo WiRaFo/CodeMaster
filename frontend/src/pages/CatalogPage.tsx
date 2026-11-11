@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { Check, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -62,25 +62,27 @@ export function CatalogPage() {
 
   return (
     <>
-      <PageHeading title={t('nav.catalog')} />
-      <div className="mb-6 max-w-3xl">
-        <CatalogSearchForm id="catalog-search" initialQuery={query.q} key={query.q} keepParams={filterParams({ ...query, q: '' }).toString()} />
-        <p className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-          <Link to={`/${lang}/catalog/fonds`}>{t('fonds.guide')}</Link>
-          <Link to={`/${lang}/catalog/fonds?kind=personal`}>{t('fonds.kind.personal')}</Link>
+      <PageHeading title={t('nav.catalog')} art={<CatalogBox />}>
+        <CatalogSearchForm id="catalog-search" banner initialQuery={query.q} key={query.q} keepParams={filterParams({ ...query, q: '' }).toString()} />
+        <p className="flex flex-wrap gap-2.5">
+          <Link to={`/${lang}/catalog/fonds`} className="btn-ondark">{t('fonds.guide')}</Link>
+          <Link to={`/${lang}/catalog/fonds?kind=personal`} className="btn-ondark">{t('fonds.kind.personal')}</Link>
         </p>
-      </div>
+      </PageHeading>
 
-      <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside aria-labelledby="catalog-filters-title" className="hidden lg:block">
-          <h2 id="catalog-filters-title" className="mb-4 text-xl font-bold">{t('catalog.filtersTitle')}</h2>
+      <div className="cat-layout">
+        <aside aria-labelledby="catalog-filters-title" className="hidden min-w-0 lg:block">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 id="catalog-filters-title" className="cat-h2">{t('catalog.filtersTitle')}</h2>
+            {activeCount ? <button type="button" className="flt-reset" onClick={() => go(clearFilters(query))}>{t('catalog.reset')}</button> : null}
+          </div>
           {filters('filters')}
         </aside>
 
         <section aria-labelledby="catalog-results" className="min-w-0">
-          <h2 id="catalog-results" className="visually-hidden">{t('catalog.results')}</h2>
-
-          <div className="mb-4 flex flex-wrap items-end gap-3">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3.5">
+            <h2 id="catalog-results" className="cat-h2">{t('catalog.results')}</h2>
+            <div className="flex flex-wrap items-end gap-3">
             <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
               <Dialog.Trigger className="btn-secondary lg:hidden">
                 <SlidersHorizontal aria-hidden="true" className="size-5" />
@@ -88,7 +90,7 @@ export function CatalogPage() {
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-                <Dialog.Content className="fixed inset-0 z-40 flex flex-col bg-surface text-text sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md">
+                <Dialog.Content className="fixed inset-0 z-40 flex flex-col bg-[var(--bg)] text-text sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md">
                   <div className="flex items-center justify-between gap-3 border-b border-border p-4">
                     <Dialog.Title className="text-xl font-bold">{t('catalog.filtersTitle')}</Dialog.Title>
                     <Dialog.Close className="btn-icon" aria-label={t('header.close')}>
@@ -109,9 +111,9 @@ export function CatalogPage() {
               </Dialog.Portal>
             </Dialog.Root>
 
-            <div className="flex flex-col">
-              <label htmlFor="catalog-sort" className="text-sm font-semibold">{t('catalog.sortLabel')}</label>
-              <select id="catalog-sort" className="input" value={query.sort} onChange={(e) => {
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="catalog-sort" className="text-[calc(16px*var(--fs,1))] font-semibold">{t('catalog.sortLabel')}</label>
+              <select id="catalog-sort" className="flt-input font-semibold" value={query.sort} onChange={(e) => {
                 const sort = e.target.value;
                 if (isSort(sort)) go({ ...query, sort, page: 1 });
               }}>
@@ -119,6 +121,7 @@ export function CatalogPage() {
                   <option key={s} value={s}>{t(`catalog.sort.${s}`)}</option>
                 ))}
               </select>
+            </div>
             </div>
           </div>
 
@@ -128,11 +131,11 @@ export function CatalogPage() {
             <LoadStatus status={result.status === 'error' ? 'error' : 'loading'} />
           ) : (
             <div aria-busy={result.status === 'loading'} className={result.status === 'loading' ? 'opacity-60' : undefined}>
-              <p role="status" className="mb-2 font-semibold">
+              <p role="status" className="mb-4 text-[calc(19px*var(--fs,1))] font-bold">
                 {query.q ? t('catalog.foundFor', { count: shown.total, q: query.q }) : t('catalog.found', { count: shown.total })}
               </p>
               {shown.interpretedCode ? (
-                <p className="mb-4">{t('catalog.interpretedCode', { code: shown.interpretedCode.formatted })}</p>
+                <p className="cat-code"><Check aria-hidden="true" className="size-[26px] shrink-0 text-[var(--brand)]" /><span>{t('catalog.interpretedCode', { code: shown.interpretedCode.formatted })}</span></p>
               ) : null}
               {shown.items.length === 0 ? (
                 <div className="mb-4">
@@ -142,10 +145,10 @@ export function CatalogPage() {
                   ) : null}
                 </div>
               ) : (
-                <ol className="mb-6 grid gap-3" start={(query.page - 1) * PAGE_SIZE + 1}>
-                  {shown.items.map((d) => (
+                <ol className="mb-6 grid gap-5" start={(query.page - 1) * PAGE_SIZE + 1}>
+                  {shown.items.map((d, i) => (
                     <li key={d.id}>
-                      <DocumentCard lang={lang} doc={d} />
+                      <DocumentCard lang={lang} doc={d} index={i} />
                     </li>
                   ))}
                 </ol>
@@ -213,6 +216,20 @@ function ActiveFilters({ query, facets, onChange }: { query: CatalogQuery; facet
           <button type="button" className="btn-secondary" onClick={() => onChange(clearFilters(query))}>{t('catalog.clearAll')}</button>
         </li>
       </ul>
+    </div>
+  );
+}
+
+/** Картотечный ящик в плашке каталога (Catalog.dc.html): карточки покачиваются, крышка приоткрывается при наведении. */
+function CatalogBox() {
+  return (
+    <div className="box3d hide-m" aria-hidden="true">
+      <div className="cards-fly">
+        <span className="bg-white" /><span className="bg-[var(--brand)] [animation-delay:.5s]" /><span className="bg-[var(--tint)] [animation-delay:1s]" />
+        <span className="bg-[#A9C4F2] [animation-delay:1.5s]" /><span className="bg-white [animation-delay:2s]" />
+      </div>
+      <div className="box3d-body"><span className="mono">Ф. · Оп. · Д.</span></div>
+      <div className="lid" />
     </div>
   );
 }

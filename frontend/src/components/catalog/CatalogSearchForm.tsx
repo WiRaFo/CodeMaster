@@ -7,10 +7,12 @@ import { useNavigate, useParams } from 'react-router';
  * Поиск по архивному учёту (F-011). Отделён от поиска по сайту в шапке (F-007):
  * ведёт в /catalog?q=…, где запрос распознаётся и как слова, и как шифр.
  */
-export function CatalogSearchForm({ id, initialQuery = '', large = false, keepParams = '' }: {
+export function CatalogSearchForm({ id, initialQuery = '', large = false, keepParams = '', banner = false }: {
   id: string;
   initialQuery?: string;
   large?: boolean;
+  /** Внутри тёмной плашки страницы каталога (Catalog.dc.html): белое поле 64 px, подсказка светлая. */
+  banner?: boolean;
   /** Фильтры, которые сохраняются при новом запросе (на странице каталога). */
   keepParams?: string;
 }) {
@@ -27,6 +29,22 @@ export function CatalogSearchForm({ id, initialQuery = '', large = false, keepPa
     const search = params.toString();
     navigate(`/${lang}/catalog${search ? `?${search}` : ''}`);
   };
+
+  if (banner) {
+    return (
+      <form role="search" aria-label={t('catalogSearch.label')} onSubmit={onSubmit} className="cat-search">
+        <label htmlFor={id} className="label mb-2">{t('catalogSearch.label')}</label>
+        <div className="field-row">
+          <input id={id} type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={200}
+            aria-describedby={`${id}-hint`} className="field cat-search-field" autoComplete="off" />
+          <button type="submit" className="btn cat-search-btn">
+            <Search aria-hidden="true" className="size-5" />{t('catalogSearch.submit')}
+          </button>
+        </div>
+        <p id={`${id}-hint`} className="cat-search-hint">{t('catalogSearch.hint')}</p>
+      </form>
+    );
+  }
 
   return (
     <form role="search" aria-label={t('catalogSearch.label')} onSubmit={onSubmit}>
