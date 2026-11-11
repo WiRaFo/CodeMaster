@@ -9,7 +9,7 @@ export function OriginBadge({ origin }: { origin: DataOrigin }) {
   const { t } = useTranslation();
   if (origin !== 'demo' && origin !== 'synthetic') return null;
   return (
-    <span className="inline-block rounded border border-demo-text bg-demo-bg px-2 py-0.5 text-sm font-semibold text-demo-text">
+    <span className="chip n origin-chip">
       {t(`origin.${origin}`)}
     </span>
   );
