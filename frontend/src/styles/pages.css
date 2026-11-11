@@ -212,3 +212,20 @@ html.a11y .step{border:2px solid #000}
 .ex-card:hover .ex-title a,.ex-title a:focus-visible{text-decoration:underline!important}
 @media (prefers-reduced-motion: reduce){.ex-cover .ph{transition:none}.ex-card:hover .ph0,.ex-card:hover .ph1,.ex-card:hover .ph2{transform:none}}
 html.a11y .ex-card,html.a11y .ex-filter{border:2px solid #000}
+
+/* Экспонат (Exhibition.dc.html) */
+.ex-layout{display:grid;gap:28px;align-items:start}
+@media (min-width:1024px){.ex-layout{grid-template-columns:minmax(0,1fr) minmax(0,464px)}}
+.ex-nav{display:inline-flex;gap:8px;align-items:center;min-height:60px;padding:0 22px;border-radius:14px;border:2px solid var(--ink);background:#fff;color:var(--ink)!important;font-weight:700;font-size:calc(18px * var(--fs,1));text-decoration:none!important;transition:background-color .2s}
+.ex-nav:hover{background:var(--tint)}
+.ex-nav.next{background:var(--brand);border-color:var(--brand);color:#fff!important}
+.ex-nav.next:hover{background:var(--brand2)}
+.ex-stage{min-height:420px;display:grid;place-items:center}
+.ex-toc{padding:28px 24px;border-radius:28px;background:var(--ink);color:#fff}
+.ex-toc .info-card-h{color:#fff;margin-bottom:14px}
+.ex-toc-item{display:flex;gap:14px;align-items:center;min-height:64px;padding:10px 16px;border-radius:16px;background:rgba(255,255,255,.08);color:#fff!important;font-weight:600;text-decoration:none!important;transition:background-color .2s}
+.ex-toc-item:hover{background:rgba(255,255,255,.16)}
+.ex-toc-item[aria-current="page"]{background:#fff;color:var(--ink)!important}
+.ex-toc-n{flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.18);font-weight:800}
+.ex-toc-item[aria-current="page"] .ex-toc-n{background:var(--brand);color:#fff}
+html.a11y .ex-toc{border:2px solid #000}
