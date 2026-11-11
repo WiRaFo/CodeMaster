@@ -1,4 +1,4 @@
-import { Clock, MapPin, Newspaper, Phone, Search } from 'lucide-react';
+import { Check, Clock, MapPin, Newspaper, Phone, Search } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -44,30 +44,69 @@ export function MainContacts({ withReadingRoom, title, children }: { withReading
 export function VisitorsPage() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
+  const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);
   const steps = ['find', 'code', 'access', 'contact'] as const;
+  // Отметки шагов — только памятка для посетителя на этой странице, никуда не отправляются.
+  const [done, setDone] = useState<Record<string, boolean>>({});
+  const count = steps.filter((s) => done[s]).length;
+  const b = main.status === 'ready' ? main.data : null;
   return (
     <>
-      <PageHeading title={t('nav.visitors')}>
-        <p className="mt-2 max-w-3xl">{t('visitors.lead')}</p>
+      <PageHeading title={t('nav.visitors')} aside={b ? (
+        <div className="page-head-aside flex flex-col gap-2.5">
+          <span className="flex items-center gap-2.5 text-[calc(20px*var(--fs,1))] font-extrabold"><Clock aria-hidden="true" className="size-7" />{t('branches.schedule')}</span>
+          {b.scheduleText ? <span>{b.scheduleText}</span> : null}
+          {b.readingRoomSchedule ? <span>{b.readingRoomSchedule}</span> : null}
+          {b.phone ? <a href={telHref(b.phone)} className="info-phone no-underline"><Phone aria-hidden="true" className="bell size-[22px]" />{b.phone}</a> : null}
+        </div>
+      ) : null}>
+        <p className="m-0 max-w-[640px]">{t('visitors.lead')}</p>
+        <p className="mt-4 mb-0 max-w-[640px] text-[calc(17px*var(--fs,1))] text-[var(--odm)]">{t('visitors.infoOnly')}</p>
       </PageHeading>
-      <p className="mb-6 max-w-3xl rounded-md border-2 border-warning-text bg-warning-bg p-3 text-warning-text">{t('visitors.infoOnly')}</p>
-      <section aria-labelledby="visit-steps" className="mb-8 max-w-3xl">
-        <h2 id="visit-steps" className="mb-3 text-xl font-semibold">{t('visitors.stepsTitle')}</h2>
-        <ol className="flex list-decimal flex-col gap-2 pl-6">
-          {steps.map((s) => <li key={s}>{t(`visitors.steps.${s}`)}</li>)}
-        </ol>
-        <p className="mt-3 flex flex-wrap gap-2">
-          <Link to={`/${lang}/catalog`} className="btn-secondary">{t('nav.catalog')}</Link>
-          <Link to={`/${lang}/faq`} className="btn-secondary">{t('nav.faq')}</Link>
-          <Link to={`/${lang}/assistant`} className="btn-secondary">{t('nav.assistant')}</Link>
-        </p>
-      </section>
-      <section aria-labelledby="visit-contacts" className="mb-8 max-w-3xl">
-        <h2 id="visit-contacts" className="mb-3 text-xl font-semibold">{t('visitors.contactsTitle')}</h2>
-        <MainContacts withReadingRoom />
-        <p className="mt-3"><Link to={`/${lang}/branches`}>{t('visitors.allBranches')}</Link></p>
-      </section>
-      <p className="max-w-3xl text-sm text-muted">{t('visitors.pending')}</p>
+
+      <div className="visit-layout">
+        <section aria-labelledby="visit-steps">
+          <h2 id="visit-steps" className="h2 u mb-3">{t('visitors.stepsTitle')}</h2>
+          <p className="muted mb-5">{t('visitors.stepsHint')}</p>
+          <div className="pbar mb-2" aria-hidden="true"><span style={{ width: `${count * 25}%` }} /></div>
+          <p role="status" className="mb-[18px] font-bold">{t('visitors.done', { count, total: steps.length })}</p>
+          <ol className="flex flex-col gap-3">
+            {steps.map((s, i) => (
+              <li key={s}>
+                <button type="button" className="step" aria-pressed={!!done[s]} onClick={() => setDone({ ...done, [s]: !done[s] })}>
+                  <span className="step-n" aria-hidden="true">{i + 1}</span>
+                  <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[calc(20px*var(--fs,1))] font-extrabold leading-tight">{t(`visitors.stepTitles.${s}`)}</span>
+                    <span className="muted">{t(`visitors.steps.${s}`)}</span>
+                  </span>
+                  <span className={done[s] ? 'step-check on' : 'step-check'} aria-hidden="true"><Check className="size-5" strokeWidth={3} /></span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-[22px] flex flex-wrap gap-2.5">
+            <Link to={`/${lang}/catalog`} className="btn">{t('nav.catalog')}</Link>
+            <Link to={`/${lang}/faq`} className="btn ghost">{t('nav.faq')}</Link>
+            <Link to={`/${lang}/assistant`} className="btn ghost">{t('nav.assistant')}</Link>
+          </p>
+        </section>
+
+        <aside className="flex flex-col gap-5" aria-label={t('visitors.contactsTitle')}>
+          <section aria-labelledby="visit-rr" className="info-card">
+            <h2 id="visit-rr" className="info-card-h">{t('visitors.readingRoomTitle')}</h2>
+            <p className="m-0">{t('visitors.readingRoomText')}</p>
+            <p className="m-0 font-bold">{t('visitors.beforeVisit')}</p>
+            <ul className="m-0 flex list-disc flex-col gap-2 pl-[22px]">
+              <li>{t('visitors.before1')}</li>
+              <li>{t('visitors.before2')}</li>
+            </ul>
+          </section>
+          <MainContacts withReadingRoom title={t('visitors.contactsTitle')}>
+            <Link to={`/${lang}/branches`} className="btn line mt-2 self-start">{t('visitors.allBranches')}</Link>
+          </MainContacts>
+          <p className="muted m-0 text-[calc(15px*var(--fs,1))]">{t('visitors.pending')}</p>
+        </aside>
+      </div>
     </>
   );
 }

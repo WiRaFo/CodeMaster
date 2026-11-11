@@ -650,11 +650,24 @@
       "find": "Find the documents you need in the e-catalogue in advance.",
       "code": "Write down the reference code of each document: it is how the document is found.",
       "access": "Check the access conditions on the document's record card.",
-      "contact": "Confirm the opening hours by phone: the details are still being verified."
+      "contact": "Check the opening hours by phone before your visit."
     },
     "contactsTitle": "Address and opening hours",
     "allBranches": "All branches and contacts",
-    "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions."
+    "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions.",
+    "stepsHint": "Tick the steps as you go so that nothing is forgotten.",
+    "done": "Done: {{count}} of {{total}}",
+    "readingRoomTitle": "Reading room",
+    "readingRoomText": "How the archive reading room works. You cannot book a visit, order files or apply through the website.",
+    "beforeVisit": "Before your visit",
+    "before1": "Find the documents in the e-catalogue and write down their codes: fond, inventory, file.",
+    "before2": "Check the access level: restricted documents are issued on the terms shown in the record.",
+    "stepTitles": {
+      "find": "Find the documents you need",
+      "code": "Write down the reference code",
+      "access": "Check the access conditions",
+      "contact": "Check the opening hours"
+    }
   },
   "about": {
     "lead": "State Archive of East Kazakhstan Region: history, structure and contacts.",
