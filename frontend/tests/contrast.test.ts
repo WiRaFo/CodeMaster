@@ -15,7 +15,7 @@ function parseThemes(source: string): Map<string, Record<string, string>> {
   for (const [, selector = '', body = ''] of source.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(blockRe)) {
     const vars: Record<string, string> = {};
     for (const [, name = '', value = ''] of body.matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)) vars[name] = value;
-    themes.set(selector.trim().replace(/\s+/g, ' '), vars);
+    if (Object.keys(vars).length) themes.set(selector.trim().replace(/\s+/g, ' '), vars);
   }
   return themes;
 }
@@ -46,8 +46,8 @@ const UI_PAIRS: Array<[string, string]> = [
 const themes = parseThemes(css);
 
 describe('контраст дизайн-токенов', () => {
-  it('в файле пять тем с полным набором токенов', () => {
-    expect(themes.size).toBe(5);
+  it('в файле четыре схемы (обычная и три для слабовидящих) с полным набором токенов', () => {
+    expect(themes.size).toBe(4);
     const names = Object.keys([...themes.values()][0] ?? {}).sort();
     for (const vars of themes.values()) expect(Object.keys(vars).sort()).toEqual(names);
   });
@@ -68,11 +68,6 @@ describe('контраст дизайн-токенов', () => {
       expect(failures).toEqual([]);
     });
   }
-
-  it('тёмные темы не используют чистый чёрный фон в обычном режиме', () => {
-    const dark = [...themes.entries()].find(([s]) => s === ":root[data-theme='dark']")?.[1];
-    expect(dark?.['bg']).not.toBe('#000000');
-  });
 
   it('формула контраста совпадает с эталоном WCAG', () => {
     expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 5);

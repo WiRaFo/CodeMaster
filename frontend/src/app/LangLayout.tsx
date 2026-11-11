@@ -59,15 +59,15 @@ export function LangLayout() {
   if (!valid) return <Navigate to={`/${preferredLocale()}${pathname}${search}`} replace />;
 
   return (
-    <>
+    <div className="site">
       <SkipLink />
       <Header />
       {/* min-h-screen: пока страница загружает данные, подвал уже ниже первого экрана и не «прыгает» (CLS, ЭТАП 14). */}
-      <main id="main" tabIndex={-1} className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 focus:outline-none">
+      <main id="main" tabIndex={-1} className="wrap min-h-screen w-full py-8 focus:outline-none">
         <SectionBreadcrumbs />
         <Outlet />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

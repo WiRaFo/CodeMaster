@@ -146,7 +146,7 @@ describe('отзывы и предложения', () => {
 describe('«Посетителям» и «Об архиве»', () => {
   it('контакты и режим читального зала берутся из реестра подразделений; правила не выдумываются', async () => {
     const { container } = renderAt('/ru/visitors');
-    expect(await screen.findByText('Читальный зал: пн–пт, 10:00–17:00')).toBeInTheDocument();
+    expect(await within(screen.getByRole('main')).findByText('Читальный зал: пн–пт, 10:00–17:00')).toBeInTheDocument();
     expect(screen.getByText(/Правила читального зала и перечень услуг архива будут опубликованы/)).toBeInTheDocument();
     expect(within(screen.getByRole('main')).getByText(/заявления, запросы и заказы через него не принимаются/)).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);

@@ -22,7 +22,7 @@ describe('каркас страницы', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
-    expect(screen.getByRole('search', { name: 'Поиск по сайту' })).toBeInTheDocument();
+    expect(screen.getByRole('search', { name: 'Поиск по сайту и каталогу' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Основные разделы' })).toBeInTheDocument();
     await waitFor(() => expect(document.documentElement.lang).toBe('ru'));
     expect(document.title).toBe('Государственный архив Восточно-Казахстанской области — Госархив ВКО');
@@ -44,11 +44,13 @@ describe('каркас страницы', () => {
     const langs = within(banner).getByRole('navigation', { name: 'Язык сайта' });
     expect(within(langs).getAllByRole('link').map((a) => a.textContent)).toEqual(['KZ', 'RU', 'EN']);
     expect(within(langs).getByRole('link', { name: 'RU' })).toHaveAttribute('aria-current', 'true');
-    expect(within(banner).getByRole('button', { name: 'Включить тёмную тему' })).toBeInTheDocument();
+    expect(within(banner).getByRole('button', { name: 'Версия для слабовидящих' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(banner).getByRole('button', { name: 'Остановить анимацию на сайте' })).toBeInTheDocument();
     expect(within(banner).getByRole('searchbox', { name: 'Поиск по сайту' })).toBeInTheDocument();
-    expect(within(banner).getByRole('link', { name: 'Электронный каталог' })).toHaveAttribute('href', '/ru/catalog');
-    // Панель «Доступность» убрана: режимы текста и контраста будут вариантами дизайна.
-    expect(within(banner).queryByRole('button', { name: 'Доступность' })).toBeNull();
+    // Переход к электронному каталогу — пункт меню с полным названием в подсказке (дизайн 11.11.2026).
+    const nav = within(banner).getByRole('navigation', { name: 'Основные разделы' });
+    expect(within(nav).getByRole('link', { name: 'Фонды и каталог' })).toHaveAttribute('href', '/ru/catalog');
+    expect(within(nav).getByRole('link', { name: 'Фонды и каталог' })).toHaveAttribute('title', 'Фонды и электронный каталог');
   });
 
   it('меню содержит 10 разделов ТЗ §4 и раздел госуслуги из дополнения к ТЗ', async () => {
@@ -107,13 +109,34 @@ describe('каркас страницы', () => {
   });
 });
 
-describe('тема', () => {
-  it('кнопка темы в шапке переключает светлую и тёмную тему', async () => {
+describe('версия для слабовидящих', () => {
+  it('кнопка в шапке включает режим, панель меняет размер, цвет и картинки, выход возвращает обычную версию', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/ru');
+    const root = document.documentElement;
+    await user.click(await screen.findByRole('button', { name: 'Версия для слабовидящих' }));
+    expect(root.classList.contains('a11y')).toBe(true);
+    const bar = screen.getByRole('region', { name: 'Настройки версии для слабовидящих' });
+    await user.click(within(bar).getByRole('button', { name: 'Очень крупный' }));
+    expect(root.classList.contains('a11y-xl')).toBe(true);
+    await user.click(within(bar).getByRole('button', { name: /Белым по чёрному/ }));
+    expect(root.classList.contains('a11y-wb')).toBe(true);
+    expect(within(bar).getByRole('button', { name: /Белым по чёрному/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(within(bar).getByRole('button', { name: 'Скрыть' }));
+    expect(root.classList.contains('a11y-noimg')).toBe(true);
+    await within(screen.getByRole('contentinfo')).findByText(MAIN_BRANCH.address);
+    expect(await axeViolations(container)).toEqual([]);
+    await user.click(within(bar).getByRole('button', { name: 'Обычная версия сайта' }));
+    expect(root.classList.contains('a11y')).toBe(false);
+    expect(root.classList.contains('a11y-wb')).toBe(false);
+    expect(screen.queryByRole('region', { name: 'Настройки версии для слабовидящих' })).toBeNull();
+  });
+
+  it('кнопка «Остановить анимацию» ставит движение на паузу', async () => {
     const user = userEvent.setup();
     renderAt('/ru');
-    await user.click(await screen.findByRole('button', { name: 'Включить тёмную тему' }));
-    expect(document.documentElement.dataset['theme']).toBe('dark');
-    await user.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
-    expect(document.documentElement.dataset['theme']).toBe('light');
+    await user.click(await screen.findByRole('button', { name: 'Остановить анимацию на сайте' }));
+    expect(document.documentElement.classList.contains('no-motion')).toBe(true);
+    expect(document.documentElement.dataset['motion']).toBe('reduce');
   });
 });

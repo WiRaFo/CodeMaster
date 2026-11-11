@@ -6,53 +6,40 @@ import { A11Y_STORAGE_KEY, applyPrefs, DEFAULT_PREFS, loadPrefs, sanitizePrefs, 
 const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
 const inlineScript = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
 
-function snapshot(root: HTMLElement) {
-  return {
-    dataset: { ...root.dataset },
-    fontSize: root.style.getPropertyValue('--a11y-font-size') || '100%',
-    lineHeight: root.style.getPropertyValue('--a11y-line-height') || '1.5',
-    letterSpacing: root.style.getPropertyValue('--a11y-letter-spacing') || 'normal',
-    wordSpacing: root.style.getPropertyValue('--a11y-word-spacing') || 'normal',
-  };
-}
-
+const snapshot = (root: HTMLElement) => ({ classes: [...root.classList].sort(), dataset: { ...root.dataset } });
 function reset(root: HTMLElement) {
   for (const key of Object.keys(root.dataset)) delete root.dataset[key];
-  root.removeAttribute('style');
+  root.className = '';
 }
 
-describe('настройки доступности', () => {
+describe('версия для слабовидящих', () => {
   it('повреждённые и неизвестные значения заменяются значениями по умолчанию', () => {
-    expect(sanitizePrefs({ fontScale: 300, scheme: 'neon', highContrast: 'yes' })).toEqual(DEFAULT_PREFS);
+    expect(sanitizePrefs({ mode: 'yes', size: 'xxl', scheme: 'neon', images: 'no', still: 1 })).toEqual(DEFAULT_PREFS);
     window.localStorage.setItem(A11Y_STORAGE_KEY, '{not json');
     expect(loadPrefs()).toEqual(DEFAULT_PREFS);
   });
 
-  it('applyPrefs выставляет атрибуты и переменные, включая межсловный интервал WCAG 1.4.12', () => {
+  it('applyPrefs ставит классы дизайна; без версии схема и размер не действуют', () => {
     const root = document.documentElement;
-    applyPrefs({ ...DEFAULT_PREFS, fontScale: 200, letterSpacing: '0.16', highContrast: true, scheme: 'dark' }, root, {
-      dark: false,
-      reduceMotion: true,
-    });
-    expect(snapshot(root)).toEqual({
-      dataset: { theme: 'dark', contrast: 'high', font: 'default', motion: 'reduce', simplified: 'off' },
-      fontSize: '200%',
-      lineHeight: '1.5',
-      letterSpacing: '0.16em',
-      wordSpacing: '0.16em',
-    });
+    reset(root);
+    applyPrefs({ mode: true, size: 'xl', scheme: 'wb', images: false, still: false }, root);
+    expect(snapshot(root)).toEqual({ classes: ['a11y', 'a11y-noimg', 'a11y-wb', 'a11y-xl'], dataset: { theme: 'light', contrast: 'high', motion: 'reduce' } });
+    applyPrefs({ mode: false, size: 'xl', scheme: 'wb', images: false, still: true }, root);
+    expect(snapshot(root)).toEqual({ classes: ['no-motion'], dataset: { theme: 'light', contrast: 'normal', motion: 'reduce' } });
   });
 
   const cases: Array<Partial<A11yPrefs>> = [
     {},
-    { fontScale: 150, lineHeight: '2', letterSpacing: '0.12', scheme: 'alt', readableFont: true, simplified: true },
-    { highContrast: true, scheme: 'dark', motion: 'full' },
-    { scheme: 'light', motion: 'reduce', lineHeight: '1.8' },
+    { mode: true },
+    { mode: true, size: 'xl', scheme: 'blue', images: false },
+    { mode: true, scheme: 'wb', still: true },
+    { still: true, scheme: 'blue' },
   ];
-  it.each(cases)('инлайн-скрипт index.html применяет те же настройки, что applyPrefs: %o', (patch) => {
+  it.each(cases)('инлайн-скрипт index.html применяет то же, что applyPrefs: %o', (patch) => {
     const prefs = { ...DEFAULT_PREFS, ...patch };
     const root = document.documentElement;
-    applyPrefs(prefs, root, { dark: false, reduceMotion: false });
+    reset(root);
+    applyPrefs(prefs, root);
     const expected = snapshot(root);
     reset(root);
     window.localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify(prefs));

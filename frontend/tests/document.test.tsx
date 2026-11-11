@@ -138,7 +138,7 @@ describe('карточка документа с ограниченным дос
     expect(within(notice).getByText(/персональные данные/)).toBeInTheDocument();
     expect(within(notice).getByRole('link', { name: 'Как работает читальный зал' })).toHaveAttribute('href', '/ru/visitors');
     expect(screen.queryByRole('region', { name: 'Изображение страницы' })).toBeNull();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(within(screen.getByRole('main')).queryByRole('img')).toBeNull();
     expect(screen.queryByText('Расшифровка текста')).toBeNull();
     expect(screen.queryByText('Цифровая копия')).toBeNull();
     expect(requested().some((u) => u.includes('/pages'))).toBe(false);

@@ -32,17 +32,26 @@
     "catalogButton": "E-catalogue",
     "menuOpen": "Menu",
     "menuTitle": "Site sections",
-    "close": "Close"
+    "close": "Close",
+    "official": "Official information and reference website",
+    "motionStop": "Stop animation",
+    "motionStart": "Turn animation on",
+    "motionAria": "Stop animation on the site",
+    "lowVisionOn": "Low-vision version",
+    "lowVisionOff": "Standard version",
+    "lowVisionShortOn": "Low vision",
+    "lowVisionShortOff": "Standard version",
+    "sections": "Sections",
+    "sectionsBar": "Site sections (bar)",
+    "catalogSearch": "Search the catalogue",
+    "homeShort": "Home page",
+    "searchFull": "Search the site and catalogue"
   },
   "lang": {
     "label": "Site language",
     "kk": "Қазақша",
     "ru": "Русский",
     "en": "English"
-  },
-  "theme": {
-    "toDark": "Switch to dark theme",
-    "toLight": "Switch to light theme"
   },
   "a11y": {
     "button": "Accessibility",
@@ -85,7 +94,9 @@
     "socialPending": "Links to the archive's official social media pages will appear once the archive confirms them.",
     "infoOnly": "This website is for information only: applications, requests and orders are not accepted through it.",
     "sections": "Sections",
-    "copyright": "© {{year}} State Archive of East Kazakhstan Region"
+    "copyright": "© {{year}} State Archive of East Kazakhstan Region",
+    "more": "More",
+    "emblemAlt": "Emblem of the State Archive of East Kazakhstan Region"
   },
   "stub": {
     "text": "This section will be added in later stages of the prototype.",
@@ -678,5 +689,29 @@
     "lead": "Digitised documents that are open for viewing. Select an image to page through and zoom the copy.",
     "empty": "No open digital copies yet.",
     "alt": "First page of the digital copy: {{title}}"
+  },
+  "navShort": {
+    "catalog": "Fonds and catalogue",
+    "history": "Regional history",
+    "exhibitions": "Exhibitions",
+    "news": "News",
+    "faq": "Questions"
+  },
+  "lowVision": {
+    "region": "Low-vision version settings",
+    "size": "Text size",
+    "sizeL": "Large",
+    "sizeXl": "Extra large",
+    "color": "Colour",
+    "colorGroup": "Site colours",
+    "bw": "Black on white",
+    "wb": "White on black",
+    "blue": "Dark blue on light blue",
+    "swatch": "A",
+    "images": "Images",
+    "imagesGroup": "Images",
+    "show": "Show",
+    "hide": "Hide",
+    "exit": "Standard version"
   }
 }
