@@ -219,8 +219,8 @@ html{scroll-padding-top:96px}
 
 /* общие орнаменты (қошқар мүйіз), подвал, мелкая анимация и псевдонимы цветов для внутренних страниц */
 .site,body{--accent:var(--brand);--accentDeep:var(--brand2);--soft:var(--tint);--soft2:var(--tint2);--soft3:var(--line2);--mid:var(--line2);--inkDeep:#13213F;--onDarkAccent:var(--gold);--onDarkAccent2:#A9C4F2;--onDarkMuted:var(--odm)}
-.orn-band{background:var(--gold);-webkit-mask:url(/design/ornament-band-mask.png) repeat-x left center/auto 100%;mask:url(/design/ornament-band-mask.png) repeat-x left center/auto 100%}
-.orn-ros{background:var(--gold);-webkit-mask:url(/design/ornament-rosette-mask.png) center/contain no-repeat;mask:url(/design/ornament-rosette-mask.png) center/contain no-repeat}
+.orn-band{background:var(--gold);-webkit-mask:url(/design/ornament-band.svg) repeat-x left center/auto 100%;mask:url(/design/ornament-band.svg) repeat-x left center/auto 100%}
+.orn-ros{background:var(--gold);-webkit-mask:url(/design/ornament-rosette.svg) center/contain no-repeat;mask:url(/design/ornament-rosette.svg) center/contain no-repeat}
 .bell{animation:bell 4s ease-in-out infinite;transform-origin:50% 50%}
 @keyframes bell{0%,84%,100%{transform:rotate(0)}87%{transform:rotate(-14deg)}90%{transform:rotate(12deg)}93%{transform:rotate(-8deg)}96%{transform:rotate(5deg)}}
 .pop{transition:transform .35s cubic-bezier(.3,1.6,.5,1)}

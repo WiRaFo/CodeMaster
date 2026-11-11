@@ -28,6 +28,7 @@ export function LangLayout() {
   const firstRender = useRef(true);
 
   const valid = isLocale(lang);
+  const isHome = /^\/[^/]+\/?$/.test(pathname);
 
   useEffect(() => {
     if (!valid) return;
@@ -63,9 +64,14 @@ export function LangLayout() {
       <SkipLink />
       <Header />
       {/* min-h-screen: пока страница загружает данные, подвал уже ниже первого экрана и не «прыгает» (CLS, ЭТАП 14). */}
-      <main id="main" tabIndex={-1} className="wrap min-h-screen w-full py-8 focus:outline-none">
-        <SectionBreadcrumbs />
-        <Outlet />
+      <main id="main" tabIndex={-1} className="min-h-screen w-full focus:outline-none">
+        {/* Главная собрана из секций во всю ширину (дизайн 11.11.2026), остальные страницы — в контейнере. */}
+        {isHome ? <Outlet /> : (
+          <div className="wrap py-8">
+            <SectionBreadcrumbs />
+            <Outlet />
+          </div>
+        )}
       </main>
       <Footer />
     </div>

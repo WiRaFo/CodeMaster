@@ -30,6 +30,7 @@ export function Header() {
   const [dropOpen, setDropOpen] = useState(false);
   const [bar, setBar] = useState<BarMode>('top');
   const lastY = useRef(0);
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -57,6 +58,18 @@ export function Header() {
   useEffect(() => {
     if (bar !== 'up') setDropOpen(false);
   }, [bar]);
+
+  // Esc закрывает мобильное меню и возвращает фокус на кнопку.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMenuOpen(false);
+      menuButton.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -117,7 +130,7 @@ export function Header() {
 
         <div className="wrap hdr-main">
           <Link to={`/${lang}`} className="hdr-brand" aria-label={t('site.homeLink')}>
-            <img className="seal" src="/design/logo-seal.png" alt="" width={64} height={65} />
+            <img className="seal" src="/design/logo-seal-256.png" alt="" width={64} height={65} />
             <span className="d-col hdr-brand-text">
               <span className="hdr-name">{t('site.name')}</span>
               <span className="hdr-tag">{t('site.tagline')}</span>
@@ -135,7 +148,7 @@ export function Header() {
             <span className="a11y-ico"><Eye aria-hidden="true" className="size-[22px]" /></span>{lowVisionLabel}
           </button>
           <LanguageSwitcher className="hide-m" />
-          <button type="button" className="btn dark sm hdr-burger" aria-expanded={menuOpen} aria-controls="hdr-menu"
+          <button ref={menuButton} type="button" className="btn dark sm hdr-burger" aria-expanded={menuOpen} aria-controls="hdr-menu"
             onClick={() => setMenuOpen((open) => !open)}>
             {menuOpen ? <X aria-hidden="true" className="size-[22px]" /> : <Menu aria-hidden="true" className="size-[22px]" />}
             {t(menuOpen ? 'header.close' : 'header.menuOpen')}
@@ -157,7 +170,7 @@ export function Header() {
       <div className={barShown ? 'hdr-bar show' : 'hdr-bar'} aria-hidden={!barShown}>
         <div className="wrap hdr-bar-in">
           <Link to={`/${lang}`} className="hdr-brand" aria-label={t('site.homeLink')} tabIndex={barTab}>
-            <img className="seal" src="/design/logo-seal.png" alt="" width={44} height={45} />
+            <img className="seal" src="/design/logo-seal-256.png" alt="" width={44} height={45} />
             <span className="hdr-bar-name">{t('site.shortName')}</span>
           </Link>
           <button type="button" className="btn ghost sm" aria-expanded={dropOpen && barShown} aria-controls="hdr-drop"

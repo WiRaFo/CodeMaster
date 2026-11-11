@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './tokens.css';
 @import './design.css';
+@import './home.css';
 
 /* Токены доступны в утилитах Tailwind: bg-bg, text-text, border-border и т. д. */
 @theme inline {

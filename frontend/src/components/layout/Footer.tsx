@@ -21,7 +21,7 @@ export function Footer() {
       <div className="wrap ftr-in">
         <div className="d-grid ftr-grid">
           <section className="ftr-col" aria-labelledby="footer-contacts">
-            <img className="seal pop mb-1.5" src="/design/logo-seal.png" alt={t('footer.emblemAlt')} width={112} height={114} />
+            <img className="seal pop mb-1.5" src="/design/logo-seal-256.png" alt={t('footer.emblemAlt')} width={112} height={114} />
             <h2 id="footer-contacts" className="ftr-h">{t('footer.contacts')}</h2>
             {branch?.needsVerification ? <span className="ftr-warn">{t('footer.needsVerification')}</span> : null}
             {branch?.address ? <span>{branch.address}</span> : null}

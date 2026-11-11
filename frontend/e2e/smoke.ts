@@ -16,13 +16,15 @@ const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
 const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024', '/kk/anticorruption', '/ru/services', '/kk/services/paid', '/en/legislation', '/ru/reading-room', '/kk/symbols', '/en/links', '/ru/catalog/fonds?kind=personal', '/ru/history/timeline', '/ru/history/persons', '/kk/history/persons/auezov-mukhtar', '/en/history/collections', '/ru/history/collections/demo-creamery-records', '/kk/history/gallery'];
+// Обычная версия и три цветовые схемы версии для слабовидящих (дизайн 11.11.2026).
 const THEMES: Array<[string, Record<string, unknown>]> = [
-  ['light', { scheme: 'light' }],
-  ['dark', { scheme: 'dark' }],
-  ['alt', { scheme: 'alt' }],
-  ['high-contrast light', { scheme: 'light', highContrast: true }],
-  ['high-contrast dark', { scheme: 'dark', highContrast: true }],
+  ['обычная', { mode: false }],
+  ['слабовидящие ч/б', { mode: true, scheme: 'bw' }],
+  ['слабовидящие б/ч', { mode: true, scheme: 'wb', size: 'xl' }],
+  ['слабовидящие синяя', { mode: true, scheme: 'blue' }],
 ];
+/** Интервалы WCAG 1.4.12 и текст 200 % поверх страницы (как пользовательская таблица стилей). */
+const TEXT_SPACING = 'html{font-size:200%!important} *{line-height:2!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}';
 
 /** Учётные записи для сценариев 9–12 берутся из backend/.env (сиды создают их с теми же паролями). */
 function staffCredentials() {
@@ -151,11 +153,13 @@ async function main() {
 
     {
       const page = await browser.newPage({ viewport: { width: 320, height: 800 } });
-      await openWithPrefs(page, '/kk', { fontScale: 200, lineHeight: '2', letterSpacing: '0.16' });
+      await openWithPrefs(page, '/kk', { mode: true, size: 'xl' });
+      await page.addStyleTag({ content: TEXT_SPACING });
       const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(scroll <= client, `текст 200 % и интервалы 1.4.12 на 320px: прокрутка ${scroll} > ${client}`);
       // Прейскурант: 218 строк в таблицах — тоже без горизонтальной прокрутки при увеличенном тексте.
-      await openWithPrefs(page, '/kk/services/paid', { fontScale: 200 });
+      await openWithPrefs(page, '/kk/services/paid', {});
+      await page.addStyleTag({ content: TEXT_SPACING });
       check((await page.locator('main table').count()) === 8, 'платные услуги: 8 таблиц прейскуранта');
       const [ps, pc] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(ps <= pc, `прейскурант, текст 200 % на 320px: прокрутка ${ps} > ${pc}`);
@@ -183,14 +187,15 @@ async function main() {
       await openWithPrefs(page, '/ru', {});
       const menuButton = page.getByRole('button', { name: 'Меню' });
       await menuButton.click();
-      const dialog = page.getByRole('dialog', { name: 'Разделы сайта' });
-      check(await dialog.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
-      check((await dialog.getByRole('link').count()) === 11, 'в мобильном меню 11 разделов (10 из ТЗ и госуслуга)');
+      check((await menuButton.getAttribute('aria-expanded')) === 'true', 'кнопка меню сообщает, что меню открыто');
+      const menu = page.getByRole('navigation', { name: 'Разделы сайта' });
+      check(await menu.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
+      check((await menu.getByRole('link').count()) === 14, 'в мобильном меню 11 разделов (10 из ТЗ и госуслуга) и 3 языка');
       const violations = await axe(page);
       check(violations.length === 0, `axe мобильное меню: ${violations.join('; ')}`);
       await page.keyboard.press('Escape');
-      check(!(await dialog.isVisible()), 'Esc закрывает меню');
-      check(await menuButton.evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку меню');
+      check((await page.getByRole('button', { name: 'Меню' }).getAttribute('aria-expanded')) === 'false', 'Esc закрывает меню');
+      check(await page.getByRole('button', { name: 'Меню' }).evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку меню');
       await page.close();
     }
 
@@ -244,22 +249,28 @@ async function main() {
     }
 
     {
-      // Сценарий 14: тема сохраняется при переходах, смене языка и перезагрузке (панель доступности убрана 11.11.2026).
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      // Сценарий 14: версия для слабовидящих сохраняется при переходах, смене языка и перезагрузке (дизайн 11.11.2026).
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/kk', {});
-      await page.getByRole('button', { name: 'Қараңғы тақырыпты қосу' }).click();
-      check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'сценарий 14: тёмная тема включается без перезагрузки');
-      check((await page.getByRole('button', { name: 'Қолжетімділік', exact: true }).count()) === 0, 'панели «Доступность» в шапке нет');
-      await page.getByRole('banner').getByRole('link', { name: 'Электрондық каталог' }).first().click();
+      await page.getByRole('banner').getByRole('button', { name: 'Нашар көретіндерге арналған нұсқа' }).click();
+      check(await page.evaluate(() => document.documentElement.classList.contains('a11y')), 'сценарий 14: версия для слабовидящих включается без перезагрузки');
+      const bar = page.getByRole('region', { name: 'Нашар көретіндерге арналған нұсқаның баптаулары' });
+      await bar.getByRole('button', { name: /Қара фонда ақ/ }).click();
+      await bar.getByRole('button', { name: 'Өте ірі' }).click();
+      await page.getByRole('navigation', { name: 'Негізгі бөлімдер' }).getByRole('link', { name: 'Қорлар мен каталог' }).click();
       await page.waitForURL(/\/kk\/catalog/);
-      await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'RU' }).click();
+      await page.getByRole('navigation', { name: 'Сайт тілі' }).first().getByRole('link', { name: 'RU' }).click();
       await page.waitForURL(/\/ru\/catalog/);
       await page.reload();
       await page.locator('h1').waitFor();
-      const state = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, lang: document.documentElement.lang }));
-      check(state.theme === 'dark', `сценарий 14: тема сохранилась после перехода, смены языка и перезагрузки (${state.theme})`);
-      check(state.lang === 'ru', 'сценарий 14: язык сменился, тема осталась');
-      check(await page.getByRole('button', { name: 'Включить светлую тему' }).isVisible(), 'сценарий 14: кнопка темы подписана на новом языке');
+      const state = await page.evaluate(() => ({ cls: document.documentElement.className, lang: document.documentElement.lang }));
+      check(/\ba11y\b/.test(state.cls) && /a11y-wb/.test(state.cls) && /a11y-xl/.test(state.cls), `сценарий 14: режим, цвет и размер сохранились после перехода, смены языка и перезагрузки (${state.cls})`);
+      check(state.lang === 'ru', 'сценарий 14: язык сменился, режим остался');
+      check(await page.getByRole('button', { name: 'Обычная версия сайта' }).first().isVisible(), 'сценарий 14: кнопка выхода подписана на новом языке');
+      const violations = await axe(page);
+      check(violations.length === 0, `axe версия для слабовидящих б/ч, крупный: ${violations.join('; ')}`);
+      await page.getByRole('region', { name: 'Настройки версии для слабовидящих' }).getByRole('button', { name: 'Обычная версия сайта' }).click();
+      check(!(await page.evaluate(() => document.documentElement.classList.contains('a11y'))), 'сценарий 14: выход возвращает обычную версию');
       await page.close();
     }
 

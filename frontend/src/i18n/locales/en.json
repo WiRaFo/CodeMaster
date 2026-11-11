@@ -146,6 +146,112 @@
         "title": "Branch information",
         "text": "Addresses, phone numbers and opening hours of the archive and its branches."
       }
+    },
+    "heroLine1": "The digital memory",
+    "heroLine2": "of East Kazakhstan",
+    "heroArt": "Illustration: a fonds, an inventory and a file in the archive",
+    "open": "Open",
+    "quickKicker": {
+      "findDocument": "Catalogue",
+      "certificate": "Public service",
+      "readingRoom": "Visitors",
+      "findBranch": "Branches"
+    },
+    "quickText": {
+      "findDocument": "By title, keywords or archival reference code.",
+      "certificate": "Where to apply and which documents you need.",
+      "readingRoom": "Opening hours and how to prepare for your visit.",
+      "findBranch": "Addresses, phone numbers and opening hours of the archive’s branches."
+    },
+    "cipherTitle": "How to read a reference code",
+    "cipherExample": "Sample reference code:",
+    "cipher": {
+      "fond": {
+        "code": "F. 12",
+        "label": "Fonds",
+        "text": "Records of one organisation or person"
+      },
+      "inventory": {
+        "code": "Inv. 3",
+        "label": "Inventory",
+        "text": "List of files within a fonds"
+      },
+      "case": {
+        "code": "File 45",
+        "label": "File",
+        "text": "A folder of documents"
+      },
+      "sheets": {
+        "code": "Sh. 1–12",
+        "label": "Sheets",
+        "text": "Pages within a file"
+      }
+    },
+    "manuscript": {
+      "title": "From manuscript to transcription",
+      "text": "Published documents have a digital copy and a transcription. Old handwriting can be read in plain letters and found by words.",
+      "toText": "Show transcription",
+      "toSheet": "Show manuscript",
+      "caption": "Transcription — sample",
+      "note": "Illustration: the text was written as an example and is not an archival document.",
+      "plainTitle": "Dear sirs!",
+      "plain": "This repository holds the memory of the Eastern lands, from the Irtysh to the peaks of the Altai: files, letters, orders and the fates of people.",
+      "plainSign": "Keeper of the archive"
+    },
+    "historyLead": "“The Great Archive of Memory”: publications on regional history based on archival documents.",
+    "allPublications": "All publications",
+    "historyTabs": {
+      "timeline": {
+        "tab": "by year",
+        "name": "Timeline"
+      },
+      "persons": {
+        "tab": "people",
+        "name": "Historical figures"
+      },
+      "collections": {
+        "tab": "selections",
+        "name": "Collections"
+      },
+      "gallery": {
+        "tab": "photos",
+        "name": "Gallery"
+      },
+      "calendar": {
+        "tab": "dates",
+        "name": "Calendar of memorable dates"
+      }
+    },
+    "topicSoon": "coming soon",
+    "topicCount": "Publications: {{count}}",
+    "exhibitionsLead": "Thematic displays of the archive’s documents and photographs. You can go through an exhibition in order, from the first item to the last.",
+    "years": "Years: {{years}}",
+    "startViewing": "Start viewing",
+    "rubricLabel": "Category",
+    "allRubrics": "All categories",
+    "rubricEmpty": "There are no publications in this category yet.",
+    "assistant": {
+      "title": "AI assistant",
+      "text": "The assistant tells you where to find the site’s open materials and links to the right sections. It does not accept applications or requests.",
+      "label": "Your question",
+      "ask": "Ask",
+      "examplesTitle": "Sample questions",
+      "examples": [
+        "How do I apply for an archival certificate?",
+        "What is an inventory?",
+        "How do I find a document by its reference code?",
+        "Where is the reading room?"
+      ]
+    },
+    "contacts": {
+      "title": "Branches and contacts",
+      "text_one": "The archive, its sites and branches: {{count}} unit across the region.",
+      "text_other": "The archive, its sites and branches: {{count}} units across the region.",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "schedule": "Hours",
+      "find": "Find a branch"
     }
   },
   "notFound": {

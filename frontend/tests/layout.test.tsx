@@ -17,7 +17,7 @@ async function axeViolations(container: HTMLElement) {
 describe('каркас страницы', () => {
   it('ориентиры, один h1, язык страницы и заголовок вкладки', async () => {
     renderAt('/ru');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Государственный архив Восточно-Казахстанской области' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Цифровая память Восточного Казахстана' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
@@ -74,8 +74,8 @@ describe('каркас страницы', () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(new Response('{}', { status: 500 }));
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     renderAt('/ru');
-    expect(await screen.findByText('Контакты временно не загрузились.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Все филиалы и контакты' })).toHaveAttribute('href', '/ru/branches');
+    expect(await within(screen.getByRole('contentinfo')).findByText('Контакты временно не загрузились.')).toBeInTheDocument();
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Все филиалы и контакты' })).toHaveAttribute('href', '/ru/branches');
   });
 
   it('переключатель языка ведёт на ту же страницу', async () => {
