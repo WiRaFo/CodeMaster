@@ -5,9 +5,12 @@ import type { ParsedQuery } from './query-parser.ts';
  * 1) просьба подать заявление, заказать или оплатить — сайт этого не делает (§5.8, с. 10; F-122, S-021);
  * 2) адреса и контакты; 3) архивные термины; 4) разделы сайта; 5) поиск по каталогу.
  */
-export const TERMS = ['fond', 'inventory', 'case', 'sheet', 'archiveCode', 'restricted', 'readingRoom', 'digitalCopy'] as const;
+export const TERMS = [
+  'fond', 'inventory', 'case', 'sheet', 'archiveCode', 'restricted', 'readingRoom', 'digitalCopy',
+  'archive', 'archivalDocument', 'personnel', 'archivalCopy', 'guide', 'catalog',
+] as const;
 export type Term = (typeof TERMS)[number];
-export const SECTIONS = ['exhibitions', 'news', 'history', 'accessibility', 'faq', 'about', 'visitors', 'catalog', 'branches'] as const;
+export const SECTIONS = ['services', 'exhibitions', 'news', 'history', 'accessibility', 'faq', 'about', 'visitors', 'catalog', 'branches'] as const;
 export type Section = (typeof SECTIONS)[number];
 
 export type Intent =
@@ -33,6 +36,9 @@ const BRANCH = [
 ];
 const DEFINITION = [/что так(ое|ой|ая)/u, /что значит/u, /что означает/u, /что это/u, /как (читать|понять|расшифровать)/u, /деген (не|қалай)/u, /дегеніміз/u, /не үшін/u, /what (is|are|does)/u, /meaning of/u, /how (do i|to) read/u, /define/u];
 const TERM_WORDS: Array<[Term, RegExp, Section[]]> = [
+  ['personnel', /личн\S* состав|жеке құрам|personnel/u, ['services', 'branches']],
+  ['archivalCopy', /архивн\S* (копи|выписк)|мұрағаттық (көшірме|үзінді)|archival (copy|extract)/u, ['services']],
+  ['guide', /путеводител|жолнұсқа|guide to the fonds|archive guide/u, ['catalog']],
   ['archiveCode', /шифр|archive code|reference code|мұрағаттық шифр/u, ['catalog']],
   ['inventory', /опис[ьи]|тізбе|inventory/u, ['catalog']],
   ['case', /(?<!\p{L})(дело|дела|іс)(?!\p{L})|единиц\S* хранени|storage unit|\bfile\b/u, ['catalog']],
@@ -41,6 +47,9 @@ const TERM_WORDS: Array<[Term, RegExp, Section[]]> = [
   ['restricted', /ограничен|закрыт|шектеул|жабық|restricted|closed/u, ['catalog', 'visitors']],
   ['readingRoom', /читальн|оқу зал|reading room/u, ['visitors', 'branches']],
   ['digitalCopy', /цифров\S* коп|электронн\S* коп|скан|цифрлық көшірме|digital copy|scan/u, ['catalog']],
+  ['catalog', /каталог|catalog/u, ['catalog']],
+  ['archivalDocument', /архивн\S* документ|мұрағаттық құжат|archival (document|record)/u, ['catalog', 'history']],
+  ['archive', /архив|мұрағат|archive/u, ['about', 'catalog']],
 ];
 const NAV: Array<[Section, RegExp]> = [
   ['exhibitions', /выставк|экспозиц|көрме|exhibition/u],
@@ -56,6 +65,9 @@ export function classifyIntent(text: string, parsed: ParsedQuery): Intent {
   if (has(text, DEFINITION)) {
     const term = TERM_WORDS.find(([, re]) => re.test(text));
     if (term) return { kind: 'term', term: term[0], links: term[2] };
+    // «Что такое …» без известного термина — не поиск по каталогу, а подсказка по разделам.
+    const filters = parsed.type.length + parsed.settlement.length + parsed.topic.length + (parsed.yearFrom === undefined ? 0 : 1);
+    if (filters === 0 && !has(text, BRANCH) && !NAV.some(([, re]) => re.test(text))) return { kind: 'unknown' };
   }
   if (has(text, BRANCH)) return { kind: 'branch' };
   const filters = parsed.type.length + parsed.settlement.length + parsed.topic.length + (parsed.yearFrom === undefined ? 0 : 1);

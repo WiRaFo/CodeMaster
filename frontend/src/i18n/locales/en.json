@@ -573,7 +573,13 @@
       "archiveCode": "An archive reference code is the document's address in the archive: the fonds, inventory, file and folio numbers, for example “F. 1. Inv. 2. File 3. Fol. 4”. You can type a code into the catalog search.",
       "restricted": "Restricted documents appear on the site only as a record card with access conditions, without a copy or transcription. Closed documents are not published on the site.",
       "readingRoom": "In the reading room you can work with original documents and copies that are not published on the site. The address and hours are in “Branches and contacts”.",
-      "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one."
+      "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one.",
+      "archive": "An archive is an institution that accepts documents for storage, keeps records of them, preserves them and provides access to them. A regional state archive keeps documents of the region’s authorities, organisations and citizens.",
+      "archivalDocument": "An archival document is a document kept in an archive because it is valuable to society, the state or a person: an order, minutes, a letter, a photograph, a map.",
+      "personnel": "Personnel records are orders on hiring and dismissal, personal files, pay accounts and payrolls. They are used to confirm length of service and earnings.",
+      "archivalCopy": "An archival copy reproduces a whole document, an archival extract only the part you need. The archive issues them on application; this site does not accept applications.",
+      "guide": "A guide is a reference book on the archive’s fonds: which fonds exist, whose documents they hold and for which years.",
+      "catalog": "The e-catalogue searches descriptions of fonds, inventories, files and documents. It shows the reference code, dates and access conditions, and for some documents a digital copy."
     },
     "restart": "Start over",
     "notFound": "No answer? See",

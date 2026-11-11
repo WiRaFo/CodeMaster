@@ -287,7 +287,7 @@ export interface PeriodRef {
 }
 
 /** ЭТАП 12. Ответ архивного помощника (GET /assistant/ask). Текст ответа строится по словарю интерфейса. */
-export type AssistantSection = 'exhibitions' | 'news' | 'history' | 'accessibility' | 'faq' | 'about' | 'visitors' | 'catalog' | 'branches';
+export type AssistantSection = 'services' | 'exhibitions' | 'news' | 'history' | 'accessibility' | 'faq' | 'about' | 'visitors' | 'catalog' | 'branches';
 export type AssistantRecognized =
   | { kind: 'years'; yearFrom: number; yearTo: number; text: string }
   | { kind: 'type' | 'settlement' | 'topic'; value: string; label: string; text: string };
