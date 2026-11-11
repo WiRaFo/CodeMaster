@@ -8,6 +8,7 @@ import { sendPublicImage } from '../../http/public-image.ts';
 import { assertSameOrigin } from '../../http/staff.ts';
 import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
+import { SITE_FILE } from '../admin/page-markup.ts';
 import { publicStaff } from './staff.ts';
 
 const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
@@ -20,7 +21,7 @@ export const infoBodySchema = z.object({
   blocks: z.array(z.discriminatedUnion('type', [
     z.object({ type: z.enum(['p', 'h', 'pending']), text: z.string() }),
     z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
-    z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.string().url().startsWith('https://'), note: z.string().optional() })) }),
+    z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.union([z.string().url().startsWith('https://'), z.string().regex(SITE_FILE)]), note: z.string().optional() })) }),
   ])),
 });
 

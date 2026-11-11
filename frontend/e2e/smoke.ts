@@ -935,6 +935,10 @@ async function seoScenario(browser: Browser) {
   const api = await fetch(`${BASE}/api/v1/branches`);
   check(api.headers.get('x-frame-options') === 'DENY' && (api.headers.get('content-security-policy') ?? '').includes("default-src 'none'"), 'безопасность: заголовки у ответов API');
   const docs = (await (await fetch(`${BASE}/api/v1/anticorruption?lang=ru`)).json()) as { documents: Array<{ files: Array<{ url: string; sizeBytes: number }> }> };
+  for (const lang of ['ru', 'kk']) {
+    const price = await fetch(`${BASE}/files/documents/preyskurant-289-2023-${lang}.pdf`);
+    check(price.ok && price.headers.get('content-type') === 'application/pdf', `платные услуги: прейскурант (${lang}) отдаётся как PDF`);
+  }
   const resolution = await fetch(`${BASE}/files/documents/postanovlenie-142-2026.pdf`);
   check(resolution.ok && resolution.headers.get('content-type') === 'application/pdf', 'филиалы: постановление № 142 отдаётся как PDF');
   for (const f of docs.documents.flatMap((d) => d.files)) {

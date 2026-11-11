@@ -34,7 +34,14 @@ describe('разметка страниц', () => {
     expect(blocks.map((b) => b.type)).toEqual(['h', 'ul', 'p', 'pending', 'links', 'ol']);
     expect(blocks[2]).toEqual({ type: 'p', text: 'Абзац продолжение.' });
     expect(parseMarkup(toMarkup(blocks)).blocks).toEqual(blocks);
-    expect(parseMarkup('Текст\n[Сайт](http://example.kz)').issues).toEqual([{ line: 2, message: 'Адрес ссылки должен начинаться с https:// (http://example.kz)' }]);
+    expect(parseMarkup('Текст\n[Сайт](http://example.kz)').issues).toEqual([{ line: 2, message: 'Адрес ссылки должен начинаться с https:// или /files/documents/ (http://example.kz)' }]);
+    // Документ на самом сайте: только PDF из /files/documents/, без выхода из папки.
+    expect(parseMarkup('[Прейскурант](/files/documents/preyskurant-289-2023-ru.pdf) — скан').blocks).toEqual([{ type: 'links', items: [{ label: 'Прейскурант', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан' }] }]);
+    for (const bad of ['/files/documents/../x.pdf', '/files/documents/a.html', '/admin/x.pdf', 'javascript:alert(1)']) {
+      const parsed = parseMarkup(`[x](${bad})`);
+      expect(parsed.issues.length).toBeGreaterThan(0);
+      expect(parsed.blocks.some((b) => b.type === 'links')).toBe(false);
+    }
     expect(parseMarkup('<script>alert(1)</script>').blocks).toEqual([{ type: 'p', text: '<script>alert(1)</script>' }]);
   });
 });

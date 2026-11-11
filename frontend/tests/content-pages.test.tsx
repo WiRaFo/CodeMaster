@@ -36,6 +36,10 @@ const SERVICES = {
     { type: 'pending', text: 'Сроки и стоимость будут опубликованы позже.' },
   ],
 };
+const PAID = {
+  key: 'services/paid', title: 'Платные услуги', lead: null, actualizedAt: '2026-11-11', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified',
+  blocks: [{ type: 'links', items: [{ label: 'Постановление № 289 с прейскурантом (на русском языке)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 страниц, 1,6 МБ' }] }],
+};
 const READING_ROOM = {
   key: 'reading-room', title: 'Оқу залы', lead: null, actualizedAt: '2026-11-10', contentLang: 'kk', translationStatus: 'machine', dataOrigin: 'verified',
   blocks: [{ type: 'ul', items: ['Шифрларды жазып алыңыз.'] }],
@@ -43,7 +47,7 @@ const READING_ROOM = {
 
 beforeEach(() => {
   fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/pages/services?': SERVICES, '/api/v1/pages/reading-room?': READING_ROOM, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
+    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/pages/services?': SERVICES, '/api/v1/pages/services/paid?': PAID, '/api/v1/pages/reading-room?': READING_ROOM, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
   );
 });
 
@@ -209,6 +213,16 @@ describe('справочные разделы по дополнению к ТЗ'
     expect(screen.getByText('Сведения актуализированы: 10 ноября 2026 г..')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Платные услуги архива' })).toHaveAttribute('href', '/ru/services/paid');
     expect(container.querySelector('main form')).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('платные услуги: прейскурант — PDF на самом сайте, без пометки внешнего ресурса', async () => {
+    const { container } = renderAt('/ru/services/paid');
+    const pdf = await screen.findByRole('link', { name: 'Постановление № 289 с прейскурантом (на русском языке)' });
+    expect(pdf).toHaveAttribute('href', '/files/documents/preyskurant-289-2023-ru.pdf');
+    expect(pdf).toHaveAttribute('type', 'application/pdf');
+    expect(screen.getByText('Документ PDF на этом сайте')).toBeInTheDocument();
+    expect(screen.queryByText(/Внешний ресурс/)).toBeNull();
     expect(await axeViolations(container)).toEqual([]);
   });
 

@@ -4,6 +4,7 @@
  *   - пункт списка            1. пункт нумерованного списка
  *   ! сведения ожидаются от архива (блок «Ожидаются сведения архива»)
  *   [Название](https://адрес) — примечание   (внешняя ссылка; только https)
+ *   [Название](/files/documents/файл.pdf) — примечание   (документ, опубликованный на самом сайте)
  * Пустая строка разделяет абзацы.
  */
 export type InfoBlock =
@@ -13,6 +14,8 @@ export type InfoBlock =
 
 export interface MarkupIssue { line: number; message: string }
 
+/** Файл, опубликованный на самом сайте (frontend/public/files/documents). */
+export const SITE_FILE = /^\/files\/documents\/[a-z0-9][a-z0-9._-]*\.pdf$/;
 const LINK = /^\[([^\]]{1,300})\]\((\S{1,500})\)(?:\s+[—-]\s+(.{1,500}))?$/;
 
 export function parseMarkup(text: string): { blocks: InfoBlock[]; issues: MarkupIssue[] } {
@@ -42,13 +45,13 @@ export function parseMarkup(text: string): { blocks: InfoBlock[]; issues: Markup
       m = LINK.exec(line);
       if (!m) { issues.push({ line: n, message: 'Ссылка записывается так: [Название](https://адрес) — примечание' }); return; }
       const url = m[2] ?? '';
-      let valid = false;
+      let valid = SITE_FILE.test(url);
       try {
-        valid = new URL(url).protocol === 'https:';
+        valid ||= new URL(url).protocol === 'https:';
       } catch {
-        valid = false;
+        // не абсолютный адрес
       }
-      if (!valid) { issues.push({ line: n, message: `Адрес ссылки должен начинаться с https:// (${url})` }); return; }
+      if (!valid) { issues.push({ line: n, message: `Адрес ссылки должен начинаться с https:// или /files/documents/ (${url})` }); return; }
       const item = { label: m[1] ?? '', url, ...(m[3] ? { note: m[3] } : {}) };
       const last = blocks[blocks.length - 1];
       if (last && last.type === 'links') last.items.push(item);

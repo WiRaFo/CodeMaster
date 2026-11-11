@@ -88,7 +88,8 @@ describe('перенесённые данные (docs/requirements-matrix.md Q-2
     }
     const verified = await db.branch.findMany({ where: { dataOrigin: 'verified' } });
     expect(verified).toHaveLength(14);
-    for (const b of verified) expect(b.verifiedAt?.toISOString().slice(0, 10)).toBe('2026-11-10');
+    // Дата сверки — день передачи данных архивом; правка в панели (api-admin-branches) ставит дату правки.
+    for (const b of verified) expect((b.verifiedAt?.toISOString().slice(0, 10) ?? '') >= '2026-11-10').toBe(true);
     // Координаты не выдумываются: ни у одной записи их нет, на карту ничего не выводится.
     for (const b of [...migrated, ...verified]) {
       expect(b.lat).toBeNull();

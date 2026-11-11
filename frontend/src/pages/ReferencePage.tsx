@@ -1,4 +1,4 @@
-import { CircleAlert, ExternalLink } from 'lucide-react';
+import { CircleAlert, ExternalLink, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
@@ -65,7 +65,16 @@ export function InfoBlockView({ block, headingLevel = 2 }: { block: InfoBlock; h
     case 'links':
       return (
         <ul className="flex flex-col gap-3">
-          {block.items.map((l, i) => (
+          {block.items.map((l, i) => l.url.startsWith('/files/') ? (
+            <li key={i} className="rounded-md border-2 border-border bg-surface p-3">
+              <a href={l.url} type="application/pdf" className="inline-flex flex-wrap items-baseline gap-x-2 font-semibold wrap-anywhere">
+                <FileText aria-hidden="true" className="size-4 shrink-0 self-center" />
+                <span>{l.label}</span>
+              </a>
+              {l.note ? <p className="mt-1 text-sm">{l.note}</p> : null}
+              <p className="mt-1 text-sm text-muted">{t('reference.pdf')}</p>
+            </li>
+          ) : (
             <li key={i} className="rounded-md border-2 border-border bg-surface p-3">
               <a href={l.url} rel="noopener noreferrer" className="inline-flex flex-wrap items-baseline gap-x-2 font-semibold wrap-anywhere">
                 <span>{l.label}</span>
