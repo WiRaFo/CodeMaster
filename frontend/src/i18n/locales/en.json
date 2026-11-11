@@ -148,8 +148,8 @@
   },
   "accessibilityPage": {
     "lead": "We want everyone to be able to use this website, including people with visual, hearing, motor and cognitive impairments. Our target is WCAG 2.2 level AA.",
-    "panelTitle": "Settings panel",
-    "panelText": "The “Accessibility” button is in the header of every page. In the panel you can enlarge text up to 200%, change spacing, turn on high contrast, the dark or warm scheme and a highly legible font, reduce animation and enable simplified mode. Settings are stored only in your browser.",
+    "panelTitle": "Theme and text size",
+    "panelText": "The moon button in the header switches between the light and dark theme. The site follows the dark theme and reduced motion settings of your system. You can enlarge text up to 200% with browser zoom (Ctrl or Cmd and “+”): no content is lost and no horizontal scrolling is needed.",
     "keyboardTitle": "Keyboard use",
     "keyboardItems": [
       "Tab and Shift+Tab move between elements; focus is always visible.",
