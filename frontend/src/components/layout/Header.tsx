@@ -1,10 +1,10 @@
-import { Eye, Menu, Pause, Phone, Play, Search, X } from 'lucide-react';
+import { Menu, Phone, Search, X } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router';
-import { useA11y } from '../../app/A11yProvider.tsx';
 import { telHref, useMainBranch } from '../../lib/main-branch.ts';
 import { SECTIONS, sectionHref, type SectionKey } from '../../lib/sections.ts';
+import { AccessMenu } from './AccessMenu.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
 import { LowVisionBar } from './LowVisionBar.tsx';
 
@@ -22,7 +22,6 @@ export function Header() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const { pathname } = useLocation();
-  const { prefs, update } = useA11y();
   const navigate = useNavigate();
   const contacts = useMainBranch(lang);
   const [query, setQuery] = useState('');
@@ -80,9 +79,6 @@ export function Header() {
   const branch = contacts.status === 'ready' ? contacts.branch : null;
   const barShown = bar === 'up';
   const barTab = barShown ? 0 : -1;
-  const lowVisionLabel = t(prefs.mode ? 'header.lowVisionOff' : 'header.lowVisionOn');
-  const lowVisionShort = t(prefs.mode ? 'header.lowVisionShortOff' : 'header.lowVisionShortOn');
-  const toggleLowVision = () => update({ mode: !prefs.mode });
 
   const links = (variant: 'nav' | 'menu' | 'drop') =>
     SECTIONS.map((s) => {
@@ -110,14 +106,7 @@ export function Header() {
             <span className="hdr-official">{t('header.official')}</span>
             <span className="d-row hdr-top-end">
               {branch?.scheduleText ? <span className="hdr-hours">{branch.scheduleText}</span> : null}
-              <button type="button" className="motion-btn" aria-pressed={prefs.still} aria-label={t('header.motionAria')}
-                onClick={() => update({ still: !prefs.still })}>
-                {prefs.still ? <Play aria-hidden="true" className="size-4" /> : <Pause aria-hidden="true" className="size-4" />}
-                <span className="motion-t">{t(prefs.still ? 'header.motionStart' : 'header.motionStop')}</span>
-              </button>
-              <button type="button" className="a11y-top show-m" aria-pressed={prefs.mode} onClick={toggleLowVision}>
-                <Eye aria-hidden="true" className="size-[18px]" />{lowVisionShort}
-              </button>
+              <AccessMenu variant="top" />
               {branch?.phone ? (
                 <a href={telHref(branch.phone)} className="hdr-phone">
                   <Phone aria-hidden="true" className="bell size-[18px] text-[var(--gold)]" />{branch.phone}
@@ -144,9 +133,7 @@ export function Header() {
               <Search aria-hidden="true" className="size-5" />{t('header.searchSubmit')}
             </button>
           </form>
-          <button type="button" className="a11y-btn hide-m" aria-pressed={prefs.mode} onClick={toggleLowVision}>
-            <span className="a11y-ico"><Eye aria-hidden="true" className="size-[22px]" /></span>{lowVisionLabel}
-          </button>
+          <AccessMenu variant="main" />
           <LanguageSwitcher className="hide-m" />
           <button ref={menuButton} type="button" className="btn dark sm hdr-burger" aria-expanded={menuOpen} aria-controls="hdr-menu"
             onClick={() => setMenuOpen((open) => !open)}>
@@ -181,9 +168,7 @@ export function Header() {
           <Link to={`/${lang}/catalog`} className="btn sm hide-m" tabIndex={barTab}>
             <Search aria-hidden="true" className="size-5" />{t('header.catalogSearch')}
           </Link>
-          <button type="button" className="a11y-btn a11y-btn-bar" aria-pressed={prefs.mode} tabIndex={barTab} onClick={toggleLowVision}>
-            <span className="a11y-ico"><Eye aria-hidden="true" className="size-[22px]" /></span>{lowVisionShort}
-          </button>
+          <AccessMenu variant="bar" tabIndex={barTab} />
           {branch?.phone ? (
             <a href={telHref(branch.phone)} className="hdr-bar-phone hide-m" tabIndex={barTab}>{branch.phone}</a>
           ) : null}

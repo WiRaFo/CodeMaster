@@ -20,6 +20,8 @@
         root.classList.toggle('a11y-wb', on && p.scheme === 'wb');
         root.classList.toggle('a11y-blue', on && p.scheme === 'blue');
         root.classList.remove('a11y-noimg');
+        root.classList.toggle('txt-l', !on && p.text === 'l');
+        root.classList.toggle('txt-xl', !on && p.text === 'xl');
         root.classList.toggle('no-motion', p.still === true);
         root.dataset.theme = 'light';
         root.dataset.contrast = on ? 'high' : 'normal';

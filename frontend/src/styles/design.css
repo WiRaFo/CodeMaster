@@ -331,6 +331,36 @@ html.no-motion .quill{display:none}
 @media (max-width:720px){.hdr-top .d-row{gap:6px 8px!important;flex-wrap:nowrap}.hdr-top .wrap{padding-left:12px;padding-right:12px}.hdr-top .bell{display:none}.hdr-phone{font-size:14px;white-space:nowrap}.a11y-top{padding:0 8px;gap:6px;font-size:14px;white-space:nowrap}}
 
 
+/* Размер текста из меню доступности (без версии для слабовидящих): корень и --fs растут вместе. */
+html.txt-l{font-size:115%}html.txt-l .site{--fs:1.15}
+html.txt-xl{font-size:130%}html.txt-xl .site{--fs:1.3}
+@media (max-width:720px){html.txt-l{font-size:108%}html.txt-l .site{--fs:1.02}html.txt-xl{font-size:118%}html.txt-xl .site{--fs:1.12}}
+
+/* Меню доступности в шапке */
+.am{position:relative;display:inline-flex}
+.am-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:60;width:min(380px,calc(100vw - 24px));padding:20px;border-radius:20px;background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 30px 60px -20px rgba(16,36,68,.45);display:flex;flex-direction:column;gap:18px;text-align:left}
+.am-top .am-panel{left:0;right:auto}
+.am-h{margin:0 0 8px;font-weight:800;font-size:calc(16px * var(--fs,1))}
+.am-row{display:flex;gap:8px}
+.am-opt{flex:1;min-height:48px;padding:0 8px;border-radius:12px;border:2px solid var(--line2);background:#fff;color:var(--ink);font:700 calc(16px * var(--fs,1)) 'Inter Variable','Inter','Segoe UI',sans-serif;cursor:pointer;transition:background-color .2s,border-color .2s}
+.am-opt:hover{border-color:var(--brand)}
+.am-opt[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.am-opt .a1{font-size:calc(15px * var(--fs,1))}.am-opt .a2{font-size:calc(19px * var(--fs,1))}.am-opt .a3{font-size:calc(23px * var(--fs,1))}
+.am-switch{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:56px;padding:0 16px;border-radius:14px;border:2px solid var(--line2);background:#fff;color:var(--ink);font:700 calc(16px * var(--fs,1)) 'Inter Variable','Inter','Segoe UI',sans-serif;cursor:pointer;text-align:left}
+.am-switch .knob{flex:none;width:46px;height:26px;border-radius:99px;background:var(--line2);position:relative;transition:background-color .2s}
+.am-switch .knob::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+.am-switch[aria-pressed="true"]{border-color:var(--ink)}
+.am-switch[aria-pressed="true"] .knob{background:var(--brand)}
+.am-switch[aria-pressed="true"] .knob::after{transform:translateX(20px)}
+.am-note{margin:8px 0 0;font-size:calc(14px * var(--fs,1));color:var(--muted)}
+.am-reset{align-self:flex-start;min-height:44px;padding:0 14px;border-radius:12px;border:0;background:var(--tint);color:var(--brand);font:700 calc(15px * var(--fs,1)) 'Inter Variable','Inter','Segoe UI',sans-serif;cursor:pointer}
+.am-reset:hover{background:var(--tint2)}
+.am-top .a11y-top[aria-expanded="true"]{background:var(--gold);color:#000}
+.a11y-btn[aria-expanded="true"]{background:var(--tint)}
+html.a11y .am-panel{background:#fff;color:#000;border:3px solid #000}
+html.a11y .am-opt,html.a11y .am-switch{border:3px solid #000}
+html.a11y .am-opt[aria-pressed="true"]{background:#000;color:#fff}
+
 /* ---------- Привязка к CMS ---------- */
 /* Утилиты Tailwind в rem растут вместе с версией для слабовидящих: корень получает тот же множитель, что --fs. */
 html.a11y{font-size:130%}

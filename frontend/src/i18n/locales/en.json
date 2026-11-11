@@ -855,5 +855,17 @@
     "blue": "Dark blue on light blue",
     "swatch": "A",
     "exit": "Standard version"
+  },
+  "access": {
+    "menu": "Accessibility",
+    "menuAria": "Site accessibility settings",
+    "textSize": "Text size",
+    "textM": "Normal",
+    "textL": "Large",
+    "textXl": "Extra large",
+    "modeTitle": "Low-vision version",
+    "modeHint": "Large text, high contrast and colour are set in the yellow bar at the top of the page.",
+    "sizeInMode": "In the low-vision version, text size is chosen in the yellow bar.",
+    "reset": "Reset settings"
   }
 }

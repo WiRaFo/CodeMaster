@@ -44,8 +44,8 @@ describe('каркас страницы', () => {
     const langs = within(banner).getByRole('navigation', { name: 'Язык сайта' });
     expect(within(langs).getAllByRole('link').map((a) => a.textContent)).toEqual(['KZ', 'RU', 'EN']);
     expect(within(langs).getByRole('link', { name: 'RU' })).toHaveAttribute('aria-current', 'true');
-    expect(within(banner).getByRole('button', { name: 'Версия для слабовидящих' })).toHaveAttribute('aria-pressed', 'false');
-    expect(within(banner).getByRole('button', { name: 'Остановить анимацию на сайте' })).toBeInTheDocument();
+    expect(within(banner).getAllByRole('button', { name: 'Настройки доступности сайта' })[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(within(banner).queryByRole('button', { name: 'Остановить анимацию на сайте' })).toBeNull();
     expect(within(banner).getByRole('searchbox', { name: 'Поиск по сайту' })).toBeInTheDocument();
     // Переход к электронному каталогу — пункт меню с полным названием в подсказке (дизайн 11.11.2026).
     const nav = within(banner).getByRole('navigation', { name: 'Основные разделы' });
@@ -109,12 +109,20 @@ describe('каркас страницы', () => {
   });
 });
 
+async function openAccessMenu(user: ReturnType<typeof userEvent.setup>) {
+  const trigger = (await screen.findAllByRole('button', { name: 'Настройки доступности сайта' }))[0] as HTMLElement;
+  await user.click(trigger);
+  expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  return trigger;
+}
+
 describe('версия для слабовидящих', () => {
   it('кнопка в шапке включает режим, панель меняет размер и цвет, выход возвращает обычную версию', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/ru');
     const root = document.documentElement;
-    await user.click(await screen.findByRole('button', { name: 'Версия для слабовидящих' }));
+    await openAccessMenu(user);
+    await user.click(screen.getByRole('button', { name: /Версия для слабовидящих/ }));
     expect(root.classList.contains('a11y')).toBe(true);
     const bar = screen.getByRole('region', { name: 'Настройки версии для слабовидящих' });
     await user.click(within(bar).getByRole('button', { name: 'Очень крупный' }));
@@ -131,11 +139,24 @@ describe('версия для слабовидящих', () => {
     expect(screen.queryByRole('region', { name: 'Настройки версии для слабовидящих' })).toBeNull();
   });
 
-  it('кнопка «Остановить анимацию» ставит движение на паузу', async () => {
+  it('меню доступности: размер текста, пауза анимации и сброс; Esc закрывает меню', async () => {
     const user = userEvent.setup();
     renderAt('/ru');
-    await user.click(await screen.findByRole('button', { name: 'Остановить анимацию на сайте' }));
-    expect(document.documentElement.classList.contains('no-motion')).toBe(true);
-    expect(document.documentElement.dataset['motion']).toBe('reduce');
+    const root = document.documentElement;
+    const trigger = await openAccessMenu(user);
+    await user.click(screen.getByRole('button', { name: 'Крупный' }));
+    expect(root.classList.contains('txt-l')).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Очень крупный' }));
+    expect(root.classList.contains('txt-xl')).toBe(true);
+    expect(root.classList.contains('txt-l')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Остановить анимацию' }));
+    expect(root.classList.contains('no-motion')).toBe(true);
+    expect(root.dataset['motion']).toBe('reduce');
+    await user.click(screen.getByRole('button', { name: 'Сбросить настройки' }));
+    expect(root.classList.contains('txt-xl')).toBe(false);
+    expect(root.classList.contains('no-motion')).toBe(false);
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: 'Настройки доступности сайта' })).toBeNull();
   });
 });

@@ -10,6 +10,8 @@ import { readStorage, writeStorage } from './storage.ts';
 export const A11Y_STORAGE_KEY = 'archive-vko:a11y';
 
 export const SIZES = ['l', 'xl'] as const;
+/** Размер текста вне версии для слабовидящих: обычный, крупный, очень крупный. */
+export const TEXTS = ['m', 'l', 'xl'] as const;
 export const SCHEMES = ['bw', 'wb', 'blue'] as const;
 
 export interface A11yPrefs {
@@ -19,11 +21,13 @@ export interface A11yPrefs {
   size: (typeof SIZES)[number];
   /** Цвет: чёрным по белому, белым по чёрному, синим по голубому. */
   scheme: (typeof SCHEMES)[number];
+  /** Размер текста из меню доступности (когда версия для слабовидящих выключена). */
+  text: (typeof TEXTS)[number];
   /** Анимация остановлена кнопкой в шапке (WCAG 2.2.2). */
   still: boolean;
 }
 
-export const DEFAULT_PREFS: A11yPrefs = { mode: false, size: 'l', scheme: 'bw', still: false };
+export const DEFAULT_PREFS: A11yPrefs = { mode: false, size: 'l', scheme: 'bw', text: 'm', still: false };
 
 const oneOf = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
   list.includes(value as T) ? (value as T) : fallback;
@@ -35,6 +39,7 @@ export function sanitizePrefs(raw: unknown): A11yPrefs {
     mode: v['mode'] === true,
     size: oneOf(SIZES, v['size'], DEFAULT_PREFS.size),
     scheme: oneOf(SCHEMES, v['scheme'], DEFAULT_PREFS.scheme),
+    text: oneOf(TEXTS, v['text'], DEFAULT_PREFS.text),
     still: v['still'] === true,
   };
 }
@@ -53,7 +58,7 @@ export function savePrefs(prefs: A11yPrefs): void {
   writeStorage(A11Y_STORAGE_KEY, JSON.stringify(prefs));
 }
 
-/** Классы на <html>, на которые опирается design.css: a11y, a11y-xl, a11y-wb, a11y-blue, no-motion. */
+/** Классы на <html>, на которые опирается design.css: a11y, a11y-xl, a11y-wb, a11y-blue, txt-l, txt-xl, no-motion. */
 export function prefsClasses(prefs: A11yPrefs): string[] {
   const list: string[] = [];
   if (prefs.mode) {
@@ -61,12 +66,12 @@ export function prefsClasses(prefs: A11yPrefs): string[] {
     if (prefs.size === 'xl') list.push('a11y-xl');
     if (prefs.scheme === 'wb') list.push('a11y-wb');
     if (prefs.scheme === 'blue') list.push('a11y-blue');
-  }
+  } else if (prefs.text !== 'm') list.push(`txt-${prefs.text}`);
   if (prefs.still) list.push('no-motion');
   return list;
 }
 
-export const ALL_CLASSES = ['a11y', 'a11y-xl', 'a11y-wb', 'a11y-blue', 'a11y-noimg', 'no-motion'] as const;
+export const ALL_CLASSES = ['a11y', 'a11y-xl', 'a11y-wb', 'a11y-blue', 'a11y-noimg', 'txt-l', 'txt-xl', 'no-motion'] as const;
 
 /** Переносит режим на <html>: классы дизайна и data-атрибуты (data-theme нужен токенам, data-motion — тестам). */
 export function applyPrefs(prefs: A11yPrefs, root: HTMLElement): void {

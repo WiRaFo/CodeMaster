@@ -22,10 +22,15 @@ describe('версия для слабовидящих', () => {
   it('applyPrefs ставит классы дизайна; без версии схема и размер не действуют', () => {
     const root = document.documentElement;
     reset(root);
-    applyPrefs({ mode: true, size: 'xl', scheme: 'wb', still: false }, root);
+    applyPrefs({ mode: true, size: 'xl', scheme: 'wb', text: 'm', still: false }, root);
     expect(snapshot(root)).toEqual({ classes: ['a11y', 'a11y-wb', 'a11y-xl'], dataset: { theme: 'light', contrast: 'high', motion: 'reduce' } });
-    applyPrefs({ mode: false, size: 'xl', scheme: 'wb', still: true }, root);
+    applyPrefs({ mode: false, size: 'xl', scheme: 'wb', text: 'm', still: true }, root);
     expect(snapshot(root)).toEqual({ classes: ['no-motion'], dataset: { theme: 'light', contrast: 'normal', motion: 'reduce' } });
+    applyPrefs({ mode: false, size: 'l', scheme: 'bw', text: 'xl', still: false }, root);
+    expect(snapshot(root)).toEqual({ classes: ['txt-xl'], dataset: { theme: 'light', contrast: 'normal', motion: 'full' } });
+    // В версии для слабовидящих размер текста задаётся панелью, а не меню.
+    applyPrefs({ mode: true, size: 'l', scheme: 'bw', text: 'xl', still: false }, root);
+    expect(snapshot(root).classes).toEqual(['a11y']);
   });
 
   const cases: Array<Partial<A11yPrefs>> = [
@@ -34,6 +39,9 @@ describe('версия для слабовидящих', () => {
     { mode: true, size: 'xl', scheme: 'blue' },
     { mode: true, scheme: 'wb', still: true },
     { still: true, scheme: 'blue' },
+    { text: 'l' },
+    { text: 'xl', still: true },
+    { mode: true, text: 'xl' },
   ];
   it.each(cases)('инлайн-скрипт index.html применяет то же, что applyPrefs: %o', (patch) => {
     const prefs = { ...DEFAULT_PREFS, ...patch };
