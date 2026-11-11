@@ -89,15 +89,14 @@ function AnswerLinks({ topic, answer }: { topic: string; answer: string }) {
   const keys = LINKABLE.filter((key) => key === TOPIC_LINK[topic] || text.includes(t(`nav.${key}`).toLowerCase()));
   // Ответ о языках сайта — сразу с переключателем KZ / RU / EN.
   const aboutLangs = /казахск|қазақ|kazakh/u.test(text);
-  if (keys.length === 0 && !aboutLangs) return null;
+  // Там нужен только переключатель языка, без кнопок разделов.
+  if (aboutLangs) return <LanguageSwitcher className="faq-lang" label={t('faq.langSwitch')} />;
+  if (keys.length === 0) return null;
   return (
-    <>
-    {aboutLangs ? <LanguageSwitcher className="faq-lang" label={t('faq.langSwitch')} /> : null}
     <ul className="faq-links" aria-label={t('faq.linksLabel')}>
       {keys.map((key) => (
         <li key={key}><Link to={`/${lang}/${key}`} className="btn ghost sm">{t(`nav.${key}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link></li>
       ))}
     </ul>
-    </>
   );
 }
