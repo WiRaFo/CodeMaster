@@ -596,7 +596,8 @@
     "persons": "People",
     "events": "Timeline events",
     "photos_one": "Photo ({{count}})",
-    "photos_other": "Photos ({{count}})"
+    "photos_other": "Photos ({{count}})",
+    "filterLabel": "Publication filter"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",

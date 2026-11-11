@@ -612,7 +612,8 @@
     "photos_one": "Фото ({{count}})",
     "photos_few": "Фото ({{count}})",
     "photos_many": "Фото ({{count}})",
-    "photos_other": "Фото ({{count}})"
+    "photos_other": "Фото ({{count}})",
+    "filterLabel": "Фильтр публикаций"
   },
   "feedback": {
     "lead": "Напишите, что неудобно на сайте, что трудно найти или что стоит добавить.",

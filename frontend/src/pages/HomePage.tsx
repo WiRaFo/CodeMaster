@@ -444,7 +444,8 @@ function HomeBlocks({ data, lang }: { data: HomeData; lang: string }) {
   );
 }
 
-function HistoryBlock({ data, lang }: { data: HomeData; lang: string }) {
+/** Пять папок раздела «Цифровая история» (Main.dc.html и History.dc.html). */
+export function HistoryFolders({ lang }: { lang: string }) {
   const { t } = useTranslation();
   const tabs = [
     { key: 'timeline', to: `/${lang}/history/timeline`, Icon: Clock },
@@ -453,6 +454,27 @@ function HistoryBlock({ data, lang }: { data: HomeData; lang: string }) {
     { key: 'gallery', to: `/${lang}/history/gallery`, Icon: Images },
     { key: 'calendar', to: `/${lang}/calendar`, Icon: CalendarDays },
   ] as const;
+  return (
+  <ul className="d-grid quick-grid mb-11 gap-x-4 gap-y-[22px] [--min:230px]">
+    {tabs.map(({ key, to, Icon }, i) => (
+      <li key={key} className="flex">
+        <Link className="fold sr flex-1" to={to} style={folderStyle([0, 1, 2, 3, 0][i] ?? 0, 220)}>
+          <span className="fold-tab" aria-hidden="true">{t(`home.historyTabs.${key}.tab`)}</span>
+          <span className="fold-back" aria-hidden="true" />
+          <span className="fold-paper p2" aria-hidden="true" /><span className="fold-paper" aria-hidden="true" />
+          <span className="fold-front">
+            <Icon aria-hidden="true" className="size-9" strokeWidth={1.8} />
+            <span className="fold-title text-[calc(22px*var(--fs,1))] font-extrabold leading-tight">{t(`home.historyTabs.${key}.name`)}</span>
+          </span>
+        </Link>
+      </li>
+    ))}
+  </ul>
+  );
+}
+
+function HistoryBlock({ data, lang }: { data: HomeData; lang: string }) {
+  const { t } = useTranslation();
   const { topics, publications, documents } = data.history;
   return (
     <section id="history" className="wrap sec pb-12" aria-labelledby="home-history">
@@ -463,21 +485,7 @@ function HistoryBlock({ data, lang }: { data: HomeData; lang: string }) {
         </div>
         <Link to={`/${lang}/history`} className="btn ghost">{t('home.allPublications')}</Link>
       </div>
-      <ul className="d-grid quick-grid mb-11 gap-x-4 gap-y-[22px] [--min:230px]">
-        {tabs.map(({ key, to, Icon }, i) => (
-          <li key={key} className="flex">
-            <Link className="fold sr flex-1" to={to} style={folderStyle([0, 1, 2, 3, 0][i] ?? 0, 220)}>
-              <span className="fold-tab" aria-hidden="true">{t(`home.historyTabs.${key}.tab`)}</span>
-              <span className="fold-back" aria-hidden="true" />
-              <span className="fold-paper p2" aria-hidden="true" /><span className="fold-paper" aria-hidden="true" />
-              <span className="fold-front">
-                <Icon aria-hidden="true" className="size-9" strokeWidth={1.8} />
-                <span className="fold-title text-[calc(22px*var(--fs,1))] font-extrabold leading-tight">{t(`home.historyTabs.${key}.name`)}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <HistoryFolders lang={lang} />
       {publications.length > 0 ? (
         <>
           <h3 className="h3 mb-[18px]">{t('home.publicationsTitle')}</h3>

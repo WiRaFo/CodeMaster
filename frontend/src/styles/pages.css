@@ -229,3 +229,19 @@ html.a11y .ex-card,html.a11y .ex-filter{border:2px solid #000}
 .ex-toc-n{flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.18);font-weight:800}
 .ex-toc-item[aria-current="page"] .ex-toc-n{background:var(--brand);color:#fff}
 html.a11y .ex-toc{border:2px solid #000}
+
+/* Цифровая история (History.dc.html) */
+.hist-head .page-head{padding-bottom:200px;margin-bottom:64px}
+#history-topics,#history-pubs{margin-bottom:20px}
+.hist-mnt{position:absolute;left:0;right:0;bottom:0;width:100%;height:200px;pointer-events:none}
+.hist-mnt .m1{fill:var(--ink2)}.hist-mnt .m2{fill:var(--inkDeep)}.hist-mnt .river{stroke:var(--onDarkAccent2);stroke-dasharray:1600;stroke-dashoffset:1600;animation:hist-draw 4s .3s ease-out forwards}
+@keyframes hist-draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion: reduce){.hist-mnt .river{animation:none;stroke-dashoffset:0}}
+html[data-motion="reduce"] .hist-mnt .river{animation:none;stroke-dashoffset:0}
+html.a11y .hist-mnt{display:none}
+.topic[aria-current="true"]{background:var(--brand);color:#fff}.topic[aria-current="true"] .topic-n{background:#fff;color:var(--brand)}
+.hist-filter{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:22px;margin-bottom:24px}
+.hist-f{flex:1 1 260px;display:flex;flex-direction:column;gap:8px;font-weight:700;font-size:calc(17px * var(--fs,1))}
+.hist-f .field{font-weight:500}
+.pub-card{flex:1;padding:24px}
+.pub-cover{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:14px}
