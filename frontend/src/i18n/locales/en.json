@@ -661,7 +661,8 @@
       "visit": "Visiting the archive",
       "site": "Using the website"
     },
-    "linksLabel": "Go to section"
+    "linksLabel": "Go to section",
+    "langSwitch": "Switch site language"
   },
   "visitors": {
     "lead": "How to prepare for a visit to the archive.",

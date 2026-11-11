@@ -321,3 +321,4 @@ html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
 .asst-lang:hover{background:#fff}
 .asst-lang[aria-pressed="true"]{background:var(--ink);color:#fff}
 .tile-grid{grid-auto-rows:1fr}.tile-grid>li{display:flex}.tile-grid .tile{flex:1}
+.lang.faq-lang{display:inline-flex;margin-top:14px;align-self:flex-start}

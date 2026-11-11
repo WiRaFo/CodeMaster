@@ -1,6 +1,7 @@
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { LanguageSwitcher } from '../components/layout/LanguageSwitcher.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -86,12 +87,17 @@ function AnswerLinks({ topic, answer }: { topic: string; answer: string }) {
   const { lang = 'kk' } = useParams();
   const text = answer.toLowerCase();
   const keys = LINKABLE.filter((key) => key === TOPIC_LINK[topic] || text.includes(t(`nav.${key}`).toLowerCase()));
-  if (keys.length === 0) return null;
+  // Ответ о языках сайта — сразу с переключателем KZ / RU / EN.
+  const aboutLangs = /казахск|қазақ|kazakh/u.test(text);
+  if (keys.length === 0 && !aboutLangs) return null;
   return (
+    <>
+    {aboutLangs ? <LanguageSwitcher className="faq-lang" label={t('faq.langSwitch')} /> : null}
     <ul className="faq-links" aria-label={t('faq.linksLabel')}>
       {keys.map((key) => (
         <li key={key}><Link to={`/${lang}/${key}`} className="btn ghost sm">{t(`nav.${key}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link></li>
       ))}
     </ul>
+    </>
   );
 }
