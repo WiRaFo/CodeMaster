@@ -1,10 +1,11 @@
-import { Send } from 'lucide-react';
+import { Info, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { OriginBadge } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { ApiRequestError, apiGet } from '../lib/api.ts';
+import { useMainBranch } from '../lib/main-branch.ts';
 import { SECTIONS, sectionHref } from '../lib/sections.ts';
 import type { AssistantAnswer, AssistantDocument, AssistantRecognized, AssistantSection } from '../lib/types.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
@@ -22,7 +23,7 @@ function SectionLinks({ links }: { links: AssistantSection[] }) {
         const path = SECTIONS.find((s) => s.key === key)?.path ?? key;
         return (
           <li key={key}>
-            <Link to={sectionHref(lang, path)} className="btn-secondary">{t(`nav.${key}`)}</Link>
+            <Link to={sectionHref(lang, path)} className="btn ghost sm">{t(`nav.${key}`)}</Link>
           </li>
         );
       })}
@@ -35,10 +36,10 @@ function RecognizedList({ items }: { items: AssistantRecognized[] }) {
   if (items.length === 0) return null;
   return (
     <div className="mb-2">
-      <p>{t('assistant.understood')}</p>
+      <p className="font-bold">{t('assistant.understood')}</p>
       <ul className="mt-1 flex flex-wrap gap-2" data-testid="recognized">
         {items.map((r) => (
-          <li key={`${r.kind}-${r.text}`} className="rounded border-2 border-border bg-surface-2 px-2 py-0.5">
+          <li key={`${r.kind}-${r.text}`} className="asst-chip">
             <span className="text-muted">{t(`assistant.kinds.${r.kind}`)}: </span>
             {r.kind === 'years' ? (r.yearFrom === r.yearTo ? String(r.yearFrom) : `${r.yearFrom}–${r.yearTo}`) : r.label}
           </li>
@@ -55,7 +56,7 @@ function DocumentList({ documents, label }: { documents: AssistantDocument[]; la
   return (
     <ol className="mt-2 flex flex-col gap-2" aria-label={label}>
       {documents.map((d) => (
-        <li key={d.id} className="rounded-md border-2 border-border p-3">
+        <li key={d.id} className="asst-item">
           <Link to={`/${lang}/catalog/documents/${d.id}`}>{[d.code, d.title].filter(Boolean).join(' — ')}</Link>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
             {d.type ? <span className="text-muted">{d.type}</span> : null}
@@ -107,11 +108,11 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
           <p>{t('assistant.answers.branches')}</p>
           <ul className="mt-2 flex flex-col gap-2">
             {answer.branches.map((b) => (
-              <li key={b.slug} className="rounded-md border-2 border-border p-3">
-                <Link to={`/${lang}/branches/${b.slug}`} className="font-semibold">{b.name ?? b.slug}</Link>{' '}
+              <li key={b.slug} className="asst-item">
+                <Link to={`/${lang}/branches/${b.slug}`} className="text-[calc(20px*var(--fs,1))] font-extrabold">{b.name ?? b.slug}</Link>{' '}
                 <VerificationBadge show={b.needsVerification} />
                 {b.address ? <p>{b.address}</p> : null}
-                {b.phone ? <p><a href={telHref(b.phone)}>{b.phone}</a></p> : null}
+                {b.phone ? <p className="mt-1"><a href={telHref(b.phone)} className="text-[calc(22px*var(--fs,1))] font-extrabold">{b.phone}</a></p> : null}
                 {b.email ? <p className="break-words"><a href={`mailto:${b.email}`}>{b.email}</a></p> : null}
               </li>
             ))}
@@ -142,7 +143,7 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
                   <p className="mt-3">{t('assistant.answers.suggestions')}</p>
                   <ul className="mt-1 flex flex-wrap gap-2">
                     {answer.suggestions.map((s) => (
-                      <li key={s.reason}><Link to={catalog(s.query)} className="btn-secondary">{t(`assistant.suggest.${s.reason}`)}</Link></li>
+                      <li key={s.reason}><Link to={catalog(s.query)} className="btn ghost sm">{t(`assistant.suggest.${s.reason}`)}</Link></li>
                     ))}
                   </ul>
                 </>
@@ -193,21 +194,24 @@ export function AssistantPage() {
     // ask зависит только от языка; повторный запрос — только при новом q в адресе.
   }, [params]);
 
-  return (
-    <>
-      <PageHeading title={t('nav.assistant')}>
-        <p className="mt-2 max-w-3xl">{t('assistant.lead')}</p>
-      </PageHeading>
-      <p className="mb-6 max-w-3xl rounded-md border-2 border-border bg-surface p-3 text-sm">{t('assistant.disclaimer')}</p>
+  const main = useMainBranch(lang);
+  const phone = main.status === 'ready' ? main.branch.phone : null;
 
-      <ol className="mb-6 flex max-w-3xl flex-col gap-4" aria-live="polite" data-testid="assistant-log">
+  return (
+    <div className="asst-page">
+      <PageHeading title={t('nav.assistant')} variant="plain">
+        <p className="lead mb-6">{t('assistant.lead')}</p>
+      </PageHeading>
+      <p className="asst-note"><Info aria-hidden="true" className="size-5 shrink-0" />{t('assistant.disclaimer')}</p>
+
+      <ol className="asst-log" aria-live="polite" data-testid="assistant-log">
         {turns.map((turn) => (
-          <li key={turn.id} className="flex flex-col gap-2">
-            <p className="self-end rounded-md bg-surface-2 px-3 py-2">
+          <li key={turn.id} className="flex flex-col gap-4">
+            <p className="asst-you">
               <span className="visually-hidden">{t('assistant.you')}: </span>
               {turn.question}
             </p>
-            <div className="rounded-md border-2 border-border bg-surface p-3" data-testid="assistant-answer">
+            <div className="card asst-bot" data-testid="assistant-answer">
               <span className="visually-hidden">{t('assistant.bot')}: </span>
               {turn.state === 'loading' ? <p>{t('common.loading')}</p> : null}
               {turn.state === 'error' ? <p role="alert">{turn.tooMany ? t('assistant.tooMany') : t('common.loadError')}</p> : null}
@@ -218,32 +222,39 @@ export function AssistantPage() {
       </ol>
 
       <form
-        className="mb-4 flex max-w-3xl flex-col gap-2"
+        className="mb-8"
         onSubmit={(e) => {
           e.preventDefault();
           ask(draft);
         }}
       >
-        <label htmlFor="assistant-q" className="font-semibold">{t('assistant.question')}</label>
-        <div className="flex flex-wrap gap-2">
-          <input id="assistant-q" type="text" className="input min-w-0 flex-1" maxLength={300} value={draft} onChange={(e) => setDraft(e.target.value)} autoComplete="off" />
-          <button type="submit" className="btn-primary" disabled={!draft.trim()}>
+        <label htmlFor="assistant-q" className="label">{t('assistant.question')}</label>
+        <div className="field-row">
+          <input id="assistant-q" type="text" className="field" maxLength={300} value={draft} onChange={(e) => setDraft(e.target.value)} autoComplete="off" />
+          <button type="submit" className="btn" disabled={!draft.trim()}>
             <Send aria-hidden="true" className="size-5" />
             {t('assistant.ask')}
           </button>
         </div>
       </form>
 
-      <section aria-labelledby="assistant-examples" className="max-w-3xl">
-        <h2 id="assistant-examples" className="mb-2 font-semibold">{t('assistant.examplesTitle')}</h2>
-        <ul className="flex flex-wrap gap-2">
+      <section aria-labelledby="assistant-examples" className="mb-6">
+        <h2 id="assistant-examples" className="h3 mb-4">{t('assistant.examplesTitle')}</h2>
+        <ul className="flex flex-wrap gap-2.5">
           {EXAMPLES.map((key) => (
             <li key={key}>
-              <button type="button" className="btn-secondary text-left" onClick={() => ask(t(`assistant.examples.${key}`))}>{t(`assistant.examples.${key}`)}</button>
+              <button type="button" className="btn line text-left" onClick={() => ask(t(`assistant.examples.${key}`))}>{t(`assistant.examples.${key}`)}</button>
             </li>
           ))}
         </ul>
       </section>
-    </>
+      {turns.length > 0 ? (
+        <button type="button" className="btn ghost sm mb-10" onClick={() => setTurns([])}>{t('assistant.restart')}</button>
+      ) : null}
+      <p className="muted mt-6">
+        {t('assistant.notFound')} <Link to={`/${lang}/faq`} className="font-bold">{t('assistant.notFoundFaq')}</Link>
+        {phone ? <>{` ${t('assistant.notFoundCall')} `}<a href={telHref(phone)} className="font-bold">{phone}</a></> : null}.
+      </p>
+    </div>
   );
 }

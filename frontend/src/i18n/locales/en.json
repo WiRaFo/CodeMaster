@@ -571,7 +571,11 @@
       "restricted": "Restricted documents appear on the site only as a record card with access conditions, without a copy or transcription. Closed documents are not published on the site.",
       "readingRoom": "In the reading room you can work with original documents and copies that are not published on the site. The address and hours are in “Branches and contacts”.",
       "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one."
-    }
+    },
+    "restart": "Start over",
+    "notFound": "No answer? See",
+    "notFoundFaq": "questions and answers",
+    "notFoundCall": "or call the archive:"
   },
   "history": {
     "lead": "The “Great Archive of Memory”: stories about the region's history based on archival records.",
