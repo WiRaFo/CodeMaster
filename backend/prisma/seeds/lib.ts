@@ -20,8 +20,6 @@ export function names(ru: string, kk: string, en: string): Tri<{ name: string }>
   return { ru: { name: ru }, kk: { name: kk }, en: { name: en } };
 }
 
-export const SYNTHETIC_PREFIX: Tri<string> = { ru: '[Синтетика]', kk: '[Синтетикалық]', en: '[Synthetic]' };
-export const DEMO_PREFIX: Tri<string> = { ru: '[Демо]', kk: '[Демо]', en: '[Demo]' };
 
 /** Источник для записей, перенесённых с текущего сайта (аудит, docs/requirements-matrix.md Q-22, Q-23). */
 export const OLD_SITE_URL = 'http://e-arhiv.vko.gov.kz/ru';

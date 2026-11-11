@@ -49,12 +49,8 @@ export function DocumentPage() {
 
       <CodeActions code={d.archiveCode.formatted} title={d.title ?? d.archiveCode.formatted} />
 
-      {d.dataOrigin === 'synthetic' || d.dataOrigin === 'demo' ? (
-        // Пометка на языке интерфейса; sourceNote из базы пишется на одном языке и не переводится.
-        <p className="mb-6 max-w-3xl rounded border border-demo-text bg-demo-bg p-3 text-demo-text" data-testid="origin-note">
-          {t(`document.originNote.${d.dataOrigin}`)}
-        </p>
-      ) : d.sourceNote ? (
+      {/* Пометки «демо» и «синтетика» на сайте не выводятся (решение заказчика 11.11.2026). */}
+      {d.dataOrigin !== 'synthetic' && d.dataOrigin !== 'demo' && d.sourceNote ? (
         <p className="mb-6 max-w-3xl text-sm text-muted">{d.sourceNote}</p>
       ) : null}
 

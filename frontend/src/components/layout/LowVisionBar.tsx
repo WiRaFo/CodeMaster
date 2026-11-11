@@ -9,7 +9,7 @@ const SCHEME_SWATCH: Record<A11yPrefs['scheme'], string> = {
 };
 
 /**
- * Жёлтая панель версии для слабовидящих (дизайн 11.11.2026, Header.dc.html): размер текста, цвет, картинки, выход.
+ * Жёлтая панель версии для слабовидящих (дизайн 11.11.2026, Header.dc.html): размер текста, цвет, выход.
  * Видна только в этом режиме (html.a11y .a11y-note), настройки хранятся в браузере (lib/a11y-prefs.ts).
  */
 export function LowVisionBar() {
@@ -34,11 +34,6 @@ export function LowVisionBar() {
           <span>{t('lowVision.color')}:</span>
           {(['bw', 'wb', 'blue'] as const).map((scheme) =>
             option(prefs.scheme === scheme, t(`lowVision.${scheme}`), () => update({ scheme }), SCHEME_SWATCH[scheme]))}
-        </div>
-        <div className="a11y-grp" role="group" aria-label={t('lowVision.imagesGroup')}>
-          <span>{t('lowVision.images')}:</span>
-          {option(prefs.images, t('lowVision.show'), () => update({ images: true }))}
-          {option(!prefs.images, t('lowVision.hide'), () => update({ images: false }))}
         </div>
         <button type="button" className="a11y-exit" onClick={() => update({ mode: false })}>{t('lowVision.exit')}</button>
       </div>

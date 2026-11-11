@@ -67,7 +67,7 @@ describe('цифровая история региона (F-080–F-084)', () =>
     expect(screen.getByText('Военная история').closest('span')?.parentElement).toHaveTextContent('скоро');
     expect(screen.queryByRole('link', { name: /Военная история/ })).toBeNull();
     const card = screen.getByRole('link', { name: '[Демо] Как читать шифр' }).closest('article') as HTMLElement;
-    expect(within(card).getByText('Демо')).toBeInTheDocument();
+    expect(within(card).queryByText('Демо')).toBeNull();
     expect(await axeViolations(container)).toEqual([]);
   });
 
@@ -107,7 +107,7 @@ describe('вопросы и ответы', () => {
     const summary = await screen.findByText('Можно ли подать заявление через сайт?');
     await userEvent.click(summary);
     expect(summary.closest('details')).toHaveAttribute('open');
-    expect(screen.getByText('Ответы подготовлены командой разработки и будут согласованы с архивом.')).toBeInTheDocument();
+    expect(screen.queryByText('Ответы подготовлены командой разработки и будут согласованы с архивом.')).toBeNull();
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'Отзывы и предложения' })).toHaveAttribute('href', '/ru/feedback');
     expect(await axeViolations(container)).toEqual([]);
   });
@@ -166,7 +166,7 @@ describe('«Посетителям» и «Об архиве»', () => {
     const gallery = screen.getByRole('region', { name: 'Archive photo gallery' });
     expect(within(gallery).getByRole('img', { name: 'Здание архива' })).toHaveAttribute('src', '/api/v1/about/gallery/1');
     expect(within(gallery).getByText('Главный корпус')).toBeInTheDocument();
-    expect(within(gallery).getAllByText('Demo photo')).toHaveLength(1);
+    expect(within(gallery).queryAllByText('Demo photo')).toHaveLength(0);
     expect(await axeViolations(container)).toEqual([]);
   });
 

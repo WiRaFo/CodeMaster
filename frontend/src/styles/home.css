@@ -28,26 +28,11 @@
 .flip-face{backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .flip-back{position:absolute;inset:0;transform:rotateY(180deg)}
 .ink{color:#3A2614;font-family:'Marck Script','Segoe Script',cursive;white-space:nowrap;line-height:1.6}
-.w1,.w2,.w3,.w4,.w5,.w6{clip-path:inset(0 100% 0 0)}
-.w1{animation:w1 5s linear both}.w2{animation:w2 5s linear both}.w3{animation:w3 5s linear both}.w4{animation:w4 5s linear both}.w5{animation:w5 5s linear both}.w6{animation:w6 5s linear both}
-@keyframes w1{0%{clip-path:inset(0 100% 0 0)}14%,100%{clip-path:inset(0 0 0 0)}}
-@keyframes w2{0%,14%{clip-path:inset(0 100% 0 0)}30%,100%{clip-path:inset(0 0 0 0)}}
-@keyframes w3{0%,30%{clip-path:inset(0 100% 0 0)}46%,100%{clip-path:inset(0 0 0 0)}}
-@keyframes w4{0%,46%{clip-path:inset(0 100% 0 0)}62%,100%{clip-path:inset(0 0 0 0)}}
-@keyframes w5{0%,62%{clip-path:inset(0 100% 0 0)}76%,100%{clip-path:inset(0 0 0 0)}}
-@keyframes w6{0%,76%{clip-path:inset(0 100% 0 0)}88%,100%{clip-path:inset(0 0 0 0)}}
-.quill{animation:quill 5s linear both;transform-origin:8% 92%}
-@keyframes quill{
-0%{left:8%;top:21%;transform:rotate(-4deg)}14%{left:82%;top:21%;transform:rotate(4deg)}
-15%{left:10%;top:31%;transform:rotate(-4deg)}30%{left:86%;top:31%;transform:rotate(4deg)}
-31%{left:8%;top:41%;transform:rotate(-4deg)}46%{left:80%;top:41%;transform:rotate(4deg)}
-47%{left:8%;top:51%;transform:rotate(-4deg)}62%{left:84%;top:51%;transform:rotate(4deg)}
-63%{left:8%;top:61%;transform:rotate(-4deg)}76%{left:70%;top:61%;transform:rotate(4deg)}
-77%{left:44%;top:73%;transform:rotate(-4deg)}88%{left:86%;top:73%;transform:rotate(4deg)}
-100%{left:96%;top:96%;transform:rotate(18deg)}}
+/* Рукопись пишется из JS (HomePage, useQuillWriting): текст открывается ровно у кончика пера. */
+.quill{left:0;top:0;transform-origin:10px 186px;will-change:transform}
 .wax{animation:wax .7s cubic-bezier(.3,1.6,.5,1) both;animation-delay:4.3s}
 @keyframes wax{from{opacity:0;transform:rotate(-12deg) scale(2.2)}to{opacity:.95;transform:rotate(-12deg) scale(1)}}
-.scroll-write:not(.play) .w1,.scroll-write:not(.play) .w2,.scroll-write:not(.play) .w3,.scroll-write:not(.play) .w4,.scroll-write:not(.play) .w5,.scroll-write:not(.play) .w6,.scroll-write:not(.play) .quill,.scroll-write:not(.play) .wax{animation-play-state:paused}
+.scroll-write:not(.play) .wax{animation-play-state:paused}
 .fanbox .ph{position:absolute;width:150px;height:180px;border:8px solid #fff;border-radius:6px;box-shadow:0 14px 30px -14px rgba(0,0,0,.6);transition:transform .6s cubic-bezier(.2,.8,.2,1)}
 .fanbox:hover .ph0{transform:rotate(-13deg) translate(-46px,4px)!important}
 .fanbox:hover .ph1{transform:rotate(0deg) translate(0,-16px)!important}
@@ -59,7 +44,6 @@
 .rub{min-height:52px;padding:0 22px;border-radius:14px;cursor:pointer;font: 700 calc(17px * var(--fs,1)) 'Inter Variable','Inter',sans-serif;background:#fff;color:var(--ink);border:2px solid var(--line2);transition:transform .2s,background-color .2s}
 .rub:hover{transform:translateY(-2px)}
 .rub[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
-@media (prefers-reduced-motion: reduce){.w1,.w2,.w3,.w4,.w5,.w6{clip-path:none}}
 
 /* Классы вместо инлайн-стилей макета */
 .hero{position:relative;border-radius:36px;overflow:hidden}
@@ -133,3 +117,6 @@
 /* Карточки-ссылки в списках не подчёркиваются целиком (общее правило дизайна подчёркивает ссылки в li) */
 .site main li a:is(.fold,.card,.topic,.news-row,.fanbox,.ask-example):not(.btn):not(.hdr-link){text-decoration:none}
 .home-dates h2{font-size:calc(24px * var(--fs,1));font-weight:800}
+.useful-ico{color:var(--brand);transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+.lift:hover .useful-ico{transform:rotate(-8deg) scale(1.1)}
+@media (prefers-reduced-motion: reduce){.lift:hover .useful-ico{transform:none}}

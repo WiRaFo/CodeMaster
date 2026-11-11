@@ -1,11 +1,11 @@
 import type { AccessLevel, AntivirusStatus, PrismaClient, PublicationStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
-import { SYNTHETIC_PREFIX, type Tri } from './lib.ts';
+import type { Tri } from './lib.ts';
 
 /**
  * Синтетический каталог для разработки и тестов доступа (docs/database-design.md §10).
- * Номера фондов начинаются с TEST-, заголовки — с «[Синтетика]»; это не реальные архивные шифры.
+ * Номера фондов начинаются с TEST-; это не реальные архивные шифры.
  * Набор покрывает все сочетания, которые проверяют тесты публичных представлений:
  * открытые, ограниченные и закрытые записи на разных уровнях, неопубликованных предков, копии без проверки.
  * Ключ каждой записи хранится в source_system_id (synthetic:фонд/опись/дело/документ).
@@ -63,7 +63,7 @@ const RESTRICTED_CONDITIONS = tri(
 
 /** Синтетические организации-фондообразователи. Не реальные предприятия. */
 const ORGANIZATIONS: Array<{ slug: string; name: Tri<string> }> = [
-  { slug: 'synthetic-creamery', name: tri('Маслозавод (тестовая организация)', 'Май зауыты (сынақ ұйымы)', 'Creamery (test organisation)') },
+  { slug: 'synthetic-creamery', name: tri('Маслозавод', 'Май зауыты', 'Creamery') },
 ];
 
 const FONDS: FondSeed[] = [
@@ -71,7 +71,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-1',
     branch: 'main',
     access: 'open',
-    title: tri('Маслозавод (тестовый фонд)', 'Май зауыты (сынақ қоры)', 'Creamery (test fond)'),
+    title: tri('Маслозавод', 'Май зауыты', 'Creamery'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -166,7 +166,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-2',
     branch: 'main',
     access: 'restricted',
-    title: tri('Фонд с ограниченным доступом (тестовый)', 'Қолжетімділігі шектеулі қор (сынақ)', 'Restricted fond (test)'),
+    title: tri('Фонд с ограниченным доступом', 'Қолжетімділігі шектеулі қор', 'Restricted fond'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -193,7 +193,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-3',
     branch: 'main',
     access: 'closed',
-    title: tri('Закрытый фонд (тестовый)', 'Жабық қор (сынақ)', 'Closed fond (test)'),
+    title: tri('Закрытый фонд', 'Жабық қор', 'Closed fond'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -227,17 +227,14 @@ const FONDS: FondSeed[] = [
     kind: 'personal',
     branch: 'main',
     access: 'open',
-    title: tri('Личный фонд краеведа (тестовый)', 'Өлкетанушының жеке қоры (сынақ)', 'Personal fond of a local historian (test)'),
+    title: tri('Личный фонд краеведа', 'Өлкетанушының жеке қоры', 'Personal fond of a local historian'),
     inventory: { number: '1', access: 'open' },
     cases: [{ number: '1', access: 'open', sheets: 12, title: tri('Рукописи и заметки', 'Қолжазбалар мен жазбалар', 'Manuscripts and notes'), docs: [] }],
   },
 ];
 
-const prefixed = (t: Tri<string>): Tri<string> => ({
-  ru: `${SYNTHETIC_PREFIX.ru} ${t.ru}`,
-  kk: `${SYNTHETIC_PREFIX.kk} ${t.kk}`,
-  en: `${SYNTHETIC_PREFIX.en} ${t.en}`,
-});
+/** Заголовки без пометок на сайте (решение заказчика 11.11.2026); синтетику выдаёт dataOrigin и шифры TEST-. */
+const prefixed = (t: Tri<string>): Tri<string> => t;
 
 const LOCALES = ['ru', 'kk', 'en'] as const;
 const SYNTHETIC_BUCKET = 'archive-synthetic';

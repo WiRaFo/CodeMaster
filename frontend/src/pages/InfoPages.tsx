@@ -120,12 +120,7 @@ export function AboutPage() {
               <li key={img.url}>
                 <figure lang={img.contentLang ?? undefined}>
                   <img src={img.url} alt={img.alt} loading="lazy" width={img.width ?? undefined} height={img.height ?? undefined} className="h-auto w-full rounded-md border border-border" />
-                  {img.caption || img.dataOrigin === 'demo' ? (
-                    <figcaption className="mt-1 text-sm">
-                      {img.caption}
-                      {img.dataOrigin === 'demo' ? <span className="block text-muted" lang={lang}>{t('about.demoPhoto')}</span> : null}
-                    </figcaption>
-                  ) : null}
+                  {img.caption ? <figcaption className="mt-1 text-sm">{img.caption}</figcaption> : null}
                 </figure>
               </li>
             ))}

@@ -66,7 +66,7 @@ describe('пример ТЗ §5.8 Б (F-123)', () => {
       ['type', 'photo', 'Фотографии'],
     ]);
     expect(a.catalogQuery).toBe('type=photo&settlement=ust-kamenogorsk&yearFrom=1960&yearTo=1969');
-    expect(a.documents?.map((d) => d.title)).toEqual(['[Синтетика] Фотография коллектива маслозавода']);
+    expect(a.documents?.map((d) => d.title)).toEqual(['Фотография коллектива маслозавода']);
     expect(a['suggestions']).toEqual(expect.arrayContaining([expect.objectContaining({ reason: 'prevDecade' }), expect.objectContaining({ reason: 'allTypes' })]));
   });
 

@@ -49,7 +49,7 @@ describe('список выставок (F-090)', () => {
     const { container } = renderAt('/ru/exhibitions');
     const card = (await screen.findByRole('link', { name: '[Демо] Выставка А' })).closest('article');
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText('Демо')).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText('Демо')).toBeNull();
     expect(within(card as HTMLElement).getByText('3 экспоната')).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText('Годы: 1946–1991')).toBeInTheDocument();
     await screen.findByRole('option', { name: 'Культура (1)' });

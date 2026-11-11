@@ -22,7 +22,7 @@ describe('галерея (F-085)', () => {
     expect(img.closest('a')).toHaveAttribute('href', `/ru/catalog/documents/${ITEM?.id ?? ''}`);
     const figure = img.closest('figure') as HTMLElement;
     expect(within(figure).getByText('Ф. TEST-1. Оп. 1. Д. 1., 1956')).toBeInTheDocument();
-    expect(within(figure).getByText('Тестовые данные')).toBeInTheDocument();
+    expect(within(figure).queryByText('Тестовые данные')).toBeNull();
     expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations.map((v) => v.id)).toEqual([]);
   });
 });

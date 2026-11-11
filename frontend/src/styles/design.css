@@ -285,8 +285,6 @@ html.a11y-wb .a11y-opt[aria-pressed="true"]:not(#_):not(#__),html.a11y-wb .a11y-
 html.a11y-blue .a11y-opt[aria-pressed="true"]:not(#_):not(#__),html.a11y-blue .a11y-opt[aria-pressed="true"] *:not(#_):not(#__){background-color:#063462!important;color:#9DD1FF!important}
 .a11y-opt[aria-pressed="true"]::before{content:"✓";margin-right:8px;font-weight:900}
 /* без картинок: остаются только герб и карта */
-html.a11y-noimg .site img:not(.seal){display:none!important}
-html.a11y-noimg .site [style*="url("]:not(.orn-band):not(.orn-ros){background-image:none!important}
 /* панель настроек появляется только в версии для слабовидящих */
 html.a11y .a11y-note{display:block;background:#FFD400;color:#000;border-bottom:3px solid #000;font:700 calc(17px * var(--fs,1)) 'Inter Variable','Inter','Segoe UI',sans-serif}
 .a11y-panel{display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;padding-top:12px;padding-bottom:12px}
@@ -383,3 +381,8 @@ html.a11y.a11y-wb .page-head,html.a11y.a11y-blue .page-head{--color-text:inherit
 .site main .input{border-radius:14px;border-color:var(--muted)}
 .site main .input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--tint2);outline:0}
 .site main .prose-page h2{font-weight:800;letter-spacing:-.02em;font-size:calc(28px * var(--fs,1))}
+
+/* Поле и кнопка в одну строку: одинаковая высота, на узком экране кнопка уходит вниз. */
+.field-row{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.field-row .field{flex:1 1 220px;width:auto}
+.field-row .btn{flex:0 0 auto}

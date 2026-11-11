@@ -22,16 +22,16 @@ describe('версия для слабовидящих', () => {
   it('applyPrefs ставит классы дизайна; без версии схема и размер не действуют', () => {
     const root = document.documentElement;
     reset(root);
-    applyPrefs({ mode: true, size: 'xl', scheme: 'wb', images: false, still: false }, root);
-    expect(snapshot(root)).toEqual({ classes: ['a11y', 'a11y-noimg', 'a11y-wb', 'a11y-xl'], dataset: { theme: 'light', contrast: 'high', motion: 'reduce' } });
-    applyPrefs({ mode: false, size: 'xl', scheme: 'wb', images: false, still: true }, root);
+    applyPrefs({ mode: true, size: 'xl', scheme: 'wb', still: false }, root);
+    expect(snapshot(root)).toEqual({ classes: ['a11y', 'a11y-wb', 'a11y-xl'], dataset: { theme: 'light', contrast: 'high', motion: 'reduce' } });
+    applyPrefs({ mode: false, size: 'xl', scheme: 'wb', still: true }, root);
     expect(snapshot(root)).toEqual({ classes: ['no-motion'], dataset: { theme: 'light', contrast: 'normal', motion: 'reduce' } });
   });
 
   const cases: Array<Partial<A11yPrefs>> = [
     {},
     { mode: true },
-    { mode: true, size: 'xl', scheme: 'blue', images: false },
+    { mode: true, size: 'xl', scheme: 'blue' },
     { mode: true, scheme: 'wb', still: true },
     { still: true, scheme: 'blue' },
   ];

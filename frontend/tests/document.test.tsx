@@ -19,7 +19,7 @@ const RESTRICTED = `/ru/catalog/documents/${DOCUMENTS.restricted.id}`;
 const requested = () => fetchMock.mock.calls.map(([u]) => String(u));
 
 describe('карточка открытого документа (F-040 – F-042)', () => {
-  it('метаданные, иерархия, пометка тестовых данных, ссылки на каталог', async () => {
+  it('метаданные, иерархия, без пометки тестовых данных, ссылки на каталог', async () => {
     renderAt(OPEN);
     expect(await screen.findByRole('heading', { level: 1, name: '[Синтетика] Протокол заседания правления маслозавода' })).toBeInTheDocument();
     const crumbs = screen.getByRole('navigation', { name: 'Навигационная цепочка' });
@@ -27,8 +27,8 @@ describe('карточка открытого документа (F-040 – F-04
     expect(within(crumbs).getByRole('link', { name: 'Фонды и электронный каталог' })).toHaveAttribute('href', '/ru/catalog');
     expect(within(crumbs).getByRole('link', { name: 'Фонд TEST-1' }).getAttribute('href')).toMatch(/^\/ru\/catalog\/fonds\/[0-9a-f-]+$/);
     expect(within(crumbs).getByText('[Синтетика] Протокол заседания правления маслозавода')).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByText('Тестовые данные')).toBeInTheDocument();
-    expect(screen.getByTestId('origin-note')).toHaveTextContent('не является архивным документом');
+    expect(screen.queryByText('Тестовые данные')).toBeNull();
+    expect(screen.queryByTestId('origin-note')).toBeNull();
 
     const meta = screen.getByRole('heading', { level: 2, name: 'Сведения о документе' }).closest('aside') as HTMLElement;
     const m = within(meta);

@@ -87,7 +87,6 @@
     "phone": "Phone",
     "email": "Email",
     "schedule": "Opening hours",
-    "needsVerification": "Details were transferred from the current website and are being verified",
     "allBranches": "All branches and contacts",
     "contactsUnavailable": "Contact details could not be loaded right now.",
     "social": "Social media",
@@ -125,7 +124,6 @@
     "allExhibitions": "All exhibitions",
     "branchesTitle": "Our branches",
     "allBranches": "All branches, map and contacts",
-    "branchesNote": "Addresses and phone numbers were transferred from the current archive website and are being verified.",
     "newsTitle": "News and events",
     "allNews": "All news",
     "useful": {
@@ -193,7 +191,6 @@
       "toText": "Show transcription",
       "toSheet": "Show manuscript",
       "caption": "Transcription — sample",
-      "note": "Illustration: the text was written as an example and is not an archival document.",
       "plainTitle": "Dear sirs!",
       "plain": "This repository holds the memory of the Eastern lands, from the Irtysh to the peaks of the Altai: files, letters, orders and the fates of people.",
       "plainSign": "Keeper of the archive"
@@ -359,8 +356,7 @@
   },
   "origin": {
     "demo": "Demo",
-    "synthetic": "Test data",
-    "demoNote": "Prototype demo material; it will be replaced with archive content."
+    "synthetic": "Test data"
   },
   "content": {
     "otherLanguage": "This text is available only in: {{lang}}",
@@ -425,10 +421,6 @@
       "stage": "Page image",
       "keys": "Keys in the image area: left and right arrows turn pages, “+” and “−” zoom, “0” resets.",
       "fallbackAlt": "Page {{page}} of the digital copy"
-    },
-    "originNote": {
-      "synthetic": "Synthetic record for development and testing; not an archival document.",
-      "demo": "Demo record of the prototype; it will be replaced with the archive's data."
     }
   },
   "exhibitions": {
@@ -473,7 +465,6 @@
     "mapPending": "The map will appear once the archive has verified the coordinates. Until then, use the addresses and route links on each card.",
     "details": "Details",
     "needsVerification": "Being verified",
-    "needsVerificationNote": "This information was carried over from the archive's current website and has not been verified yet. Please call before visiting.",
     "breadcrumbs": "You are here",
     "contacts": "Contacts and hours",
     "address": "Address",
@@ -638,7 +629,6 @@
   },
   "faq": {
     "lead": "Frequently asked questions, grouped by topic.",
-    "demoNote": "The answers were prepared by the development team and will be agreed with the archive.",
     "more": "Didn't find an answer? Ask the assistant or leave feedback:",
     "topic": {
       "services": "Certificates and services",
@@ -678,7 +668,6 @@
     "source": "Information provided by the archive on 10 November 2026.",
     "unavailable": "This section has not been filled in yet.",
     "galleryTitle": "Archive photo gallery",
-    "demoPhoto": "Demo photo",
     "actualized": "Information current as of {{date}}."
   },
   "calendar": {
@@ -814,10 +803,6 @@
     "wb": "White on black",
     "blue": "Dark blue on light blue",
     "swatch": "A",
-    "images": "Images",
-    "imagesGroup": "Images",
-    "show": "Show",
-    "hide": "Hide",
     "exit": "Standard version"
   }
 }

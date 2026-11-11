@@ -60,7 +60,7 @@ describe('список подразделений (F-061, F-066)', () => {
   it('без сверенных координат карта не показывается, все адреса и телефоны — в списке; поиск меняет адрес и выдачу', async () => {
     const { container } = renderAt('/ru/branches');
     const card = (await screen.findByRole('link', { name: 'Государственный архив ВКО' })).closest('article') as HTMLElement;
-    expect(within(card).getByText('Сведения уточняются')).toBeInTheDocument();
+    expect(within(card).queryByText('Сведения уточняются')).toBeNull();
     expect(within(card).getByRole('link', { name: '8 (7232) 25-59-76' })).toHaveAttribute('href', 'tel:87232255976');
     expect(screen.getByTestId('map-pending')).toHaveTextContent('Карта появится, когда архив сверит координаты');
     expect(screen.queryByTestId('branch-map')).toBeNull();

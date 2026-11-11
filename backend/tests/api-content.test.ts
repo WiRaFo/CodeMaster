@@ -10,7 +10,7 @@ afterAll(() => t.close());
 type Item = Record<string, unknown>;
 
 describe('новости (ТЗ §5.11)', () => {
-  it('лента по убыванию даты, демо-записи помечены, есть пагинация', async () => {
+  it('лента по убыванию даты, демо-записи без пометок в заголовке, есть пагинация', async () => {
     const res = await t.get('/api/v1/news?lang=ru');
     expect(res.status).toBe(200);
     expect(res.headers['content-language']).toBe('ru');
@@ -19,7 +19,7 @@ describe('новости (ТЗ §5.11)', () => {
     expect(items.map((n) => n['slug'])).toEqual(['demo-new-site-prototype', 'demo-catalog-search']);
     for (const n of items) {
       expect(n['dataOrigin']).toBe('demo');
-      expect(String(n['title'])).toMatch(/^\[Демо\]/);
+      expect(String(n['title'])).not.toMatch(/\[Демо\]/);
     }
     const second = await t.get('/api/v1/news?pageSize=1&page=2');
     expect(second.body.items?.map((n) => n['slug'])).toEqual(['demo-catalog-search']);

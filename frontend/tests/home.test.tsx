@@ -38,7 +38,7 @@ describe('главная (ТЗ §5.1)', () => {
     expect(block.getByRole('link', { name: /^Сведения о филиалах/ })).toHaveAttribute('href', '/ru/branches');
   });
 
-  it('блоки из API: история в документах, выставки, филиалы, новости; демо и тестовые данные помечены', async () => {
+  it('блоки из API: история в документах, выставки, филиалы, новости; без пометок «демо» и «тестовые данные»', async () => {
     renderAt('/ru');
     const history = (await screen.findByRole('heading', { level: 2, name: 'Цифровая история региона' })).closest('section') as HTMLElement;
     const h = within(history);
@@ -47,12 +47,12 @@ describe('главная (ТЗ §5.1)', () => {
       '/ru/catalog/documents/6b8741a3-8fc6-40af-9408-21b6f9709b6f',
     );
     expect(h.getByText('Ф. TEST-1. Оп. 1. Д. 1.')).toBeInTheDocument();
-    expect(h.getByText('Тестовые данные')).toBeInTheDocument();
+    expect(h.queryByText('Тестовые данные')).toBeNull();
     expect(h.getByRole('link', { name: /^История семьи и поколений/ })).toHaveAttribute('href', '/ru/history?topic=family');
 
     const news = screen.getByRole('heading', { level: 2, name: 'Новости и события' }).closest('section') as HTMLElement;
     expect(within(news).getByRole('link', { name: /\[Демо\] Прототип нового сайта архива/ })).toHaveAttribute('href', '/ru/news/demo-new-site-prototype');
-    expect(within(news).getAllByText('Демо').length).toBeGreaterThan(0);
+    expect(within(news).queryAllByText('Демо')).toHaveLength(0);
     expect(within(news).getByText('8 ноября 2026 г.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { level: 2, name: 'Онлайн-выставки' })).toBeInTheDocument();

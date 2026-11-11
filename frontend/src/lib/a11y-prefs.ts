@@ -19,13 +19,11 @@ export interface A11yPrefs {
   size: (typeof SIZES)[number];
   /** Цвет: чёрным по белому, белым по чёрному, синим по голубому. */
   scheme: (typeof SCHEMES)[number];
-  /** Показывать картинки в версии (герб и карта остаются всегда). */
-  images: boolean;
   /** Анимация остановлена кнопкой в шапке (WCAG 2.2.2). */
   still: boolean;
 }
 
-export const DEFAULT_PREFS: A11yPrefs = { mode: false, size: 'l', scheme: 'bw', images: true, still: false };
+export const DEFAULT_PREFS: A11yPrefs = { mode: false, size: 'l', scheme: 'bw', still: false };
 
 const oneOf = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
   list.includes(value as T) ? (value as T) : fallback;
@@ -37,7 +35,6 @@ export function sanitizePrefs(raw: unknown): A11yPrefs {
     mode: v['mode'] === true,
     size: oneOf(SIZES, v['size'], DEFAULT_PREFS.size),
     scheme: oneOf(SCHEMES, v['scheme'], DEFAULT_PREFS.scheme),
-    images: v['images'] !== false,
     still: v['still'] === true,
   };
 }
@@ -56,7 +53,7 @@ export function savePrefs(prefs: A11yPrefs): void {
   writeStorage(A11Y_STORAGE_KEY, JSON.stringify(prefs));
 }
 
-/** Классы на <html>, на которые опирается design.css: a11y, a11y-xl, a11y-wb, a11y-blue, a11y-noimg, no-motion. */
+/** Классы на <html>, на которые опирается design.css: a11y, a11y-xl, a11y-wb, a11y-blue, no-motion. */
 export function prefsClasses(prefs: A11yPrefs): string[] {
   const list: string[] = [];
   if (prefs.mode) {
@@ -64,7 +61,6 @@ export function prefsClasses(prefs: A11yPrefs): string[] {
     if (prefs.size === 'xl') list.push('a11y-xl');
     if (prefs.scheme === 'wb') list.push('a11y-wb');
     if (prefs.scheme === 'blue') list.push('a11y-blue');
-    if (!prefs.images) list.push('a11y-noimg');
   }
   if (prefs.still) list.push('no-motion');
   return list;

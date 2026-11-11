@@ -61,12 +61,12 @@ describe('каркас страницы', () => {
     ]);
   });
 
-  it('подвал показывает контакты из API с пометкой о сверке', async () => {
+  it('подвал показывает контакты из API без пометки о сверке', async () => {
     renderAt('/ru');
     const footer = screen.getByRole('contentinfo');
     expect(await within(footer).findByText(MAIN_BRANCH.address)).toBeInTheDocument();
     expect(within(footer).getByRole('link', { name: MAIN_BRANCH.phone })).toHaveAttribute('href', 'tel:87232255976');
-    expect(within(footer).getByText('Сведения перенесены с текущего сайта и уточняются')).toBeInTheDocument();
+    expect(within(footer).queryByText('Сведения перенесены с текущего сайта и уточняются')).toBeNull();
     expect(within(footer).getByText(/заявления, запросы и заказы через него не принимаются/)).toBeInTheDocument();
   });
 
@@ -110,7 +110,7 @@ describe('каркас страницы', () => {
 });
 
 describe('версия для слабовидящих', () => {
-  it('кнопка в шапке включает режим, панель меняет размер, цвет и картинки, выход возвращает обычную версию', async () => {
+  it('кнопка в шапке включает режим, панель меняет размер и цвет, выход возвращает обычную версию', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/ru');
     const root = document.documentElement;
@@ -122,8 +122,7 @@ describe('версия для слабовидящих', () => {
     await user.click(within(bar).getByRole('button', { name: /Белым по чёрному/ }));
     expect(root.classList.contains('a11y-wb')).toBe(true);
     expect(within(bar).getByRole('button', { name: /Белым по чёрному/ })).toHaveAttribute('aria-pressed', 'true');
-    await user.click(within(bar).getByRole('button', { name: 'Скрыть' }));
-    expect(root.classList.contains('a11y-noimg')).toBe(true);
+    expect(within(bar).queryByRole('button', { name: 'Скрыть' })).toBeNull();
     await within(screen.getByRole('contentinfo')).findByText(MAIN_BRANCH.address);
     expect(await axeViolations(container)).toEqual([]);
     await user.click(within(bar).getByRole('button', { name: 'Обычная версия сайта' }));

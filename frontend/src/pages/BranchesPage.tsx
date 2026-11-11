@@ -14,10 +14,9 @@ const BranchMap = lazy(() => import('../components/branches/BranchMap.tsx'));
 export const telHref = (phone: string): string => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
 /** Пометка «сведения уточняются» для записей, не сверенных архивом. */
-export function VerificationBadge({ show }: { show: boolean }) {
-  const { t } = useTranslation();
-  if (!show) return null;
-  return <span className="inline-block rounded border border-warning-text bg-warning-bg px-2 py-0.5 text-sm font-semibold text-warning-text">{t('branches.needsVerification')}</span>;
+/** Пометка «требует уточнения» на сайте не выводится (решение заказчика 11.11.2026); признак остаётся в админке. */
+export function VerificationBadge(_props: { show: boolean }) {
+  return null;
 }
 
 /**

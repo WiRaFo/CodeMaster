@@ -90,7 +90,7 @@ describe('цифровая история региона (F-080–F-082)', () =>
     const list = await t.get('/api/v1/history/collections?lang=ru');
     const items = list.body['items'] as Array<{ slug: string; title: string; itemCount: number; dataOrigin: string }>;
     expect(items.map((c) => [c.slug, c.itemCount])).toEqual([['demo-creamery-records', 3], ['demo-local-historians', 3]]);
-    expect(items[0]).toMatchObject({ title: '[Демо] Маслозавод в документах', dataOrigin: 'demo' });
+    expect(items[0]).toMatchObject({ title: 'Маслозавод в документах', dataOrigin: 'demo' });
     const closed = await idOf(t.db, 'documents', 'TEST-1/1/1/3');
     const res = await t.get('/api/v1/history/collections/demo-creamery-records?lang=ru');
     const docs = res.body['documents'] as Array<{ id: string; access: string }>;
@@ -148,7 +148,7 @@ describe('цифровая история региона (F-080–F-082)', () =>
       const hidden = await t.get(`/api/v1/history/${slug}?lang=ru`);
       expect(hidden.body['document']).toBeNull();
       expect(hidden.raw).not.toContain(closed);
-      expect(hidden.body).toMatchObject({ sourceNote: expect.stringContaining('Демонстрационный'), bodyText: expect.stringContaining('Ф. 12') });
+      expect(hidden.body).toMatchObject({ sourceNote: expect.stringContaining('команды разработки'), bodyText: expect.stringContaining('Ф. 12') });
     } finally {
       await t.db.publication.update({ where: { slug }, data: { documentId: null } });
     }
@@ -156,10 +156,10 @@ describe('цифровая история региона (F-080–F-082)', () =>
 });
 
 describe('вопросы и ответы', () => {
-  it('шесть демо-вопросов о работе сайта на трёх языках', async () => {
+  it('пять демо-вопросов о работе сайта на трёх языках', async () => {
     for (const lang of ['kk', 'ru', 'en']) {
       const res = await t.get(`/api/v1/faq?lang=${lang}`);
-      expect(res.body.items).toHaveLength(6);
+      expect(res.body.items).toHaveLength(5);
       expect(res.body.items?.[0]).toMatchObject({ dataOrigin: 'demo', contentLang: lang });
     }
   });

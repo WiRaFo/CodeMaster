@@ -45,7 +45,6 @@ export function FaqPage() {
         <LoadStatus status={faq.status} />
       ) : (
         <>
-          {faq.data.items.some((f) => f.dataOrigin === 'demo') ? <p className="mb-4 max-w-3xl text-sm text-muted">{t('faq.demoNote')}</p> : null}
           {groupByTopic(faq.data.items).map(([topic, items]) => (
             <section key={topic} aria-labelledby={`faq-${topic}`} className="mb-8 max-w-3xl">
               <h2 id={`faq-${topic}`} className="mb-3 text-xl font-semibold">{t(`faq.topic.${topic}`)}</h2>

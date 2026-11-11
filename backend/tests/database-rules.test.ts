@@ -15,18 +15,18 @@ async function searchTitles(config: 'russian' | 'simple' | 'english', locale: st
 describe('полнотекстовый поиск (ТЗ §5.8)', () => {
   it('русская морфология: «маслозаводы» находит «маслозавода»', async () => {
     const titles = await searchTitles('russian', 'ru', 'маслозаводы');
-    expect(titles).toContain('[Синтетика] Протокол заседания правления маслозавода');
+    expect(titles).toContain('Протокол заседания правления маслозавода');
   });
 
   it('казахский текст индексируется конфигурацией simple', async () => {
     const titles = await searchTitles('simple', 'kk', 'хаттамасы');
-    expect(titles).toEqual(['[Синтетикалық] Май зауыты басқармасы отырысының хаттамасы']);
+    expect(titles).toEqual(['Май зауыты басқармасы отырысының хаттамасы']);
   });
 
   it('вектор пересчитывается при изменении перевода', async () => {
     await inRollback(db, async (tx) => {
       await tx.documentTranslation.updateMany({
-        where: { locale: 'en', title: { startsWith: '[Synthetic] Minutes' } },
+        where: { locale: 'en', title: { startsWith: 'Minutes' } },
         data: { description: 'creamery butter churns' },
       });
       const rows = await tx.$queryRaw<Array<{ n: bigint }>>`

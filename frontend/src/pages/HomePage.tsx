@@ -1,7 +1,8 @@
 import { ArrowRight, Building2, CalendarDays, Clock, FileText, Folder, Image, Images, MapPin, RefreshCw, Search, User, CircleHelp } from 'lucide-react';
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type Ref, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useA11y } from '../app/A11yProvider.tsx';
 import { usePageMeta } from '../app/usePageMeta.ts';
 import { MonthDates } from '../components/home/MonthDates.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
@@ -172,13 +173,13 @@ function CatalogBlock() {
         <div className="sr-l min-w-0 flex-[1_1_420px]">
           <h2 id="home-catalog" className="h2 u mb-5">{t('home.catalogTitle')}</h2>
           <p className="mb-7 max-w-[600px] text-[calc(19px*var(--fs,1))]">{t('home.catalogText')}</p>
-          <form role="search" aria-label={t('catalogSearch.label')} className="d-row max-w-[640px] items-end gap-2.5" onSubmit={onSubmit}>
-            <label className="label flex-[1_1_260px]" htmlFor="home-catalog-search">
-              {t('catalogSearch.label')}
+          <form role="search" aria-label={t('catalogSearch.label')} className="max-w-[640px]" onSubmit={onSubmit}>
+            <label className="label mb-2" htmlFor="home-catalog-search">{t('catalogSearch.label')}</label>
+            <div className="field-row">
               <input id="home-catalog-search" className="field" type="search" name="q" value={query} maxLength={200}
                 autoComplete="off" aria-describedby="home-catalog-hint" onChange={(e) => setQuery(e.target.value)} />
-            </label>
-            <button type="submit" className="btn"><Search aria-hidden="true" className="size-5" />{t('catalogSearch.submit')}</button>
+              <button type="submit" className="btn"><Search aria-hidden="true" className="size-5" />{t('catalogSearch.submit')}</button>
+            </div>
           </form>
           <p id="home-catalog-hint" className="muted mb-5 mt-3.5 text-[calc(17px*var(--fs,1))]">
             {t('home.cipherExample')} <span className="mono text-[var(--ink)]">{example}</span>
@@ -234,7 +235,7 @@ function UsefulLinks() {
         {items.map(({ key, to, Icon }) => (
           <li key={key} className="flex">
             <Link className="card lift sr d-col useful flex-1" to={to}>
-              <span className="icon"><Icon aria-hidden="true" className="size-7" /></span>
+              <Icon aria-hidden="true" className="useful-ico size-9" />
               <span className="tlink text-[calc(22px*var(--fs,1))] font-extrabold leading-tight">{t(`home.useful.${key}.title`)}</span>
               <span className="text-[calc(17px*var(--fs,1))] leading-normal">{t(`home.useful.${key}.text`)}</span>
             </Link>
@@ -259,6 +260,10 @@ function Manuscript() {
   const [flipped, setFlipped] = useState(false);
   const [play, setPlay] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
+  const paper = useRef<HTMLDivElement>(null);
+  const quill = useRef<SVGSVGElement>(null);
+  const { prefs } = useA11y();
+  useQuillWriting(paper, quill, play, !prefs.still && !prefs.mode);
 
   useEffect(() => {
     const el = sheet.current;
@@ -286,23 +291,23 @@ function Manuscript() {
           <button type="button" className="btn dark min-h-16 text-[calc(19px*var(--fs,1))]" aria-pressed={flipped} onClick={() => setFlipped((f) => !f)}>
             <RefreshCw aria-hidden="true" className="size-6" />{t(flipped ? 'home.manuscript.toSheet' : 'home.manuscript.toText')}
           </button>
-          <p className="muted sheet-note">{t('home.manuscript.note')}</p>
         </div>
         <div ref={sheet} className={`flip-scene scroll-write relative flex min-w-0 flex-[1.1_1_320px] justify-center${play ? ' play' : ''}`}>
           <Inkwell />
           <div className="flip w-[min(520px,100%)] [aspect-ratio:5/6.4]" style={{ transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
-            <div className="flip-face sheet-paper" aria-hidden="true">
+            <div ref={paper} className="flip-face sheet-paper" aria-hidden="true">
               <div className="absolute left-[9%] right-[8%] top-[7%] flex justify-between">
                 <span className="ink text-[3.8cqw]" lang="ru">{SHEET_NUMBER}</span>
                 <span className="ink text-[3.8cqw]" lang="ru">{SHEET_PLACE}</span>
               </div>
               <div className="absolute left-[9%] right-[8%] top-[16%] flex flex-col gap-[.8cqw]" lang="ru">
                 {SHEET_HAND.map((line, i) => (
-                  <span key={line} className={`ink w${i + 1} ${i === 0 || i === SHEET_HAND.length - 1 ? 'text-[5.6cqw]' : 'text-[4.8cqw]'}${i === SHEET_HAND.length - 1 ? ' mt-[2cqw] self-end' : ''}`}>{line}</span>
+                  <span key={line} data-hand=""
+                    className={`ink w${i + 1} ${i === 0 || i === SHEET_HAND.length - 1 ? 'text-[5.6cqw]' : 'text-[4.8cqw]'}${i === SHEET_HAND.length - 1 ? ' mt-[2cqw] self-end' : ' self-start'}`}>{line}</span>
                 ))}
               </div>
               <img className="wax absolute bottom-[6%] left-[9%] w-[23%] rotate-[-12deg]" src="/design/logo-seal-256.png" alt="" />
-              <Quill />
+              <Quill ref={quill} />
             </div>
             <div className="flip-face flip-back card flex flex-col gap-[18px] rounded-[18px] p-[9%]" aria-hidden={!flipped}>
               <span className="muted text-[calc(17px*var(--fs,1))] font-bold">{t('home.manuscript.caption')}</span>
@@ -327,9 +332,99 @@ function Inkwell() {
   );
 }
 
-function Quill() {
+/** Кончик пера в координатах SVG (viewBox 150×190): по нему перо ставится на строку. */
+const QUILL_TIP = { x: 10, y: 186 };
+const WRITE_MS = 4200;
+const LINE_GAP_MS = 140;
+
+/**
+ * Пишет рукопись пером: каждая строка открывается слева направо, а кончик пера стоит на краю написанного.
+ * Скорость одна для всех строк (по ширине текста). Без анимации (системная настройка, «Остановить анимацию»,
+ * версия для слабовидящих) текст виден сразу, перо скрыто стилями.
+ */
+function useQuillWriting(paperRef: RefObject<HTMLDivElement | null>, quillRef: RefObject<SVGSVGElement | null>, play: boolean, motion: boolean) {
+  useLayoutEffect(() => {
+    const paperEl = paperRef.current;
+    const quillEl = quillRef.current;
+    if (!paperEl || !quillEl) return;
+    const lines = Array.from(paperEl.querySelectorAll<HTMLElement>('[data-hand]'));
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const show = () => lines.forEach((l) => { l.style.clipPath = ''; });
+    if (!motion || reduce) {
+      show();
+      return;
+    }
+    const clip = (el: HTMLElement, p: number) => { el.style.clipPath = `inset(-40% ${((1 - p) * 100).toFixed(2)}% -40% -4%)`; };
+    const offset = (el: HTMLElement) => {
+      let x = 0;
+      let y = 0;
+      let node: HTMLElement | null = el;
+      while (node && node !== paperEl) {
+        x += node.offsetLeft;
+        y += node.offsetTop;
+        node = node.offsetParent as HTMLElement | null;
+      }
+      return { x, y };
+    };
+    const place = (x: number, y: number, tilt: number) => {
+      quillEl.style.transform = `translate(${x - QUILL_TIP.x}px, ${y - QUILL_TIP.y}px) rotate(${tilt}deg)`;
+    };
+    const geo = () => lines.map((el) => {
+      const { x, y } = offset(el);
+      return { el, x, y: y + el.offsetHeight * 0.78, w: el.offsetWidth };
+    });
+    let g = geo();
+    lines.forEach((l) => clip(l, 0));
+    if (g[0]) place(g[0].x, g[0].y, -4);
+    if (!play) return;
+
+    const total = g.reduce((sum, l) => sum + l.w, 0) || 1;
+    const writing = WRITE_MS - LINE_GAP_MS * (g.length - 1);
+    const spans = g.map((l) => (l.w / total) * writing);
+    let frame = 0;
+    const start = performance.now();
+    const onResize = () => { g = geo(); };
+    window.addEventListener('resize', onResize);
+    const tick = (now: number) => {
+      let t = now - start;
+      for (let i = 0; i < g.length; i++) {
+        const line = g[i]!;
+        const span = spans[i]!;
+        if (t >= span + LINE_GAP_MS || (i === g.length - 1 && t >= span)) {
+          clip(line.el, 1);
+          t -= span + LINE_GAP_MS;
+          continue;
+        }
+        if (t >= span) {
+          // Перо переносится к началу следующей строки.
+          const next = g[i + 1]!;
+          const k = (t - span) / LINE_GAP_MS;
+          clip(line.el, 1);
+          place(line.x + line.w + (next.x - line.x - line.w) * k, line.y + (next.y - line.y) * k, 4 - 8 * k);
+          frame = requestAnimationFrame(tick);
+          return;
+        }
+        const p = Math.max(0, t / span);
+        clip(line.el, p);
+        place(line.x + line.w * p, line.y + Math.sin(p * 40) * 1.5, -4 + 8 * p);
+        frame = requestAnimationFrame(tick);
+        return;
+      }
+      const last = g[g.length - 1];
+      if (last) place(last.x + last.w + 18, last.y + 24, 18);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', onResize);
+      show();
+    };
+  }, [paperRef, quillRef, play, motion]);
+}
+
+function Quill({ ref }: { ref: Ref<SVGSVGElement> }) {
   return (
-    <svg className="quill pointer-events-none absolute left-[8%] top-[21%] -ml-1 -mt-[176px]" width="150" height="190" viewBox="0 0 150 190">
+    <svg ref={ref} className="quill pointer-events-none absolute" width="150" height="190" viewBox="0 0 150 190">
       <path d="M10 186 L64 96" stroke="#5B3B1E" strokeWidth="3" strokeLinecap="round" />
       <path d="M60 104 C 40 70, 70 18, 140 4 C 120 30, 116 56, 96 76 C 106 74, 112 70, 118 66 C 104 92, 84 102, 60 104Z" fill="#F7F1E4" stroke="#B9A57E" strokeWidth="1.2" />
       <path d="M62 102 C 86 70, 108 40, 138 6" stroke="#9C8458" strokeWidth="1.6" fill="none" />
@@ -541,12 +636,12 @@ function AssistantCard() {
       <div className="orn-ros spin ask-ros" aria-hidden="true" />
       <h2 className="h2 h2-card">{t('home.assistant.title')}</h2>
       <p className="m-0 text-[calc(19px*var(--fs,1))]">{t('home.assistant.text')}</p>
-      <form className="d-row items-end gap-2.5" onSubmit={onSubmit}>
-        <label className="label flex-[1_1_240px]" htmlFor="home-ask">
-          {t('home.assistant.label')}
+      <form onSubmit={onSubmit}>
+        <label className="label mb-2" htmlFor="home-ask">{t('home.assistant.label')}</label>
+        <div className="field-row">
           <input id="home-ask" className="field" type="text" name="q" value={question} maxLength={500} onChange={(e) => setQuestion(e.target.value)} />
-        </label>
-        <button type="submit" className="btn gold">{t('home.assistant.ask')}</button>
+          <button type="submit" className="btn gold">{t('home.assistant.ask')}</button>
+        </div>
       </form>
       <h3 className="text-[calc(17px*var(--fs,1))] font-bold text-[var(--gold)]">{t('home.assistant.examplesTitle')}</h3>
       <ul className="d-row gap-2.5">
@@ -579,7 +674,6 @@ function ContactsCard() {
           ) : null}
         </dl>
       ) : main.status === 'error' ? <p>{t('footer.contactsUnavailable')}</p> : null}
-      {branch?.needsVerification ? <p className="muted text-sm">{t('home.branchesNote')}</p> : null}
       <Link to={`/${lang}/branches`} className="btn mt-auto self-start">{t('home.contacts.find')}</Link>
     </div>
   );

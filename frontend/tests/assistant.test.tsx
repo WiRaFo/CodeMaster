@@ -43,7 +43,7 @@ describe('архивный помощник', () => {
     await within(answer).findByText('Я понял запрос так:');
     expect(within(answer).getByTestId('recognized')).toHaveTextContent('Годы: 1960–1969Населённый пункт: Усть-КаменогорскТип: Фотографии');
     expect(within(answer).getByRole('link', { name: 'Ф. TEST-1. Оп. 1. Д. 1. — [Синтетика] Фотография' })).toHaveAttribute('href', '/ru/catalog/documents/11111111-1111-4111-8111-111111111111');
-    expect(within(answer).getByText('Тестовые данные')).toBeInTheDocument();
+    expect(within(answer).queryByText('Тестовые данные')).toBeNull();
     expect(within(answer).getByRole('link', { name: 'Все результаты в каталоге' })).toHaveAttribute('href', '/ru/catalog?type=photo&settlement=ust-kamenogorsk&yearFrom=1960&yearTo=1969');
     expect(within(answer).getByRole('link', { name: 'Предыдущее десятилетие' })).toHaveAttribute('href', '/ru/catalog?type=photo&settlement=ust-kamenogorsk&yearFrom=1950&yearTo=1959');
     expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(`/api/v1/assistant/ask?q=${encodeURIComponent('Фотографии Усть-Каменогорска 1960-х').replace(/%20/g, '+')}&lang=ru`);
