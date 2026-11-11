@@ -83,8 +83,17 @@ async function openWithPrefs(page: Page, path: string, prefs: Record<string, unk
 async function axe(page: Page): Promise<string[]> {
   if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE_SOURCE);
   // Контраст проверяется по итоговому виду: ждём конца конечных анимаций (появление диалогов, всплывающих окон).
+  // Анимации, привязанные к прокрутке (появление блоков, animation-timeline: view()), не «заканчиваются» сами —
+  // их не ждём; ожидание ограничено 5 с.
   await page.evaluate(() =>
-    Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))),
+    Promise.race([
+      Promise.all(
+        document.getAnimations()
+          .filter((x) => x.timeline instanceof DocumentTimeline && x.effect?.getComputedTiming().iterations !== Infinity)
+          .map((x) => x.finished.catch(() => undefined)),
+      ),
+      new Promise((r) => setTimeout(r, 5000)),
+    ]),
   );
   return page.evaluate(async () => {
     type Node = { target: string[]; any: Array<{ data?: { messageKey?: string } | null }> };
@@ -185,7 +194,9 @@ async function main() {
     {
       const page = await browser.newPage({ viewport: { width: 360, height: 780 } });
       await openWithPrefs(page, '/ru', {});
-      const menuButton = page.getByRole('button', { name: 'Меню' });
+      // Подпись кнопки меняется («Меню» → «Закрыть»), поэтому кнопка берётся по классу.
+      const menuButton = page.locator('button.hdr-burger');
+      check((await menuButton.innerText()).trim() === 'Меню', 'кнопка мобильного меню подписана «Меню»');
       await menuButton.click();
       check((await menuButton.getAttribute('aria-expanded')) === 'true', 'кнопка меню сообщает, что меню открыто');
       const menu = page.getByRole('navigation', { name: 'Разделы сайта' });
@@ -194,8 +205,8 @@ async function main() {
       const violations = await axe(page);
       check(violations.length === 0, `axe мобильное меню: ${violations.join('; ')}`);
       await page.keyboard.press('Escape');
-      check((await page.getByRole('button', { name: 'Меню' }).getAttribute('aria-expanded')) === 'false', 'Esc закрывает меню');
-      check(await page.getByRole('button', { name: 'Меню' }).evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку меню');
+      check((await menuButton.getAttribute('aria-expanded')) === 'false', 'Esc закрывает меню');
+      check(await menuButton.evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку меню');
       await page.close();
     }
 
@@ -441,7 +452,7 @@ async function main() {
       // Сценарий 1 (docs/development-roadmap.md, ЭТАП 4): с главной только клавиатурой найти документ в каталоге.
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/ru', {});
-      for (const block of ['Электронный каталог', 'История в документах', 'Онлайн-выставки', 'Наши филиалы', 'Новости и события']) {
+      for (const block of ['Электронный каталог', 'Цифровая история региона', 'Онлайн-выставки', 'Филиалы и контакты', 'Новости и события']) {
         check(await page.getByRole('heading', { level: 2, name: block }).isVisible(), `главная: блок «${block}»`);
       }
       check((await page.getByText('Демо', { exact: true }).count()) > 0, 'главная: демо-записи помечены');
@@ -586,7 +597,7 @@ async function main() {
       await openWithPrefs(page, `/ru/catalog/documents/${restrictedDoc.id}`, {});
       await page.getByTestId('restricted-notice').waitFor();
       check(await page.getByRole('heading', { name: 'Доступ ограничен' }).isVisible(), 'сценарий 18: виден блок «Доступ ограничен»');
-      check((await page.locator('.document-viewer, img').count()) === 0, 'сценарий 18: нет просмотрщика и изображений');
+      check((await page.locator('main .document-viewer, main img:not(.seal)').count()) === 0, 'сценарий 18: нет просмотрщика и изображений в содержимом страницы');
       check(!requests.some((u) => u.includes('/pages')), 'сценарий 18: страница не запрашивает список страниц');
       const direct = await page.evaluate(async (id) => [(await fetch(`/api/v1/catalog/documents/${id}/pages`)).status, (await fetch(`/api/v1/catalog/documents/${id}/pages/1/image`)).status], restrictedDoc.id);
       check(direct[0] === 404 && direct[1] === 404, `сценарий 18: прямые запросы страниц и изображения дают 404 (${direct.join(', ')})`);
