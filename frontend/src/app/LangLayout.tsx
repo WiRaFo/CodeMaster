@@ -61,7 +61,8 @@ export function LangLayout() {
     <>
       <SkipLink />
       <Header />
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-7xl px-4 py-8 focus:outline-none">
+      {/* min-h-screen: пока страница загружает данные, подвал уже ниже первого экрана и не «прыгает» (CLS, ЭТАП 14). */}
+      <main id="main" tabIndex={-1} className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 focus:outline-none">
         <Outlet />
       </main>
       <Footer />

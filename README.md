@@ -83,6 +83,8 @@ npm run dev:api && npm run dev:web
 
 Разделы (ЭТАП 7): `/history`, `/faq`, `/visitors`, `/about`, `/feedback`. Отзывы видны в панели в разделе «Отзывы».
 
+Проверки (ЭТАП 14): `bash frontend/scripts/lighthouse.sh` — Lighthouse по 9 страницам; результаты и покрытие сценариев — [docs/testing/](docs/testing/).
+
 Безопасность и SEO (ЭТАП 13): заголовки безопасности и CSP, `robots.txt`, `sitemap.xml` при сборке с `SITE_URL=https://…`, канонические адреса и `hreflang`. За обратным прокси задайте `TRUST_PROXY` — см. [docs/deployment.md](docs/deployment.md).
 
 Панель только на русском, закрыта от индексации; все проверки прав — на сервере ([docs/api-design.md §8](docs/api-design.md)). Загруженные сканы не видны на сайте до проверки антивирусом (ЭТАП 13).
