@@ -98,6 +98,7 @@ export function AboutPage() {
         <h2 id="about-history" className="mb-3 text-xl font-semibold">{t('about.historyTitle')}</h2>
         {about.status !== 'ready' ? <LoadStatus status={about.status} /> : about.data.history ? (
           <>
+            <p className="mb-2"><Link to={`/${lang}/history/timeline`}>{t('timeline.title')}</Link></p>
             <TranslationNote contentLang={about.data.history.contentLang} translationStatus={about.data.history.translationStatus} />
             <div className="mt-2 flex max-w-[75ch] flex-col gap-3" lang={about.data.history.contentLang}>
               {about.data.history.blocks.map((block, i) => <HistoryBlockView key={i} block={block} />)}

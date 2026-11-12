@@ -1022,9 +1022,10 @@ model HistoricalPerson {
   updatedById       String?           @map("updated_by_id") @db.Uuid
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  translations HistoricalPersonTranslation[]
-  documents    DocumentPerson[]
-  publications PublicationPerson[]
+  translations   HistoricalPersonTranslation[]
+  documents      DocumentPerson[]
+  publications   PublicationPerson[]
+  memorableDates PersonMemorableDate[]
 
   @@map("historical_persons")
 }
@@ -1739,9 +1740,23 @@ model MemorableDate {
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
   translations MemorableDateTranslation[]
+  persons      PersonMemorableDate[]
 
   @@index([calendarYear, month])
   @@map("memorable_dates")
+}
+
+/// Записи календаря памятных дат о человеке (F-086): страница личности показывает их как сведения архива.
+model PersonMemorableDate {
+  personId        String @map("person_id") @db.Uuid
+  memorableDateId String @map("memorable_date_id") @db.Uuid
+
+  person        HistoricalPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  memorableDate MemorableDate    @relation(fields: [memorableDateId], references: [id], onDelete: Cascade)
+
+  @@id([personId, memorableDateId])
+  @@index([memorableDateId])
+  @@map("person_memorable_dates")
 }
 
 model MemorableDateTranslation {
@@ -1762,12 +1777,12 @@ model MemorableDateTranslation {
 /// закрытые документы не индексируются, а поиск дополнительно соединяется с public_documents_v.
 /// Размерность не фиксирована: зависит от модели, строки разных моделей не смешиваются (поле model).
 model DocumentEmbedding {
-  documentId  String                 @map("document_id") @db.Uuid
+  documentId  String                @map("document_id") @db.Uuid
   locale      Locale
   model       String
-  contentHash String                 @map("content_hash")
+  contentHash String                @map("content_hash")
   embedding   Unsupported("vector")
-  updatedAt   DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 

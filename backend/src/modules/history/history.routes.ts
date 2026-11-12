@@ -127,6 +127,91 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     };
   });
 
+  /**
+   * Хронологическая лента (F-083): опубликованные события по годам, раньше — выше.
+   * Сейчас это события истории архива из переданного архивом текста; события по региону добавятся тем же путём.
+   */
+  app.get('/history/timeline', async (request, reply) => {
+    const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const rows = await db.$queryRaw<Array<{
+      slug: string; year: number; event_date: Date | null; date_precision: string; data_origin: string; source_note: string | null;
+      title: string | null; description: string | null; content_lang: string | null; translation_status: string | null;
+    }>>`
+      SELECT e.slug, e.year, e.event_date, e.date_precision::text AS date_precision, e.data_origin::text AS data_origin, e.source_note,
+             t.title, t.description, t.locale AS content_lang, t.translation_status
+      FROM historical_events e
+      ${bestTranslation('historicalEvent', 't', 'e.id', lang, ['title', 'description'])}
+      WHERE e.publication_status = 'published' AND e.deleted_at IS NULL AND t.title IS NOT NULL
+      ORDER BY e.year, e.event_date NULLS FIRST, e.slug`;
+    return {
+      items: rows.map((r) => ({
+        slug: r.slug,
+        year: r.year,
+        date: r.event_date ? r.event_date.toISOString().slice(0, 10) : null,
+        precision: r.date_precision,
+        title: r.title,
+        description: r.description,
+        sourceNote: r.source_note,
+        dataOrigin: r.data_origin,
+        contentLang: r.content_lang,
+        translationStatus: r.translation_status,
+      })),
+    };
+  });
+
+  /**
+   * Исторические личности (F-086). Сведения — записи календаря памятных дат о человеке (опубликованные);
+   * биография выводится, только если она заполнена.
+   */
+  const personSelect = (lang: Locale) => Prisma.sql`
+    SELECT hp.id, hp.slug, hp.birth_year, hp.death_year, hp.data_origin::text AS data_origin, hp.source_note,
+           t.full_name, t.life_years_text, t.biography, t.locale AS content_lang, t.translation_status
+    FROM historical_persons hp
+    ${bestTranslation('historicalPerson', 't', 'hp.id', lang, ['full_name', 'life_years_text', 'biography'])}
+    WHERE hp.publication_status = 'published' AND hp.deleted_at IS NULL AND t.full_name IS NOT NULL`;
+  type PersonRow = {
+    id: string; slug: string; birth_year: number | null; death_year: number | null; data_origin: string; source_note: string | null;
+    full_name: string; life_years_text: string | null; biography: string | null; content_lang: string | null; translation_status: string | null;
+  };
+  const personDto = (r: PersonRow) => ({
+    slug: r.slug,
+    fullName: r.full_name,
+    lifeYears: r.life_years_text,
+    dataOrigin: r.data_origin,
+    contentLang: r.content_lang,
+    translationStatus: r.translation_status,
+  });
+
+  app.get('/history/persons', async (request, reply) => {
+    const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const rows = await db.$queryRaw<PersonRow[]>`${personSelect(lang)} ORDER BY t.full_name COLLATE "C", hp.slug`;
+    return { items: rows.map(personDto) };
+  });
+
+  app.get('/history/persons/:slug', async (request, reply) => {
+    const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
+    const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const [row] = await db.$queryRaw<PersonRow[]>`${personSelect(lang)} AND hp.slug = ${slug}`;
+    if (!row) throw notFound();
+    const dates = await db.$queryRaw<Array<{ calendar_year: number; month: number | null; day: number | null; date_label: string; text: string; content_lang: string }>>`
+      SELECT md.calendar_year, md.month, md.day, t.date_label, t.text, t.locale AS content_lang
+      FROM person_memorable_dates pmd
+      JOIN memorable_dates md ON md.id = pmd.memorable_date_id AND md.publication_status = 'published' AND md.deleted_at IS NULL
+      JOIN LATERAL (
+        SELECT mt.locale::text AS locale, mt.date_label, mt.text FROM memorable_date_translations mt
+        WHERE mt.memorable_date_id = md.id AND mt.translation_status <> 'missing'
+        ORDER BY (mt.locale = ${lang}::"Locale") DESC, (mt.locale = 'ru') DESC, mt.locale LIMIT 1
+      ) t ON true
+      WHERE pmd.person_id = ${row.id}::uuid
+      ORDER BY md.calendar_year, md.month NULLS FIRST, md.day NULLS FIRST`;
+    return {
+      ...personDto(row),
+      biography: row.biography,
+      sourceNote: row.source_note,
+      memorableDates: dates.map((d) => ({ calendarYear: d.calendar_year, dateLabel: d.date_label, text: d.text, contentLang: d.content_lang })),
+    };
+  });
+
   app.get('/history/:slug', async (request, reply) => {
     const { slug } = z.object({ slug: z.string().max(150) }).parse(request.params);
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);

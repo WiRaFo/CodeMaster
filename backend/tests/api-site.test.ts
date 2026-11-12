@@ -46,6 +46,84 @@ describe('цифровая история региона (F-080–F-082)', () =>
     }
   });
 
+  it('хронология (F-083): события архива по годам из переданного текста, снятое событие не видно', async () => {
+    const res = await t.get('/api/v1/history/timeline?lang=kk');
+    const items = res.body['items'] as Array<{ slug: string; year: number; date: string | null; title: string; description: string; contentLang: string; dataOrigin: string }>;
+    expect(items.length).toBe(12);
+    expect(items.map((e) => e.year)).toEqual([...items.map((e) => e.year)].sort((a, b) => a - b));
+    expect(items[0]).toMatchObject({ slug: 'archive-founded-1940', year: 1940, date: null, contentLang: 'ru', dataOrigin: 'verified' });
+    expect(items[0]?.description).toContain('образован в 1940 году');
+    expect(items.find((e) => e.slug === 'archives-administration-1992')?.date).toBe('1992-08-13');
+    expect(items.find((e) => e.slug === 'network-formed-1967')?.description).toContain('— Государственного архива Восточно-Казахстанской области');
+    await t.db.historicalEvent.update({ where: { slug: 'abai-region-2022' }, data: { publicationStatus: 'draft' } });
+    try {
+      const after = (await t.get('/api/v1/history/timeline')).body['items'] as Array<{ slug: string }>;
+      expect(after.map((e) => e.slug)).not.toContain('abai-region-2022');
+    } finally {
+      await t.db.historicalEvent.update({ where: { slug: 'abai-region-2022' }, data: { publicationStatus: 'published' } });
+    }
+  });
+
+  it('личности (F-086): список, страница с записями календаря, снятая личность — 404', async () => {
+    const list = await t.get('/api/v1/history/persons?lang=ru');
+    const items = list.body['items'] as Array<{ slug: string; fullName: string; lifeYears: string | null }>;
+    expect(items).toHaveLength(8);
+    expect(items.find((p) => p.slug === 'burov-pavel')).toMatchObject({ fullName: 'Буров Павел Петрович', lifeYears: '1902–1944' });
+    const kk = await t.get('/api/v1/history/persons/auezov-mukhtar?lang=kk');
+    expect(kk.body).toMatchObject({ fullName: 'Мұхтар Омарханұлы Әуезов', contentLang: 'kk', biography: null });
+    expect(kk.body['memorableDates']).toEqual([
+      { calendarYear: 2022, dateLabel: '28 қыркүйек', text: expect.stringContaining('Абай жолы'), contentLang: 'kk' },
+    ]);
+    const pankratyev = await t.get('/api/v1/history/persons/pankratyev-dmitry?lang=ru');
+    expect((pankratyev.body['memorableDates'] as unknown[]).length).toBe(2);
+    await t.db.historicalPerson.update({ where: { slug: 'burov-pavel' }, data: { publicationStatus: 'draft' } });
+    try {
+      expect((await t.get('/api/v1/history/persons/burov-pavel')).status).toBe(404);
+      expect(((await t.get('/api/v1/history/persons')).body['items'] as Array<{ slug: string }>).map((p) => p.slug)).not.toContain('burov-pavel');
+    } finally {
+      await t.db.historicalPerson.update({ where: { slug: 'burov-pavel' }, data: { publicationStatus: 'published' } });
+    }
+    expect((await t.get('/api/v1/history/persons/no-such-person')).status).toBe(404);
+  });
+
+  it('коллекции (F-081): только публичные элементы, закрытый документ не виден ни в составе, ни в счётчике', async () => {
+    const list = await t.get('/api/v1/history/collections?lang=ru');
+    const items = list.body['items'] as Array<{ slug: string; title: string; itemCount: number; dataOrigin: string }>;
+    expect(items.map((c) => [c.slug, c.itemCount])).toEqual([['demo-creamery-records', 3], ['demo-local-historians', 3]]);
+    expect(items[0]).toMatchObject({ title: '[Демо] Маслозавод в документах', dataOrigin: 'demo' });
+    const closed = await idOf(t.db, 'documents', 'TEST-1/1/1/3');
+    const res = await t.get('/api/v1/history/collections/demo-creamery-records?lang=ru');
+    const docs = res.body['documents'] as Array<{ id: string; access: string }>;
+    expect(docs).toHaveLength(3);
+    expect(docs.map((d) => d.access)).toEqual(['open', 'restricted', 'open']);
+    expect(res.raw).not.toContain(closed);
+    expect(res.raw).not.toContain('Закрытый документ');
+    const people = await t.get('/api/v1/history/collections/demo-local-historians?lang=kk');
+    expect((people.body['persons'] as Array<{ slug: string; fullName: string }>).map((p) => p.slug)).toEqual(['pankratyev-dmitry', 'gerasimov-boris', 'kharlamov-prokofy']);
+    // Снятая коллекция — 404, как несуществующая.
+    await t.db.collection.update({ where: { slug: 'demo-local-historians' }, data: { publicationStatus: 'archived' } });
+    try {
+      expect((await t.get('/api/v1/history/collections/demo-local-historians')).status).toBe(404);
+    } finally {
+      await t.db.collection.update({ where: { slug: 'demo-local-historians' }, data: { publicationStatus: 'published' } });
+    }
+    expect((await t.get('/api/v1/history/collections/nothing')).status).toBe(404);
+  });
+
+  it('галерея (F-085): только открытые документы с проверенной копией, ссылка на изображение работает', async () => {
+    const open = await idOf(t.db, 'documents', 'TEST-1/1/1/1');
+    const res = await t.get('/api/v1/history/gallery?lang=ru');
+    const items = res.body.items as Array<{ id: string; access: string; image: { url: string } }>;
+    // Ограниченный TEST-1/1/1/2 (копия не публикуется) и фото TEST-1/1/1/5 (антивирус не проверил) в галерею не попадают.
+    expect(items.map((i) => i.id)).toContain(open);
+    expect(items.every((i) => i.access === 'open')).toBe(true);
+    for (const key of ['TEST-1/1/1/2', 'TEST-1/1/1/3', 'TEST-1/1/1/5']) expect(res.raw).not.toContain(await idOf(t.db, 'documents', key));
+    const first = items.find((i) => i.id === open);
+    expect(first?.image.url).toBe(`/api/v1/catalog/documents/${open}/pages/1/image`);
+    expect((await t.app.inject({ method: 'GET', url: first?.image.url ?? '' })).statusCode).toBe(200);
+    expect(res.body['total']).toBe(items.length);
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

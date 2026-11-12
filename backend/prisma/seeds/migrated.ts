@@ -5,6 +5,8 @@ import {
 import { ANTICORRUPTION_SETTING, ANTICORRUPTION_TEXT } from './archive-anticorruption.ts';
 import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
 import { ARCHIVE_HISTORY_RU, type HistoryBlock } from './archive-history.ts';
+import { ARCHIVE_TIMELINE, timelineText } from './archive-timeline.ts';
+import { ARCHIVE_PERSONS, personEntries } from './archive-persons.ts';
 import { INFO_PAGES, type InfoBlock } from './info-pages.ts';
 import { names, translationRows, OLD_SITE_CONTACTS_URL, type Tri } from './lib.ts';
 
@@ -160,6 +162,8 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
   await seedStaff(db, branchIds);
   await seedAboutPages(db);
   await seedCalendar(db);
+  await seedTimeline(db);
+  await seedPersons(db);
   await seedAnticorruption(db);
   await seedInfoPages(db);
   await db.siteSetting.upsert({
@@ -211,6 +215,56 @@ async function seedAboutPages(db: PrismaClient): Promise<void> {
 }
 
 /** Календарь памятных дат: русский и казахский тексты из источника, порядок строк сохраняется. */
+/** Хронология архива (F-083): события из «Истории архива», только на русском. */
+async function seedTimeline(db: PrismaClient): Promise<void> {
+  for (const e of ARCHIVE_TIMELINE) {
+    const data = {
+      year: e.year,
+      eventDate: e.date ? new Date(`${e.date}T00:00:00Z`) : null,
+      datePrecision: e.date ? ('day' as const) : ('year' as const),
+      sourceNote: 'Текст «История архива», передан архивом 10.11.2026',
+      publicationStatus: 'published' as const,
+      dataOrigin: 'verified' as const,
+    };
+    const row = await db.historicalEvent.upsert({ where: { slug: e.slug }, update: data, create: { slug: e.slug, ...data } });
+    await db.historicalEventTranslation.deleteMany({ where: { eventId: row.id } });
+    await db.historicalEventTranslation.create({ data: { eventId: row.id, locale: 'ru', title: e.title, description: timelineText(e), translationStatus: 'reviewed' } });
+  }
+}
+
+/**
+ * Исторические личности (F-086) из календаря памятных дат; связи с записями календаря пересоздаются,
+ * потому что календарь пересоздаётся при каждом запуске сида.
+ */
+async function seedPersons(db: PrismaClient): Promise<void> {
+  const dates = await db.memorableDate.findMany({
+    where: { dataOrigin: 'verified' },
+    select: { id: true, calendarYear: true, translations: { where: { locale: 'ru' }, select: { text: true } } },
+  });
+  for (const p of ARCHIVE_PERSONS) {
+    const data = {
+      birthYear: p.birthYear,
+      deathYear: p.deathYear,
+      sourceNote: 'Календарь памятных дат 2022–2026, передан архивом 10.11.2026',
+      publicationStatus: 'published' as const,
+      dataOrigin: 'verified' as const,
+    };
+    const row = await db.historicalPerson.upsert({ where: { slug: p.slug }, update: data, create: { slug: p.slug, ...data } });
+    await db.historicalPersonTranslation.deleteMany({ where: { personId: row.id } });
+    const years = p.birthYear && p.deathYear ? `${p.birthYear}–${p.deathYear}` : null;
+    await db.historicalPersonTranslation.createMany({
+      data: (['ru', 'kk'] as const).map((locale) => ({ personId: row.id, locale, fullName: p.name[locale], lifeYearsText: years, translationStatus: 'reviewed' as const })),
+    });
+    const ids = personEntries(p).map((e) => {
+      const found = dates.find((d) => d.calendarYear === e.calendarYear && d.translations[0]?.text === e.ru.text);
+      if (!found) throw new Error(`Личности: запись календаря не найдена для ${p.slug}`);
+      return found.id;
+    });
+    await db.personMemorableDate.deleteMany({ where: { personId: row.id } });
+    await db.personMemorableDate.createMany({ data: ids.map((memorableDateId) => ({ personId: row.id, memorableDateId })) });
+  }
+}
+
 async function seedCalendar(db: PrismaClient): Promise<void> {
   await db.memorableDate.deleteMany({ where: { dataOrigin: 'verified' } });
   for (const [i, e] of ARCHIVE_CALENDAR.entries()) {

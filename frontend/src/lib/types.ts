@@ -425,3 +425,46 @@ export interface CaseDetail extends Localized {
   inventory: { id: string; number: string; title: string | null };
   documents: DocumentSummary[];
 }
+
+/** Событие хронологической ленты (GET /history/timeline, F-083). date — только если день известен. */
+export interface TimelineEvent extends Localized {
+  slug: string;
+  year: number;
+  date: string | null;
+  precision: string;
+  title: string | null;
+  description: string | null;
+  sourceNote: string | null;
+  dataOrigin: DataOrigin;
+}
+
+/** Историческая личность (GET /history/persons, F-086). */
+export interface PersonSummary extends Localized {
+  slug: string;
+  fullName: string;
+  lifeYears: string | null;
+  dataOrigin: DataOrigin;
+}
+export interface PersonDetail extends PersonSummary {
+  biography: string | null;
+  sourceNote: string | null;
+  memorableDates: Array<{ calendarYear: number; dateLabel: string; text: string; contentLang: string }>;
+}
+
+/** Тематическая коллекция (GET /history/collections, F-081). itemCount — только видимые на сайте элементы. */
+export interface CollectionSummary extends Localized {
+  slug: string;
+  title: string | null;
+  description: string | null;
+  itemCount: number;
+  dataOrigin: DataOrigin;
+}
+export interface CollectionDetail extends CollectionSummary {
+  documents: DocumentSummary[];
+  persons: Array<{ slug: string; fullName: string; lifeYears: string | null; contentLang: string | null }>;
+}
+
+/** Плитка галереи (GET /history/gallery, F-085): документ и его первая публичная страница. */
+export interface GalleryItem extends DocumentSummary {
+  image: { url: string; width: number | null; height: number | null };
+}
