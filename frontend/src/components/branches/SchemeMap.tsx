@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { telHref } from '../../lib/main-branch.ts';
 import type { BranchSummary } from '../../lib/types.ts';
+import { MAP_REGIONS, MAP_VIEWBOX } from './map-regions.ts';
 
 /**
  * Схема области с метками подразделений (макет заказчика, 12.11.2026). Это не географическая карта:
@@ -14,19 +15,19 @@ import type { BranchSummary } from '../../lib/types.ts';
 
 /** Место метки на схеме, % от ширины и высоты рисунка (острие метки). */
 const SPOTS: Record<string, { x: number; y: number }> = {
-  'ust-kamenogorsk': { x: 35.6, y: 34.5 },
-  shemonaikha: { x: 32.2, y: 9.5 },
-  ridder: { x: 47.9, y: 21.5 },
-  glubokoe: { x: 28.5, y: 22.5 },
-  ulan: { x: 17.5, y: 38 },
-  altai: { x: 54, y: 34 },
-  'ulken-naryn': { x: 51.9, y: 49 },
-  'katon-karagay': { x: 85.4, y: 48.5 },
-  samar: { x: 31.4, y: 52 },
-  kurchum: { x: 47.1, y: 65 },
-  markakol: { x: 73.8, y: 62.5 },
-  tarbagatai: { x: 44.4, y: 80.5 },
-  zaisan: { x: 62.8, y: 82.5 },
+  'ust-kamenogorsk': { x: 29.5, y: 37.4 },
+  shemonaikha: { x: 20.3, y: 17.4 },
+  ridder: { x: 43.7, y: 22.3 },
+  glubokoe: { x: 33.6, y: 19.2 },
+  ulan: { x: 13, y: 38.5 },
+  altai: { x: 48.8, y: 37 },
+  'ulken-naryn': { x: 56.1, y: 51.2 },
+  'katon-karagay': { x: 77, y: 48.6 },
+  samar: { x: 36.3, y: 56.1 },
+  kurchum: { x: 52.6, y: 67.2 },
+  markakol: { x: 73.7, y: 66.1 },
+  tarbagatai: { x: 41.8, y: 86.9 },
+  zaisan: { x: 60.6, y: 89.1 },
 };
 /** Подразделения в Усть-Каменогорске показываются одной меткой областного центра. */
 const UK = new Set(['main', 'main-krylova', 'ust-kamenogorsk-personnel']);
@@ -38,6 +39,7 @@ export const twoGisHref = (b: Pick<BranchSummary, 'name' | 'address'>) =>
 export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
+  const [hot, setHot] = useState<string | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
 
@@ -66,7 +68,15 @@ export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang:
   return (
     <div className="smap" data-testid="scheme-map">
       <div className="smap-stage" onClick={(e) => { if (e.target === e.currentTarget) setOpen(null); }}>
-        <img src="/design/vko-map.webp" alt="" className="smap-img" width={1200} height={960} loading="lazy" decoding="async" />
+        {/* Векторная схема: районы подсвечиваются при наведении; щелчок по району открывает его подразделение (дублирует метку). */}
+        <svg className="smap-svg" viewBox={MAP_VIEWBOX} aria-hidden="true" focusable="false">
+          {MAP_REGIONS.map((r) => (
+            <path key={r.key} d={r.d} fill={r.fill}
+              className={`smap-reg${groups.has(r.key) ? ' live' : ''}${hot === r.key || open === r.key ? ' hot' : ''}`}
+              onMouseEnter={() => setHot(r.key)} onMouseLeave={() => setHot(null)}
+              onClick={() => { if (groups.has(r.key)) { opener.current = null; setOpen(open === r.key ? null : r.key); } }} />
+          ))}
+        </svg>
         {[...groups].map(([key, list]) => {
           const main = list.some((b) => b.isMain);
           const p = SPOTS[key]!;
@@ -75,6 +85,7 @@ export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang:
             <button key={key} type="button" className={`smap-pin${main ? ' main' : ''}${open === key ? ' on' : ''}`}
               style={{ left: `${p.x}%`, top: `${p.y}%` }} aria-expanded={open === key} aria-controls="smap-panel"
               aria-label={list.length > 1 ? t('branchMap.pinMany', { name, count: list.length }) : name}
+              onMouseEnter={() => setHot(key)} onMouseLeave={() => setHot(null)} onFocus={() => setHot(key)} onBlur={() => setHot(null)}
               onClick={(e) => { opener.current = e.currentTarget; setOpen(open === key ? null : key); }}>
               <span className="smap-drop"><Landmark aria-hidden="true" className={main ? 'size-6' : 'size-5'} /></span>
               {main ? <span className="smap-tag">{t('branchMap.central')}</span> : null}
@@ -84,7 +95,7 @@ export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang:
 
         {open && spot ? (
           <div id="smap-panel" ref={panel} tabIndex={-1} role="dialog" aria-label={items[0]?.name ?? ''}
-            className={`smap-pop${spot.x > 60 ? ' left' : ''}${spot.y < 35 ? ' below' : ''}`}
+            className={`smap-pop${spot.x > 60 ? ' left' : ''}${spot.y < 50 ? ' below' : ''}`}
             style={{ left: `${spot.x}%`, top: `${spot.y}%` }}>
             <button type="button" className="smap-x" onClick={close} aria-label={t('branchMap.close')}><X aria-hidden="true" className="size-5" /></button>
             {items.map((b) => (
@@ -105,7 +116,6 @@ export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang:
           </div>
         ) : null}
       </div>
-      <p className="smap-note">{t('branchMap.note')}</p>
     </div>
   );
 }

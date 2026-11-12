@@ -898,7 +898,6 @@
     "close": "Close",
     "open2gis": "Open in 2GIS",
     "newTab": "(opens in a new tab)",
-    "more": "Details",
-    "note": "Schematic map of the region: markers show the district, not the exact address. Build a route in 2GIS."
+    "more": "Details"
   }
 }
