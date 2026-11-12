@@ -337,9 +337,9 @@ html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
 .tl-q-in .field{padding-left:44px;width:100%}
 .tl-axis-wrap .muted{color:var(--odm)}
 .tl-axis-wrap{margin:0 0 32px;padding:20px 28px 14px;border-radius:24px;background:var(--ink);color:#fff}
-.tl-axis{position:relative;height:110px;margin:0 16px}
+.tl-axis{position:relative;height:96px;margin:0 16px}
 .tl-line{position:absolute;left:0;right:0;bottom:30px;height:4px;border-radius:2px;background:rgba(255,255,255,.25)}
-.tl-band{position:absolute;bottom:22px;top:0;border-radius:12px;background:rgba(169,196,242,.16);transition:left .3s,width .3s}
+.tl-band{position:absolute;bottom:18px;height:28px;border-radius:14px;background:rgba(169,196,242,.16);transition:left .3s,width .3s}
 .tl-dot{position:absolute;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:3px solid var(--ink);background:var(--onDarkAccent2);cursor:pointer;padding:0;transition:transform .2s,background-color .2s}
 .tl-dot:hover:not(:disabled){transform:scale(1.35)}
 .tl-dot.on{background:var(--gold);transform:scale(1.5);box-shadow:0 0 0 4px rgba(234,217,76,.35)}

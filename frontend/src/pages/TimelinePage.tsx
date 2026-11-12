@@ -201,7 +201,9 @@ export function TimelinePage() {
               onPointerDown={onScrubDown}
               onPointerMove={(e) => { if (!dragging && e.pointerType === 'mouse') setHover(pointAt(e.clientX)); }}
               onPointerLeave={() => { if (!dragging) setHover(null); }}>
-              <span className="tl-band" style={{ left: pos(from), width: `calc(${pos(Math.min(to + 1, maxYear))} - ${pos(from)})` }} aria-hidden="true" />
+              {from > minYear || to < maxYear ? (
+                <span className="tl-band" style={{ left: pos(from), width: `calc(${pos(Math.min(to + 1, maxYear))} - ${pos(from)})` }} aria-hidden="true" />
+              ) : null}
               <span className="tl-line" aria-hidden="true" />
               {selected ? <span className="tl-played" style={{ width: pos(thumbYear) }} aria-hidden="true" /> : null}
               {hover && !dragging ? <span className="tl-hover" style={{ left: pos(hover.year) }} aria-hidden="true" /> : null}
@@ -217,7 +219,7 @@ export function TimelinePage() {
                 return (
                   <button key={e.slug} type="button" data-slug={e.slug}
                     className={`tl-dot${inRange ? '' : ' out'}${isSel ? ' on' : ''}`}
-                    style={{ left: pos(e.year), bottom: `${18 + (stackOf.get(e.slug) ?? 0) * 22}px` }}
+                    style={{ left: pos(e.year), bottom: `${23 + (stackOf.get(e.slug) ?? 0) * 22}px` }}
                     aria-pressed={isSel} disabled={!inRange} tabIndex={isSel || (!selected && inRange) ? 0 : -1}
                     title={`${e.year}: ${e.title ?? ''}`} onClick={() => choose(e)}>
                     <span className="sr-only">{`${e.year}: ${e.title ?? ''}`}</span>
