@@ -195,22 +195,6 @@ async function main() {
     }
 
     {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-      await openWithPrefs(page, '/en', {});
-      await page.getByRole('button', { name: 'Accessibility' }).click();
-      const panel = page.getByRole('dialog', { name: 'Accessibility settings' });
-      await panel.getByRole('radio', { name: '150 %' }).check();
-      const fontSize = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
-      check(fontSize === '24px', `текст 150 % даёт 24px: ${fontSize}`);
-      const violations = await axe(page);
-      check(violations.length === 0, `axe панель доступности: ${violations.join('; ')}`);
-      await page.reload();
-      await page.locator('h1').waitFor();
-      check((await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)) === '24px', 'настройка сохраняется после перезагрузки');
-      await page.close();
-    }
-
-    {
       // Сценарий 13 (ЭТАП 11a): переключение языка ведёт на ту же страницу с теми же фильтрами; интерфейс полностью переведён.
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/ru/catalog?q=маслозавод&hasDigitalCopy=true', {});
@@ -260,25 +244,21 @@ async function main() {
     }
 
     {
-      // Сценарии 14–15: тема и настройки доступности сохраняются при переходах, смене языка и перезагрузке.
+      // Сценарий 14: тема сохраняется при переходах, смене языка и перезагрузке (панель доступности убрана 11.11.2026).
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
       await openWithPrefs(page, '/kk', {});
       await page.getByRole('button', { name: 'Қараңғы тақырыпты қосу' }).click();
       check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'сценарий 14: тёмная тема включается без перезагрузки');
-      await page.getByRole('button', { name: 'Қолжетімділік', exact: true }).click();
-      const panel = page.getByRole('dialog', { name: 'Қолжетімділік баптаулары' });
-      await panel.getByRole('checkbox', { name: 'Жоғары контраст' }).check();
-      await page.keyboard.press('Escape');
+      check((await page.getByRole('button', { name: 'Қолжетімділік', exact: true }).count()) === 0, 'панели «Доступность» в шапке нет');
       await page.getByRole('banner').getByRole('link', { name: 'Электрондық каталог' }).first().click();
       await page.waitForURL(/\/kk\/catalog/);
       await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'RU' }).click();
       await page.waitForURL(/\/ru\/catalog/);
       await page.reload();
       await page.locator('h1').waitFor();
-      const state = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, contrast: document.documentElement.dataset.contrast, lang: document.documentElement.lang }));
+      const state = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, lang: document.documentElement.lang }));
       check(state.theme === 'dark', `сценарий 14: тема сохранилась после перехода, смены языка и перезагрузки (${state.theme})`);
-      check(state.contrast === 'high', `сценарий 15: высокая контрастность сохранилась (${state.contrast})`);
-      check(state.lang === 'ru', 'сценарий 15: язык сменился, настройки остались');
+      check(state.lang === 'ru', 'сценарий 14: язык сменился, тема осталась');
       check(await page.getByRole('button', { name: 'Включить светлую тему' }).isVisible(), 'сценарий 14: кнопка темы подписана на новом языке');
       await page.close();
     }

@@ -47,7 +47,8 @@ describe('каркас страницы', () => {
     expect(within(banner).getByRole('button', { name: 'Включить тёмную тему' })).toBeInTheDocument();
     expect(within(banner).getByRole('searchbox', { name: 'Поиск по сайту' })).toBeInTheDocument();
     expect(within(banner).getByRole('link', { name: 'Электронный каталог' })).toHaveAttribute('href', '/ru/catalog');
-    expect(within(banner).getByRole('button', { name: 'Доступность' })).toBeInTheDocument();
+    // Панель «Доступность» убрана: режимы текста и контраста будут вариантами дизайна.
+    expect(within(banner).queryByRole('button', { name: 'Доступность' })).toBeNull();
   });
 
   it('меню содержит 10 разделов ТЗ §4 и раздел госуслуги из дополнения к ТЗ', async () => {
@@ -106,30 +107,7 @@ describe('каркас страницы', () => {
   });
 });
 
-describe('панель доступности', () => {
-  it('меняет размер текста и тему сразу, сохраняет и сбрасывает с объявлением', async () => {
-    const user = userEvent.setup();
-    renderAt('/ru');
-    await user.click(await screen.findByRole('button', { name: 'Доступность' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Настройки доступности' });
-    await user.click(within(dialog).getByRole('radio', { name: '200 %' }));
-    expect(document.documentElement.style.getPropertyValue('--a11y-font-size')).toBe('200%');
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Повышенная контрастность' }));
-    expect(document.documentElement.dataset['contrast']).toBe('high');
-    await user.click(within(dialog).getByRole('radio', { name: 'Тёплая (кремовый фон)' }));
-    expect(document.documentElement.dataset['theme']).toBe('alt');
-    expect(JSON.parse(window.localStorage.getItem('archive-vko:a11y') ?? '{}')).toMatchObject({ fontScale: 200, highContrast: true, scheme: 'alt' });
-    expect(await axeViolations(dialog)).toEqual([]);
-
-    await user.click(within(dialog).getByRole('button', { name: 'Сбросить настройки' }));
-    expect(document.documentElement.style.getPropertyValue('--a11y-font-size')).toBe('100%');
-    expect(document.documentElement.dataset['theme']).toBe('light');
-    await waitFor(() => expect(screen.getByTestId('announcer')).toHaveTextContent('Настройки доступности сброшены'));
-
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  });
-
+describe('тема', () => {
   it('кнопка темы в шапке переключает светлую и тёмную тему', async () => {
     const user = userEvent.setup();
     renderAt('/ru');

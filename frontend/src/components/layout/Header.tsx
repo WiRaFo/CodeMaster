@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useNavigate, useParams } from 'react-router';
 import { useA11y } from '../../app/A11yProvider.tsx';
 import { SECTIONS, sectionHref } from '../../lib/sections.ts';
-import { A11yPanel } from '../accessibility/A11yPanel.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
 
 /**
  * Шапка по ТЗ §4, с. 3: логотип и официальное наименование, переключатель языков, переключатель темы,
- * поисковая строка, кнопка перехода к электронному каталогу; плюс кнопка панели доступности.
+ * поисковая строка, кнопка перехода к электронному каталогу. Панель настроек доступности убрана 11.11.2026:
+ * размер текста, контраст и другие режимы будут отдельными вариантами дизайна, которые переключаются кнопкой.
  */
 export function Header() {
   const { t } = useTranslation();
@@ -52,7 +52,6 @@ export function Header() {
             aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}>
             {isDark ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}
           </button>
-          <A11yPanel />
         </div>
       </div>
 
