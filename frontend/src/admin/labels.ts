@@ -34,6 +34,7 @@ export const AUDIT_LABEL: Record<string, string> = {
   status_change: 'Смена статуса',
   access_change: 'Смена доступа',
   upload: 'Загрузка файла',
+  antivirus_scan: 'Проверка антивирусом',
 };
 
 export const actionPath = (action: string) => action.replace(/_/g, '-');
