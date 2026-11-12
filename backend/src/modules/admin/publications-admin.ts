@@ -1,11 +1,14 @@
 import type { Prisma, PrismaClient, PublicationStatus } from '@prisma/client';
+import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { PUBLICATION_KINDS, publicationInputSchema, type PublicationInput } from '@archive-vko/shared';
 import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission, type Staff } from '../../http/staff.ts';
+import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
+import { hasGrant } from '../auth/session.ts';
 import { writeAudit } from '../audit/audit.ts';
-import { ruFirst, syncTranslations } from './admin-common.ts';
+import { MASTER_BUCKET, ruFirst, sniffImage, syncTranslations } from './admin-common.ts';
 
 /**
  * Публикации «Цифровой истории» в панели (ТЗ §5.6, §6.6; F-149).
@@ -23,7 +26,8 @@ type Tx = Prisma.TransactionClient;
 const select = {
   id: true, slug: true, kind: true, periodText: true, yearFrom: true, yearTo: true, sourceNote: true, authorship: true,
   documentId: true, isFeatured: true, publishedAt: true, publicationStatus: true, dataOrigin: true, sourceUrl: true, updatedAt: true,
-  translations: { select: { locale: true, title: true, lead: true, bodyText: true } },
+  coverAssetId: true,
+  translations: { select: { locale: true, title: true, lead: true, bodyText: true, coverAlt: true } },
   categories: { select: { category: { select: { slug: true, kind: true } } } },
   settlements: { select: { settlement: { select: { slug: true } } } },
   persons: { select: { personId: true } },
@@ -35,9 +39,12 @@ const titleOf = (p: Row) => ruFirst(p.translations)?.title ?? p.slug;
 const paragraphs = (text: string) => ({ paragraphs: text.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean) });
 const invalid = (path: Array<string | number>, message: string) => new ApiError(400, 'VALIDATION_FAILED', message, [{ path, code: 'unknown' }]);
 
-export async function publicationsAdminRoutes(app: FastifyInstance, { db }: { db: PrismaClient }): Promise<void> {
+export async function publicationsAdminRoutes(app: FastifyInstance, { db, storage }: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
   /** Видна ли публикация на сайте сейчас и виден ли связанный документ (через public_documents_v). */
   async function out(p: Row) {
+    const cover = p.coverAssetId
+      ? await db.digitalAsset.findFirst({ where: { id: p.coverAssetId, deletedAt: null }, select: { mimeType: true, originalFilename: true, antivirusStatus: true } })
+      : null;
     const [doc, publicDoc] = p.documentId
       ? await Promise.all([
           db.document.findUnique({ where: { id: p.documentId }, select: { translations: { select: { locale: true, title: true } } } }),
@@ -59,13 +66,15 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db }: { db
       authorship: p.authorship,
       sourceUrl: p.sourceUrl,
       document: p.documentId ? { id: p.documentId, title: doc ? (ruFirst(doc.translations)?.title ?? null) : null, visible: publicDoc.length > 0 } : null,
+      // Обложка видна на сайте только после проверки антивирусом (public_publication_covers_v).
+      cover: cover ? { filename: cover.originalFilename, mimeType: cover.mimeType, antivirusStatus: cover.antivirusStatus } : null,
       topics: p.categories.filter((c) => c.category.kind === 'history_topic').map((c) => c.category.slug),
       settlements: p.settlements.map((s) => s.settlement.slug),
       personIds: p.persons.map((x) => x.personId),
       eventIds: p.events.map((x) => x.eventId),
       updatedAt: p.updatedAt.toISOString(),
       title: titleOf(p),
-      translations: Object.fromEntries(p.translations.map((t) => [t.locale, { title: t.title, lead: t.lead ?? '', bodyText: t.bodyText ?? '' }])),
+      translations: Object.fromEntries(p.translations.map((t) => [t.locale, { title: t.title, lead: t.lead ?? '', bodyText: t.bodyText ?? '', coverAlt: t.coverAlt ?? '' }])),
     };
   }
 
@@ -125,7 +134,7 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db }: { db
     await syncTranslations(
       input.translations,
       (locale, t) => {
-        const text = { title: t.title, lead: t.lead, bodyText: t.bodyText, body: paragraphs(t.bodyText), translationStatus: 'reviewed' as const };
+        const text = { title: t.title, lead: t.lead, bodyText: t.bodyText, body: paragraphs(t.bodyText), coverAlt: t.coverAlt, translationStatus: 'reviewed' as const };
         return tx.publicationTranslation.upsert({ where: { publicationId_locale: { publicationId: id, locale } }, update: text, create: { ...text, publicationId: id, locale } });
       },
       (locale) => tx.publicationTranslation.deleteMany({ where: { publicationId: id, locale } }),
@@ -194,6 +203,8 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db }: { db
     assertIfMatch(request, before.updatedAt);
     const input = publicationInputSchema.parse(request.body);
     requireWrite(staff, before.publicationStatus, input);
+    // Опубликованная обложка должна быть описана для незрячих хотя бы по-русски.
+    if (input.published && before.coverAssetId && !input.translations.ru?.coverAlt) throw invalid(['translations', 'ru', 'coverAlt'], 'Cover description is required');
     const refs = await resolveRefs(input);
     if (await slugTaken(input.slug, id)) throw new ApiError(409, 'CONFLICT', 'Slug is already used');
     return out(await db.$transaction((tx) => save(tx, before, input, refs, staff.session.userId, request)));
@@ -209,5 +220,78 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db }: { db
       await writeAudit(tx, request, { userId: staff.session.userId, action: 'delete', entityType: 'publication', entityId: id, summary: `Удалена публикация «${titleOf(before)}»` });
     });
     return reply.status(204).send();
+  });
+
+  /**
+   * Обложка публикации: тело запроса — сам файл (JPEG, PNG, WebP), тип проверяется по сигнатуре.
+   * Нужны права правки и загрузки файлов; у опубликованной публикации — ещё право публикации.
+   * Файл ложится в закрытый бакет со статусом «ожидает проверки антивирусом» и на сайте не виден до проверки.
+   */
+  app.post('/admin/memory/publications/:id/cover', async (request, reply) => {
+    const staff = requirePermission(request, READ);
+    if (!hasGrant(staff.grants, 'assets:upload')) throw new ApiError(403, 'FORBIDDEN', 'Permission assets:upload required');
+    const { id } = ids.parse(request.params);
+    const before = await load(id);
+    if (before.publicationStatus === 'published' && !staff.grants.global.has(PUBLISH)) throw new ApiError(403, 'FORBIDDEN', `Permission ${PUBLISH} required`);
+    const data = request.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new ApiError(400, 'VALIDATION_FAILED', 'File is required', [{ path: ['file'], code: 'required' }]);
+    const mime = sniffImage(data);
+    if (!mime) throw new ApiError(415, 'VALIDATION_FAILED', 'Only JPEG, PNG and WebP images are accepted', [{ path: ['file'], code: 'unsupported_type' }]);
+    const rawName = request.headers['x-filename'];
+    const filename = (typeof rawName === 'string' ? decodeURIComponent(rawName) : 'cover').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(0, 200) || 'cover';
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mime];
+    const key = `publications/${id}/${randomUUID()}.${ext}`;
+    await storage.write(MASTER_BUCKET, key, data);
+    const row = await db.$transaction(async (tx) => {
+      const asset = await tx.digitalAsset.create({
+        data: {
+          kind: 'image', storageBucket: MASTER_BUCKET, storageKey: key, originalFilename: filename, mimeType: mime,
+          sizeBytes: BigInt(data.length), sha256: createHash('sha256').update(data).digest('hex'), sourceNote: before.sourceNote,
+          accessLevel: 'open', dataOrigin: before.dataOrigin, processingStatus: 'ready', antivirusStatus: 'pending', createdById: staff.session.userId,
+        },
+      });
+      // Прежняя обложка больше не нужна: мягкое удаление файла.
+      if (before.coverAssetId) await tx.digitalAsset.update({ where: { id: before.coverAssetId }, data: { deletedAt: new Date() } });
+      await tx.publication.update({ where: { id }, data: { coverAssetId: asset.id, updatedById: staff.session.userId } });
+      await writeAudit(tx, request, {
+        userId: staff.session.userId, action: 'upload', entityType: 'publication', entityId: id,
+        summary: `Загружена обложка публикации «${titleOf(before)}» («${filename}», ${mime})`,
+        changes: { assetId: asset.id, replaced: before.coverAssetId, sizeBytes: data.length },
+      });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return reply.status(201).send(await out(row));
+  });
+
+  app.delete('/admin/memory/publications/:id/cover', async (request) => {
+    const staff = requirePermission(request, READ);
+    const { id } = ids.parse(request.params);
+    const before = await load(id);
+    if (before.publicationStatus === 'published' && !staff.grants.global.has(PUBLISH)) throw new ApiError(403, 'FORBIDDEN', `Permission ${PUBLISH} required`);
+    if (!before.coverAssetId) throw notFound();
+    if (!confirmSchema.parse(request.body ?? {}).confirm) throw new ApiError(400, 'CONFIRMATION_REQUIRED', 'Deletion must be confirmed');
+    const coverId = before.coverAssetId;
+    const row = await db.$transaction(async (tx) => {
+      await tx.digitalAsset.update({ where: { id: coverId }, data: { deletedAt: new Date() } });
+      await tx.publication.update({ where: { id }, data: { coverAssetId: null, updatedById: staff.session.userId } });
+      await writeAudit(tx, request, { userId: staff.session.userId, action: 'delete', entityType: 'publication', entityId: id, summary: `Удалена обложка публикации «${titleOf(before)}»`, changes: { assetId: coverId } });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return out(row);
+  });
+
+  /** Предпросмотр обложки для сотрудников, в том числе до проверки антивирусом. */
+  app.get('/admin/memory/publications/:id/cover', async (request, reply) => {
+    requirePermission(request, READ);
+    const { id } = ids.parse(request.params);
+    const { coverAssetId } = await load(id);
+    const asset = coverAssetId ? await db.digitalAsset.findFirst({ where: { id: coverAssetId, deletedAt: null }, select: { storageBucket: true, storageKey: true, mimeType: true } }) : null;
+    const body = asset ? await storage.read(asset.storageBucket, asset.storageKey) : null;
+    if (!asset || !body) throw notFound();
+    return reply
+      .header('Content-Type', asset.mimeType)
+      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+      .header('Cache-Control', 'no-store')
+      .send(body);
   });
 }

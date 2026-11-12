@@ -15,6 +15,8 @@ export function PublicationCard({ p }: { p: PublicationSummary }) {
   const years = p.periodText ?? yearsLabel(p.yearFrom, p.yearTo);
   return (
     <article className="flex h-full flex-col gap-2 rounded-md border-2 border-border bg-surface p-4">
+      {/* В карточке обложка оформительская: заголовок рядом, поэтому alt пустой. */}
+      {p.cover ? <img src={p.cover.url} alt="" loading="lazy" className="aspect-[3/2] w-full rounded object-cover" /> : null}
       <div className="flex flex-wrap items-center gap-2">
         <OriginBadge origin={p.dataOrigin} />
         {years ? <span className="text-sm text-muted">{t('history.years', { years })}</span> : null}
@@ -149,6 +151,7 @@ export function PublicationPage() {
         </div>
       </PageHeading>
       <article className="max-w-[75ch]" lang={p.contentLang ?? undefined}>
+        {p.cover ? <img src={p.cover.url} alt={p.cover.alt} className="mb-4 w-full rounded-md" /> : null}
         {p.lead ? <p className="mb-4 text-lg">{p.lead}</p> : null}
         {(p.bodyText ?? '').split(/\n{2,}/).filter(Boolean).map((para, i) => <p key={i} className="mb-4 whitespace-pre-line">{para}</p>)}
       </article>

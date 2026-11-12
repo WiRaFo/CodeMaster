@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { AdminHeading, ErrorMessage } from './AdminApp.tsx';
+import { ConfirmDialog } from './ConfirmDialog.tsx';
+import { adminRequest, adminUpload, errorText } from './api.ts';
 import { ADMIN_LOCALES, type AdminLocale } from './format.ts';
 import {
   Field, MemoryTabs, OriginSelect, SaveButtons, byLocale, filled, useMemoryPage,
@@ -14,17 +16,18 @@ import { useAdminData } from './useAdminData.ts';
  */
 const KINDS: Record<string, string> = { article: 'Статья', photo_story: 'Фотоистория', biography: 'Биография', memoir: 'Воспоминания' };
 const MESSAGES: Record<string, string> = {
-  VALIDATION_FAILED: 'Проверьте поля: адрес латиницей, название и текст на русском, источник от 5 символов, годы по порядку, ссылка на источник с https.',
+  VALIDATION_FAILED: 'Проверьте поля: адрес латиницей, название и текст на русском, источник от 5 символов, годы по порядку, ссылка на источник с https, описание обложки на русском, если обложка есть.',
   FORBIDDEN: 'Публиковать, править опубликованное и удалять может сотрудник с правом публикации. Сохраните как черновик.',
 };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
-interface PubText { title: string; lead: string; bodyText: string }
+interface PubText { title: string; lead: string; bodyText: string; coverAlt: string }
 interface Option { slug: string; name: string }
 interface PubRow {
   id: string; slug: string; kind: string; periodText: string | null; yearFrom: number | null; yearTo: number | null;
   published: boolean; featured: boolean; publishedAt: string | null; dataOrigin: string; sourceNote: string | null; authorship: string | null; sourceUrl: string | null;
   document: { id: string; title: string | null; visible: boolean } | null;
+  cover: { filename: string; mimeType: string; antivirusStatus: string } | null;
   topics: string[]; settlements: string[]; personIds: string[]; eventIds: string[];
   updatedAt: string; title: string; translations: Partial<Record<AdminLocale, PubText>>;
 }
@@ -34,7 +37,12 @@ interface PubForm {
   dataOrigin: Origin; sourceNote: string; authorship: string; sourceUrl: string; documentLink: string;
   topics: string[]; settlements: string[]; personIds: string[]; eventIds: string[]; texts: Texts<PubText>;
 }
-const emptyText = (): PubText => ({ title: '', lead: '', bodyText: '' });
+const emptyText = (): PubText => ({ title: '', lead: '', bodyText: '', coverAlt: '' });
+const ANTIVIRUS: Record<string, string> = {
+  pending: 'ожидает проверки антивирусом, на сайте пока не показывается',
+  clean: 'проверена, показывается на сайте у опубликованной публикации',
+  infected: 'не прошла проверку антивирусом и на сайте не показывается',
+};
 const toggle = (list: string[], value: string, on: boolean) => (on ? [...list, value] : list.filter((x) => x !== value));
 
 function formOf(row: PubRow | null): PubForm {
@@ -68,18 +76,49 @@ function Checklist({ legend, options, value, onChange }: { legend: string; optio
   );
 }
 
-export function MemoryPublicationsPage({ canWrite }: { canWrite: boolean }) {
+export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: boolean; canUpload: boolean }) {
   const list = useAdminData<PubList>('/admin/memory/publications');
   const persons = useAdminData<{ items: PersonRow[] }>('/admin/memory/persons');
   const events = useAdminData<{ items: EventRow[] }>('/admin/memory/events');
   const page = useMemoryPage('/admin/memory/publications', list.reload, MESSAGES);
   const [editing, setEditing] = useState<{ id: string | null; updatedAt: string | null; current: PubRow | null; form: PubForm } | null>(null);
   const canPublish = list.data?.canPublish ?? false;
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [confirmCover, setConfirmCover] = useState(false);
+  /** Загрузка и удаление обложки меняют запись: дальше правка идёт с новой версией (If-Match). */
+  const coverChanged = (row: PubRow, message: string) => {
+    if (editing) setEditing({ ...editing, updatedAt: row.updatedAt, current: row });
+    page.setStatus(message);
+    list.reload();
+  };
+  const uploadCover = async (file: File | undefined) => {
+    if (!file || !editing?.id) return;
+    setCoverBusy(true);
+    setCoverError(null);
+    try {
+      coverChanged(await adminUpload<PubRow>(`/admin/memory/publications/${editing.id}/cover`, file), 'Обложка загружена.');
+    } catch (e) {
+      setCoverError(errorText(e));
+    } finally {
+      setCoverBusy(false);
+    }
+  };
+  const removeCover = async () => {
+    setConfirmCover(false);
+    if (!editing?.id) return;
+    try {
+      coverChanged(await adminRequest<PubRow>('DELETE', `/admin/memory/publications/${editing.id}/cover`, { confirm: true }), 'Обложка удалена.');
+    } catch (e) {
+      setCoverError(errorText(e));
+    }
+  };
   const set = (patch: Partial<PubForm>) => editing && setEditing({ ...editing, form: { ...editing.form, ...patch } });
   const setText = (l: AdminLocale, k: keyof PubText, v: string) => editing && set({ texts: { ...editing.form.texts, [l]: { ...editing.form.texts[l], [k]: v } } });
   const open = (row: PubRow | null) => {
     page.setStatus(null);
     page.setError(null);
+    setCoverError(null);
     setEditing({ id: row?.id ?? null, updatedAt: row?.updatedAt ?? null, current: row, form: formOf(row) });
   };
   const submit = async (event: FormEvent) => {
@@ -97,6 +136,7 @@ export function MemoryPublicationsPage({ canWrite }: { canWrite: boolean }) {
   // Опубликованное правит только сотрудник с правом публикации.
   const canEdit = (row: PubRow) => canWrite && (canPublish || !row.published);
   const doc = editing?.current?.document;
+  const cover = editing?.current?.cover ?? null;
   const docChanged = editing ? editing.form.documentLink.trim() !== (doc?.id ?? '') : false;
 
   return (
@@ -132,6 +172,28 @@ export function MemoryPublicationsPage({ canWrite }: { canWrite: boolean }) {
           {doc && !docChanged ? <p>{`Сейчас: ${doc.title ?? doc.id}`}{doc.visible ? null : <strong> (не видно на сайте: документ закрыт или не опубликован)</strong>}</p> : null}
           <label className="choice"><input type="checkbox" checked={editing.form.published} disabled={!canPublish} onChange={(e) => set({ published: e.target.checked })} /><span>Опубликовано на сайте</span></label>
           <label className="choice"><input type="checkbox" checked={editing.form.featured} onChange={(e) => set({ featured: e.target.checked })} /><span>Показывать в начале списка</span></label>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-semibold">Обложка</legend>
+            {!editing.id ? <p>Обложку можно загрузить после первого сохранения.</p> : (
+              <>
+                {cover ? (
+                  <>
+                    <img src={`/api/v1/admin/memory/publications/${editing.id}/cover?v=${encodeURIComponent(editing.updatedAt ?? '')}`} alt={`Предпросмотр обложки: ${cover.filename}`} className="max-h-48 w-fit rounded border border-border" />
+                    <p>{`Файл «${cover.filename}»: ${ANTIVIRUS[cover.antivirusStatus] ?? cover.antivirusStatus}.`}</p>
+                  </>
+                ) : <p>Обложки нет.</p>}
+                {canUpload ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <Field id="pu-cover" label={cover ? 'Заменить обложку' : 'Загрузить обложку'} hint="JPEG, PNG или WebP до 20 МБ. Опишите обложку ниже для незрячих.">
+                      <input id="pu-cover" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="pu-cover-hint" disabled={coverBusy} onChange={(e) => { void uploadCover(e.target.files?.[0]); e.target.value = ''; }} />
+                    </Field>
+                    {cover ? <button type="button" className="btn-secondary" onClick={() => setConfirmCover(true)}>Удалить обложку</button> : null}
+                  </div>
+                ) : <p>Загружать файлы может сотрудник с правом загрузки.</p>}
+                {coverError ? <p role="alert" className="text-danger">{coverError}</p> : null}
+              </>
+            )}
+          </fieldset>
           <Checklist legend="Тематики" options={list.data.topics.map((x) => ({ value: x.slug, label: x.name }))} value={editing.form.topics} onChange={(topics) => set({ topics })} />
           <Checklist legend="Населённые пункты" options={list.data.settlements.map((x) => ({ value: x.slug, label: x.name }))} value={editing.form.settlements} onChange={(settlements) => set({ settlements })} />
           <Checklist
@@ -151,6 +213,9 @@ export function MemoryPublicationsPage({ canWrite }: { canWrite: boolean }) {
               <legend className="font-semibold">{l.label}{l.code === 'ru' ? ' (обязательно)' : ' (пусто — без этой версии)'}</legend>
               <Field id={`pu-${l.code}-title`} label="Заголовок"><input id={`pu-${l.code}-title`} className="input" lang={l.code} value={editing.form.texts[l.code].title} onChange={(e) => setText(l.code, 'title', e.target.value)} /></Field>
               <Field id={`pu-${l.code}-lead`} label="Вводный абзац"><textarea id={`pu-${l.code}-lead`} className="input min-h-16" lang={l.code} value={editing.form.texts[l.code].lead} onChange={(e) => setText(l.code, 'lead', e.target.value)} /></Field>
+              <Field id={`pu-${l.code}-alt`} label="Описание обложки для незрячих" hint={l.code === 'ru' ? 'Обязательно, если обложка есть и публикация на сайте.' : undefined}>
+                <input id={`pu-${l.code}-alt`} className="input" lang={l.code} aria-describedby={l.code === 'ru' ? 'pu-ru-alt-hint' : undefined} value={editing.form.texts[l.code].coverAlt} onChange={(e) => setText(l.code, 'coverAlt', e.target.value)} />
+              </Field>
               <Field id={`pu-${l.code}-body`} label="Текст"><textarea id={`pu-${l.code}-body`} className="input min-h-48" lang={l.code} value={editing.form.texts[l.code].bodyText} onChange={(e) => setText(l.code, 'bodyText', e.target.value)} /></Field>
             </fieldset>
           ))}
@@ -182,6 +247,15 @@ export function MemoryPublicationsPage({ canWrite }: { canWrite: boolean }) {
         </div>
       ) : null}
       {page.dialog}
+      <ConfirmDialog
+        open={confirmCover}
+        title="Удалить обложку?"
+        description="Обложка исчезнет из панели и с сайта."
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => void removeCover()}
+        onCancel={() => setConfirmCover(false)}
+      />
     </>
   );
 }

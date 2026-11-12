@@ -196,7 +196,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="news" element={news ? <NewsAdminPage /> : <NoAccess />} />
           <Route path="memory" element={<Navigate to="/admin/memory/publications" replace />} />
-          <Route path="memory/publications" element={can('publications:edit') ? <MemoryPublicationsPage canWrite={can('publications:edit')} /> : <NoAccess />} />
+          <Route path="memory/publications" element={can('publications:edit') ? <MemoryPublicationsPage canWrite={can('publications:edit')} canUpload={can('assets:upload')} /> : <NoAccess />} />
           <Route path="memory/events" element={can('publications:edit') ? <MemoryEventsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/persons" element={can('publications:edit') ? <MemoryPersonsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/collections" element={can('publications:edit') ? <MemoryCollectionsPage canWrite={can('publications:publish')} /> : <NoAccess />} />

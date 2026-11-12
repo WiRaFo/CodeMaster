@@ -14,6 +14,7 @@ let moderator: Client;
 
 const SLUG = 'test-publication-admin';
 const ROLE = 'test-publication-writer';
+const COVER = 'test-publication-cover';
 
 beforeAll(async () => {
   t = await testApp();
@@ -25,7 +26,7 @@ beforeAll(async () => {
   moderator = await login(t.app, (await createStaff(t.db, 'moderator')).email, undefined, '10.0.12.3');
 });
 afterAll(async () => {
-  await t.db.publication.deleteMany({ where: { slug: SLUG } });
+  await t.db.publication.deleteMany({ where: { slug: { in: [SLUG, COVER] } } });
   await cleanupStaff(t.db);
   await t.db.role.deleteMany({ where: { code: ROLE } });
   await t.close();
@@ -120,5 +121,53 @@ describe('публикации в панели', () => {
     expect((await editor.request('DELETE', `/api/v1/admin/memory/publications/${id}`, { confirm: true })).status).toBe(204);
     expect((await editor.request('GET', `/api/v1/admin/memory/publications/${id}`)).status).toBe(404);
     expect(await t.db.auditLog.findFirst({ where: { entityType: 'publication', entityId: id, action: 'delete' } })).not.toBeNull();
+  });
+});
+
+describe('обложка публикации', () => {
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
+  const upload = (client: Client, id: string, body: Buffer, type = 'image/png') =>
+    t.app.inject({ method: 'POST', url: `/api/v1/admin/memory/publications/${id}/cover`, headers: { cookie: client.cookie, 'x-csrf-token': client.csrf, 'content-type': type, 'x-filename': encodeURIComponent('обложка.png') }, payload: body });
+  const input = (over: Record<string, unknown> = {}, ruOver: Record<string, unknown> = {}) => ({
+    slug: COVER, kind: 'photo_story', yearFrom: '', yearTo: '', published: false, featured: false, dataOrigin: 'demo',
+    sourceNote: '[Демо] Проверочный источник', topics: [], settlements: [], personIds: [], eventIds: [],
+    translations: { ru: { title: '[Демо] Публикация с обложкой', bodyText: 'Текст публикации с обложкой.', ...ruOver } }, ...over,
+  });
+
+  it('файл проверяется по сигнатуре; без права загрузки — 403; до проверки антивирусом обложки на сайте нет', async () => {
+    const created = await editor.request('POST', '/api/v1/admin/memory/publications', input());
+    const id = String(created.body['id']);
+    expect((await upload(writer, id, png)).statusCode).toBe(403);
+    expect((await upload(editor, id, Buffer.from('X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR'), 'application/octet-stream')).statusCode).toBe(415);
+    const res = await upload(editor, id, png);
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ cover: { filename: 'обложка.png', mimeType: 'image/png', antivirusStatus: 'pending' } });
+    expect((await editor.request('GET', `/api/v1/admin/memory/publications/${id}/cover`)).status).toBe(200);
+
+    let updatedAt = String(res.json().updatedAt);
+    const noAlt = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}`, input({ published: true }), { 'if-match': updatedAt });
+    expect(paths(noAlt.body)).toEqual(['translations.ru.coverAlt']);
+    const published = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}`, input({ published: true }, { coverAlt: 'Здание архива, 1960-е годы' }), { 'if-match': updatedAt });
+    expect(published.status).toBe(200);
+    updatedAt = String(published.body['updatedAt']);
+    expect(((await site(`/api/v1/history/${COVER}?lang=ru`)).json() as { cover: unknown }).cover).toBeNull();
+    expect((await site(`/api/v1/history/${COVER}/cover`)).statusCode).toBe(404);
+
+    // Имитация проверки антивирусом: после неё обложка видна на сайте вместе с описанием.
+    const { coverAssetId } = await t.db.publication.findUniqueOrThrow({ where: { id }, select: { coverAssetId: true } });
+    await t.db.digitalAsset.update({ where: { id: coverAssetId ?? '' }, data: { antivirusStatus: 'clean' } });
+    const page = (await site(`/api/v1/history/${COVER}?lang=kk`)).json() as { cover: { url: string; alt: string } | null };
+    expect(page.cover).toEqual({ url: `/api/v1/history/${COVER}/cover`, alt: 'Здание архива, 1960-е годы' });
+    const image = await site(`/api/v1/history/${COVER}/cover`);
+    expect(image.statusCode).toBe(200);
+    expect(image.headers['content-type']).toBe('image/png');
+    const list = (await site('/api/v1/history?lang=ru')).json() as { items: Array<{ slug: string; cover: unknown }> };
+    expect(list.items.find((x) => x.slug === COVER)?.cover).not.toBeNull();
+
+    expect((await editor.request('DELETE', `/api/v1/admin/memory/publications/${id}/cover`, {})).status).toBe(400);
+    const removed = await editor.request('DELETE', `/api/v1/admin/memory/publications/${id}/cover`, { confirm: true });
+    expect(removed.body['cover']).toBeNull();
+    expect((await site(`/api/v1/history/${COVER}/cover`)).statusCode).toBe(404);
+    expect(await t.db.auditLog.count({ where: { entityType: 'publication', entityId: id, action: { in: ['upload', 'delete'] } } })).toBe(2);
   });
 });
