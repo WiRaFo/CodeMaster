@@ -143,6 +143,14 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       ${bestTranslation('historicalEvent', 't', 'e.id', lang, ['title', 'description'])}
       WHERE e.publication_status = 'published' AND e.deleted_at IS NULL AND t.title IS NOT NULL
       ORDER BY e.year, e.event_date NULLS FIRST, e.slug`;
+    // Опубликованные публикации о событии — ссылками под ним.
+    const links = await db.$queryRaw<Array<{ event_slug: string; slug: string; title: string | null }>>`
+      SELECT e.slug AS event_slug, p.slug, t.title
+      FROM publication_events pe
+      JOIN historical_events e ON e.id = pe.event_id
+      JOIN publications p ON p.id = pe.publication_id AND ${PUBLIC_PUBLICATION}
+      ${bestTranslation('publication', 't', 'p.id', lang, ['title'])}
+      ORDER BY p.published_at DESC, p.slug`;
     return {
       items: rows.map((r) => ({
         slug: r.slug,
@@ -155,6 +163,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
         dataOrigin: r.data_origin,
         contentLang: r.content_lang,
         translationStatus: r.translation_status,
+        publications: links.filter((l) => l.event_slug === r.slug).map((l) => ({ slug: l.slug, title: l.title })),
       })),
     };
   });
@@ -204,11 +213,15 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       ) t ON true
       WHERE pmd.person_id = ${row.id}::uuid
       ORDER BY md.calendar_year, md.month NULLS FIRST, md.day NULLS FIRST`;
+    const publications = await db.$queryRaw<Row[]>`${select(lang)} WHERE ${PUBLIC_PUBLICATION}
+      AND EXISTS (SELECT 1 FROM publication_persons pp WHERE pp.publication_id = p.id AND pp.person_id = ${row.id}::uuid)
+      ORDER BY p.published_at DESC, p.slug`;
     return {
       ...personDto(row),
       biography: row.biography,
       sourceNote: row.source_note,
       memorableDates: dates.map((d) => ({ calendarYear: d.calendar_year, dateLabel: d.date_label, text: d.text, contentLang: d.content_lang })),
+      publications: publications.map(summary),
     };
   });
 
@@ -217,7 +230,7 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const lang = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
     const [p] = await db.$queryRaw<Row[]>`${select(lang)} WHERE ${PUBLIC_PUBLICATION} AND p.slug = ${slug}`;
     if (!p) throw notFound();
-    const [docs, related] = await Promise.all([
+    const [docs, related, persons, events] = await Promise.all([
       p.document_id
         ? db.$queryRaw<Array<{ id: string; fond_number: string; inventory_number: string; case_number: string; sheets_from: string | null; sheets_to: string | null; effective_access: string; title: string | null }>>`
             SELECT d.id, d.fond_number, d.inventory_number, d.case_number, d.sheets_from, d.sheets_to, d.effective_access::text AS effective_access, t.title
@@ -228,6 +241,21 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
         AND EXISTS (SELECT 1 FROM publication_categories a JOIN publication_categories b ON a.category_id = b.category_id
                     WHERE a.publication_id = p.id AND b.publication_id = ${p.id}::uuid)
         ORDER BY p.published_at DESC LIMIT 3`,
+      // Связанные личности и события — только опубликованные.
+      db.$queryRaw<Array<{ slug: string; full_name: string; life_years_text: string | null }>>`
+        SELECT hp.slug, t.full_name, t.life_years_text
+        FROM publication_persons pp
+        JOIN historical_persons hp ON hp.id = pp.person_id AND hp.publication_status = 'published' AND hp.deleted_at IS NULL
+        ${bestTranslation('historicalPerson', 't', 'hp.id', lang, ['full_name', 'life_years_text'])}
+        WHERE pp.publication_id = ${p.id}::uuid AND t.full_name IS NOT NULL
+        ORDER BY t.full_name COLLATE "C"`,
+      db.$queryRaw<Array<{ slug: string; year: number; title: string }>>`
+        SELECT e.slug, e.year, t.title
+        FROM publication_events pe
+        JOIN historical_events e ON e.id = pe.event_id AND e.publication_status = 'published' AND e.deleted_at IS NULL
+        ${bestTranslation('historicalEvent', 't', 'e.id', lang, ['title'])}
+        WHERE pe.publication_id = ${p.id}::uuid AND t.title IS NOT NULL
+        ORDER BY e.year, e.event_date NULLS FIRST, e.slug`,
     ]);
     const doc = docs[0];
     return {
@@ -238,6 +266,8 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       sourceUrl: p.source_url,
       document: doc ? { id: doc.id, title: doc.title, access: doc.effective_access, code: archiveCodeDto(doc, lang) } : null,
       related: related.map(summary),
+      persons: persons.map((x) => ({ slug: x.slug, fullName: x.full_name, lifeYears: x.life_years_text })),
+      events: events.map((x) => ({ slug: x.slug, year: x.year, title: x.title })),
     };
   });
 }

@@ -480,7 +480,9 @@
     "source": "Source",
     "sourceUrl": "Source link",
     "related": "More on this theme",
-    "settlement": "Place"
+    "settlement": "Place",
+    "persons": "People",
+    "events": "Timeline events"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",
@@ -643,7 +645,8 @@
     "decades": "Decades",
     "decade": "{{decade}}s",
     "empty": "No events yet.",
-    "fullHistory": "Full history of the archive"
+    "fullHistory": "Full history of the archive",
+    "publications": "Publications about this event"
   },
   "persons": {
     "title": "Historical figures",
@@ -652,7 +655,8 @@
     "biography": "Biography",
     "noBiography": "A biography will be published once the archive prepares the text. Below are the entries from the calendar of memorable dates.",
     "dates": "In the calendar of memorable dates",
-    "source": "Information from the calendar of memorable dates provided by the State Archive of East Kazakhstan Region."
+    "source": "Information from the calendar of memorable dates provided by the State Archive of East Kazakhstan Region.",
+    "publications": "Publications"
   },
   "collections": {
     "title": "Collections",

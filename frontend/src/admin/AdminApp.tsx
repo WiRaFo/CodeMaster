@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
 import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
@@ -14,6 +14,7 @@ import { ImportPage } from './ImportPage.tsx';
 import { FaqAdminPage, PageEditPage, PagesAdminPage } from './ContentAdmin.tsx';
 import { NewsAdminPage } from './NewsAdmin.tsx';
 import { MemoryCollectionsPage, MemoryEventsPage, MemoryPersonsPage } from './MemoryAdmin.tsx';
+import { MemoryPublicationsPage } from './PublicationsAdmin.tsx';
 import { UsersAdminPage } from './UsersAdmin.tsx';
 import { LoginPage } from './LoginPage.tsx';
 
@@ -169,7 +170,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {can('catalog:import') ? <AdminNavItem to="/admin/import" label="Импорт описи" /> : null}
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
             {news ? <AdminNavItem to="/admin/news" label="Новости" /> : null}
-            {can('publications:edit') ? <AdminNavItem to="/admin/memory/events" label="Архив памяти" /> : null}
+            {can('publications:edit') ? <AdminNavItem to="/admin/memory" label="Архив памяти" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
@@ -194,6 +195,8 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="news" element={news ? <NewsAdminPage /> : <NoAccess />} />
+          <Route path="memory" element={<Navigate to="/admin/memory/publications" replace />} />
+          <Route path="memory/publications" element={can('publications:edit') ? <MemoryPublicationsPage canWrite={can('publications:edit')} /> : <NoAccess />} />
           <Route path="memory/events" element={can('publications:edit') ? <MemoryEventsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/persons" element={can('publications:edit') ? <MemoryPersonsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/collections" element={can('publications:edit') ? <MemoryCollectionsPage canWrite={can('publications:publish')} /> : <NoAccess />} />

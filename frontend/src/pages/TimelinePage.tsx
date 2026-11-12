@@ -68,8 +68,14 @@ export function TimelinePage() {
                         <p className="font-semibold text-primary">
                           <time dateTime={e.date ?? String(e.year)}>{e.date ? formatDate(e.date, lang) : e.year}</time>
                         </p>
-                        <h3 id={`event-${e.slug}`} className="mb-2 text-lg font-semibold">{e.title}</h3>
+                        <h3 id={`event-${e.slug}`} className="mb-2 scroll-mt-24 text-lg font-semibold">{e.title}</h3>
                         {e.description ? <Description text={e.description} /> : null}
+                        {e.publications.length > 0 ? (
+                          <div className="mt-2">
+                            <p className="font-semibold">{t('timeline.publications')}</p>
+                            <ul className="list-disc pl-5">{e.publications.map((x) => <li key={x.slug}><Link to={`/${lang}/history/${x.slug}`}>{x.title ?? x.slug}</Link></li>)}</ul>
+                          </div>
+                        ) : null}
                       </article>
                     </li>
                   ))}

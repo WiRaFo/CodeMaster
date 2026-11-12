@@ -6,6 +6,7 @@ import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import type { PersonDetail, PersonSummary } from '../lib/types.ts';
 import { useApi } from '../lib/useApi.ts';
+import { PublicationCard } from './HistoryPage.tsx';
 import { NotFoundPage } from './NotFoundPage.tsx';
 
 /**
@@ -74,6 +75,12 @@ export function PersonPage() {
             ))}
           </ul>
           <p className="mt-3"><Link to={`/${lang}/calendar?year=${p.memorableDates[0]?.calendarYear ?? ''}`}>{t('calendar.title')}</Link></p>
+        </section>
+      ) : null}
+      {p.publications.length > 0 ? (
+        <section aria-labelledby="person-publications" className="mb-8">
+          <h2 id="person-publications" className="mb-3 text-xl font-semibold">{t('persons.publications')}</h2>
+          <ul className="grid gap-4 md:grid-cols-2">{p.publications.map((x) => <li key={x.slug}><PublicationCard p={x} /></li>)}</ul>
         </section>
       ) : null}
       {p.memorableDates.length > 0 ? <p className="text-sm text-muted">{t('persons.source')}</p> : null}

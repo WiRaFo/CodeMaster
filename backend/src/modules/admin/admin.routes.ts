@@ -30,6 +30,7 @@ import { exhibitionAdminRoutes } from './exhibitions-admin.ts';
 import { exportAdminRoutes } from './export-admin.ts';
 import { importAdminRoutes } from './import-admin.ts';
 import { memoryAdminRoutes } from './memory-admin.ts';
+import { publicationsAdminRoutes } from './publications-admin.ts';
 import { newsAdminRoutes } from './news-admin.ts';
 import { overviewAdminRoutes } from './overview-admin.ts';
 import { userAdminRoutes } from './users-admin.ts';
@@ -533,6 +534,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   await userAdminRoutes(app, { db });
   await newsAdminRoutes(app, { db });
   await memoryAdminRoutes(app, { db });
+  await publicationsAdminRoutes(app, { db });
   await exportAdminRoutes(app, { db });
   await overviewAdminRoutes(app, { db });
 

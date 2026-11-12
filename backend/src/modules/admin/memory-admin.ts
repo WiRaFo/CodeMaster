@@ -2,13 +2,13 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
-  LOCALES, collectionInputSchema, personInputSchema, timelineEventInputSchema,
+  collectionInputSchema, personInputSchema, timelineEventInputSchema,
   type CollectionInput, type PersonInput, type TimelineEventInput,
 } from '@archive-vko/shared';
 import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission } from '../../http/staff.ts';
 import { writeAudit } from '../audit/audit.ts';
-import { ruFirst } from './admin-common.ts';
+import { ruFirst, syncTranslations } from './admin-common.ts';
 
 /**
  * «Архив памяти» в панели (ТЗ §6.6, F-149): события хронологии, исторические личности, коллекции.
@@ -28,18 +28,6 @@ const requireConfirm = (request: Request) => {
   if (!confirmSchema.parse(request.body ?? {}).confirm) throw new ApiError(400, 'CONFIRMATION_REQUIRED', 'Deletion must be confirmed');
 };
 const slugConflict = () => new ApiError(409, 'CONFLICT', 'Slug is already used');
-
-/** Перевод на каждый язык: есть во вводе — upsert, нет — удаление. */
-async function syncTranslations<T>(
-  locales: Partial<Record<(typeof LOCALES)[number], T>>,
-  upsert: (locale: (typeof LOCALES)[number], value: T) => Promise<unknown>,
-  remove: (locale: (typeof LOCALES)[number]) => Promise<unknown>,
-) {
-  for (const locale of LOCALES) {
-    const value = locales[locale];
-    await (value ? upsert(locale, value) : remove(locale));
-  }
-}
 
 export async function memoryAdminRoutes(app: FastifyInstance, { db }: { db: PrismaClient }): Promise<void> {
   /* ---------- События хронологии ---------- */

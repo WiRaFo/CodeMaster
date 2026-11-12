@@ -1,10 +1,22 @@
 import type { Prisma } from '@prisma/client';
 import type { Staff } from '../../http/staff.ts';
-import { WORKFLOW_ACTIONS, type WorkflowAction } from '@archive-vko/shared';
+import { LOCALES, WORKFLOW_ACTIONS, type WorkflowAction } from '@archive-vko/shared';
 
 /** Общие части административного API: каталог и выставки. */
 
 /** Перевод для панели: русский, а если его нет — первый имеющийся. Панель ведётся на русском. */
+/** Перевод на каждый язык: есть во вводе — upsert, нет — удаление. */
+export async function syncTranslations<T>(
+  locales: Partial<Record<(typeof LOCALES)[number], T>>,
+  upsert: (locale: (typeof LOCALES)[number], value: T) => Promise<unknown>,
+  remove: (locale: (typeof LOCALES)[number]) => Promise<unknown>,
+) {
+  for (const locale of LOCALES) {
+    const value = locales[locale];
+    await (value ? upsert(locale, value) : remove(locale));
+  }
+}
+
 export const ruFirst = <T extends { locale: string }>(list: readonly T[]): T | undefined => list.find((t) => t.locale === 'ru') ?? list[0];
 
 /** Права, дающие доступ к каталогу в панели. */

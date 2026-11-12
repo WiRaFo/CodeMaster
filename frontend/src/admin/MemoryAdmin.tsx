@@ -11,22 +11,22 @@ import { useAdminData } from './useAdminData.ts';
  * Читать может сотрудник с publications:edit, сохранять и удалять — с publications:publish: запись меняется
  * на сайте сразу. У каждой записи обязателен источник; демонстрационные помечаются на сайте.
  */
-type Origin = 'verified' | 'demo';
-type Texts<T> = Record<AdminLocale, T>;
+export type Origin = 'verified' | 'demo';
+export type Texts<T> = Record<AdminLocale, T>;
 const ERRORS: Record<string, string> = {
   VALIDATION_FAILED: 'Проверьте поля: адрес латиницей через дефис, название на русском, источник от 5 символов, годы по порядку.',
   CONFLICT: 'Такой адрес уже занят, или запись изменена другим сотрудником: обновите страницу.',
   FORBIDDEN: 'Недостаточно прав: сохранять записи «Архива памяти» может сотрудник с правом публикации.',
 };
-const failText = (e: unknown) => (e instanceof AdminApiError ? (ERRORS[e.code] ?? errorText(e)) : errorText(e));
-const byLocale = <T,>(make: () => T, from: Partial<Record<AdminLocale, T>> = {}): Texts<T> =>
+const failText = (e: unknown, messages: Record<string, string>) => (e instanceof AdminApiError ? (messages[e.code] ?? ERRORS[e.code] ?? errorText(e)) : errorText(e));
+export const byLocale = <T,>(make: () => T, from: Partial<Record<AdminLocale, T>> = {}): Texts<T> =>
   Object.fromEntries(ADMIN_LOCALES.map((l) => [l.code, from[l.code] ?? make()])) as Texts<T>;
-const filled = <T, K extends keyof T>(texts: Texts<T>, key: K) =>
+export const filled = <T, K extends keyof T>(texts: Texts<T>, key: K) =>
   Object.fromEntries(ADMIN_LOCALES.filter((l) => String(texts[l.code][key]).trim()).map((l) => [l.code, texts[l.code]]));
 
 /** Переключатель разделов «Архива памяти». */
-function MemoryTabs() {
-  const tabs = [['/admin/memory/events', 'Хронология'], ['/admin/memory/persons', 'Личности'], ['/admin/memory/collections', 'Коллекции']] as const;
+export function MemoryTabs() {
+  const tabs = [['/admin/memory/publications', 'Публикации'], ['/admin/memory/events', 'Хронология'], ['/admin/memory/persons', 'Личности'], ['/admin/memory/collections', 'Коллекции']] as const;
   return (
     <nav aria-label="Разделы архива памяти" className="mb-4">
       <ul className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ function MemoryTabs() {
   );
 }
 
-function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: ReactNode }) {
+export function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="admin-field">
       <label htmlFor={id}>{label}</label>
@@ -48,7 +48,7 @@ function Field({ id, label, hint, children }: { id: string; label: string; hint?
   );
 }
 
-function OriginSelect({ id, value, onChange }: { id: string; value: Origin; onChange: (v: Origin) => void }) {
+export function OriginSelect({ id, value, onChange }: { id: string; value: Origin; onChange: (v: Origin) => void }) {
   return (
     <Field id={id} label="Происхождение">
       <select id={id} className="input" value={value} onChange={(e) => onChange(e.target.value === 'demo' ? 'demo' : 'verified')}>
@@ -60,7 +60,7 @@ function OriginSelect({ id, value, onChange }: { id: string; value: Origin; onCh
 }
 
 /** Общая обвязка списка: заголовок, кнопка «Добавить», статус, ошибка, подтверждение удаления. */
-function useMemoryPage(base: string, reload: () => void) {
+export function useMemoryPage(base: string, reload: () => void, messages: Record<string, string> = {}) {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<{ id: string; label: string } | null>(null);
@@ -72,7 +72,7 @@ function useMemoryPage(base: string, reload: () => void) {
       reload();
       return true;
     } catch (e) {
-      setError(failText(e));
+      setError(failText(e, messages));
       return false;
     }
   };
@@ -83,7 +83,7 @@ function useMemoryPage(base: string, reload: () => void) {
       setStatus(`«${deleting.label}» удалено.`);
       reload();
     } catch (e) {
-      setError(failText(e));
+      setError(failText(e, messages));
     } finally {
       setDeleting(null);
     }
@@ -112,7 +112,7 @@ function Actions({ canWrite, label, onEdit, onDelete }: { canWrite: boolean; lab
   );
 }
 
-const SaveButtons = ({ onCancel }: { onCancel: () => void }) => (
+export const SaveButtons = ({ onCancel }: { onCancel: () => void }) => (
   <div className="flex flex-wrap gap-2">
     <button type="submit" className="btn-primary">Сохранить</button>
     <button type="button" className="btn-secondary" onClick={onCancel}>Отмена</button>
@@ -122,7 +122,7 @@ const SaveButtons = ({ onCancel }: { onCancel: () => void }) => (
 /* ---------- Хронология ---------- */
 
 interface EventText { title: string; description: string }
-interface EventRow { id: string; slug: string; year: number; date: string | null; published: boolean; dataOrigin: string; sourceNote: string | null; updatedAt: string; title: string; translations: Partial<Record<AdminLocale, EventText>> }
+export interface EventRow { id: string; slug: string; year: number; date: string | null; published: boolean; dataOrigin: string; sourceNote: string | null; updatedAt: string; title: string; translations: Partial<Record<AdminLocale, EventText>> }
 interface EventForm { slug: string; year: string; date: string; published: boolean; dataOrigin: Origin; sourceNote: string; texts: Texts<EventText> }
 const emptyEventText = (): EventText => ({ title: '', description: '' });
 
@@ -203,7 +203,7 @@ export function MemoryEventsPage({ canWrite }: { canWrite: boolean }) {
 /* ---------- Личности ---------- */
 
 interface PersonText { fullName: string; biography: string }
-interface PersonRow { id: string; slug: string; birthYear: number | null; deathYear: number | null; published: boolean; dataOrigin: string; sourceNote: string | null; updatedAt: string; fullName: string; memorableDates: number; translations: Partial<Record<AdminLocale, PersonText>> }
+export interface PersonRow { id: string; slug: string; birthYear: number | null; deathYear: number | null; published: boolean; dataOrigin: string; sourceNote: string | null; updatedAt: string; fullName: string; memorableDates: number; translations: Partial<Record<AdminLocale, PersonText>> }
 interface PersonForm { slug: string; birthYear: string; deathYear: string; published: boolean; dataOrigin: Origin; sourceNote: string; texts: Texts<PersonText> }
 const emptyPersonText = (): PersonText => ({ fullName: '', biography: '' });
 const years = (p: PersonRow) => (p.birthYear || p.deathYear ? `${p.birthYear ?? '?'}–${p.deathYear ?? ''}` : 'нет');
