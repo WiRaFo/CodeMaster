@@ -121,6 +121,12 @@ describe('вход в панель (F-140, сценарий 9)', () => {
     renderAt('/admin/audit');
     expect(await screen.findByRole('heading', { level: 1, name: 'Нет доступа' })).toBeInTheDocument();
   });
+
+  it('адрес панели, совпадающий с публичным разделом (/admin/exhibitions/new), открывает панель, а не страницу сайта', async () => {
+    renderAt('/admin/exhibitions/new');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Нет доступа' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
+  });
 });
 
 describe('карточка документа в панели (F-144, F-146, F-154; сценарий 10)', () => {

@@ -66,6 +66,15 @@ a:hover {
   color: var(--color-primary-hover);
   text-decoration-thickness: 2px;
 }
+/* Ссылки в виде кнопок: правило `a` вне слоя иначе перебивает цвет из @layer components. */
+a.btn-primary,
+a.btn-primary:hover {
+  color: var(--color-on-primary);
+}
+a.btn-secondary,
+a.btn-secondary:hover {
+  color: var(--color-text);
+}
 
 .visually-hidden:not(:focus):not(:active) {
   position: absolute !important;

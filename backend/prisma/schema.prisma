@@ -648,10 +648,11 @@ model Fond {
   updatedById       String?           @map("updated_by_id") @db.Uuid
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  creatorOrg   Organization?     @relation(fields: [creatorOrgId], references: [id], onDelete: SetNull)
-  translations FondTranslation[]
-  inventories  Inventory[]
+  branch          Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  creatorOrg      Organization?     @relation(fields: [creatorOrgId], references: [id], onDelete: SetNull)
+  translations    FondTranslation[]
+  inventories     Inventory[]
+  exhibitionItems ExhibitionItem[]
 
   @@unique([branchId, fondNumber])
   @@index([fondNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "fonds_number_trgm_idx")
@@ -793,18 +794,19 @@ model Document {
   updatedById       String?           @map("updated_by_id") @db.Uuid
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  case         Case                  @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  period       HistoricalPeriod?     @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  documentType DocumentType          @relation(fields: [documentTypeId], references: [id], onDelete: Restrict)
-  organization Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  translations DocumentTranslation[]
-  assets       DocumentAsset[]
-  relationsOut DocumentRelation[]    @relation("RelationSource")
-  relationsIn  DocumentRelation[]    @relation("RelationTargetDocument")
-  categories   DocumentCategory[]
-  settlements  DocumentSettlement[]
-  tags         DocumentTag[]
-  persons      DocumentPerson[]
+  case            Case                  @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  period          HistoricalPeriod?     @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  documentType    DocumentType          @relation(fields: [documentTypeId], references: [id], onDelete: Restrict)
+  organization    Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  translations    DocumentTranslation[]
+  assets          DocumentAsset[]
+  exhibitionItems ExhibitionItem[]
+  relationsOut    DocumentRelation[]    @relation("RelationSource")
+  relationsIn     DocumentRelation[]    @relation("RelationTargetDocument")
+  categories      DocumentCategory[]
+  settlements     DocumentSettlement[]
+  tags            DocumentTag[]
+  persons         DocumentPerson[]
 
   @@unique([caseId, documentNumber])
   @@index([documentTypeId])
@@ -1287,6 +1289,8 @@ model ExhibitionItem {
 
   exhibition   Exhibition                  @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
   asset        DigitalAsset?               @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  document     Document?                   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  fond         Fond?                       @relation(fields: [fondId], references: [id], onDelete: SetNull)
   translations ExhibitionItemTranslation[]
 
   @@unique([exhibitionId, sortOrder])
@@ -1299,6 +1303,8 @@ model ExhibitionItemTranslation {
   title             String
   description       String?
   sourceNote        String?           @map("source_note")
+  /// Текстовая альтернатива изображения экспоната (A-004)
+  altText           String?           @map("alt_text")
   translationStatus TranslationStatus @default(missing) @map("translation_status")
 
   item ExhibitionItem @relation(fields: [itemId], references: [id], onDelete: Cascade)

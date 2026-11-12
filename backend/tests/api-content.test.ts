@@ -77,7 +77,7 @@ describe('главная: агрегат GET /home', () => {
     expect(history.topics.find((x) => x['slug'] === 'region')).toMatchObject({ publicationCount: 1 });
     expect(history.publications.map((p) => p['slug']).sort()).toEqual(['demo-how-to-read-archive-code', 'demo-reading-room-visit']);
     expect(history.publications.every((p) => p['dataOrigin'] === 'demo')).toBe(true);
-    expect((res.body['exhibitions'] as Item[]).map((e) => e['slug'])).toEqual(['demo-exhibition-example']);
+    expect((res.body['exhibitions'] as Item[]).map((e) => e['slug'])).toEqual(['demo-exhibition-example', 'demo-exhibition-culture']);
   });
 
   it('в блок документов попадают только эффективно открытые документы', async () => {

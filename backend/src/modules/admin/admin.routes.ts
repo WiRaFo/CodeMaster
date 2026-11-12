@@ -3,7 +3,6 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
   LOCALES,
-  WORKFLOW_ACTIONS,
   adminListSchema,
   applyWorkflowAction,
   availableWorkflowActions,
@@ -25,6 +24,8 @@ import { hasGrant } from '../auth/session.ts';
 import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { writeAudit } from '../audit/audit.ts';
+import { exhibitionAdminRoutes } from './exhibitions-admin.ts';
+import { MASTER_BUCKET, STATUS_RU, UPLOAD_LIMIT, UPLOAD_TYPES, actionFromPath, notifyWorkflow, sniffImage } from './admin-common.ts';
 import {
   branchOf,
   compactDate,
@@ -40,20 +41,6 @@ import {
 const uuidParam = z.object({ id: z.uuid() });
 const CATALOG_READ = ['catalog:edit', 'catalog:submit', 'catalog:review', 'catalog:publish'] as const;
 
-/** Действие согласования в адресе пишется через дефис: /request-changes. */
-const actionFromPath = (segment: string): WorkflowAction | null => {
-  const action = segment.replace(/-/g, '_');
-  return WORKFLOW_ACTIONS.find((a) => a === action) ?? null;
-};
-
-const STATUS_RU: Record<string, string> = {
-  draft: 'черновик',
-  in_review: 'на проверке',
-  needs_changes: 'требует доработки',
-  approved: 'одобрено',
-  published: 'опубликовано',
-  archived: 'архивировано',
-};
 
 export interface AdminOptions {
   db: PrismaClient;
@@ -61,17 +48,6 @@ export interface AdminOptions {
   allowedOrigins: readonly string[];
 }
 
-/** Загружаемые сканы: только растровые форматы, тип определяется по сигнатуре файла, а не по имени (S-013). */
-const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
-const UPLOAD_LIMIT = 20 * 1024 * 1024;
-const MASTER_BUCKET = 'archive-masters';
-
-function sniffImage(data: Buffer): (typeof UPLOAD_TYPES)[number] | null {
-  if (data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return 'image/jpeg';
-  if (data.length > 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
-  if (data.length > 12 && data.subarray(0, 4).toString('ascii') === 'RIFF' && data.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
-  return null;
-}
 
 /**
  * Административный API каталога (docs/api-design.md §5; ТЗ §6.3, §6.7, §6.8).
@@ -536,7 +512,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
         summary,
         changes: { from: current.status, to: result.to, ...(body.comment ? { comment: body.comment } : {}) },
       });
-      await notify(tx, { entity, id: params.id, action, to: result.to, label, comment: body.comment ?? null, actorId: staff.session.userId, authorId: current.createdById });
+      await notifyWorkflow(tx, 'catalog', { entity, id: params.id, action, to: result.to, label, comment: body.comment ?? null, actorId: staff.session.userId, authorId: current.createdById });
     });
     return { id: params.id, status: result.to };
   });
@@ -593,6 +569,8 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
       mine: mine.map(short),
     };
   });
+
+  await exhibitionAdminRoutes(app, { db, storage });
 
   /** Журнал действий (F-152): только для права audit:read. */
   app.get('/admin/audit-logs', async (request) => {
@@ -670,37 +648,6 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
       translations,
     });
     if (issues.length) throw new ApiError(422, 'INCOMPLETE_RECORD', 'Required fields are missing', issues);
-  }
-
-  /**
-   * Уведомления внутри админки (ТЗ §6.7): об отправке на проверку — ролям с правом проверки,
-   * о возврате на доработку, одобрении и публикации — автору записи.
-   */
-  async function notify(
-    tx: Prisma.TransactionClient,
-    e: { entity: CatalogEntity; id: string; action: WorkflowAction; to: string; label: string; comment: string | null; actorId: string; authorId: string | null },
-  ): Promise<void> {
-    const base = { type: e.action, entityType: e.entity, entityId: e.id };
-    if (e.action === 'submit') {
-      const roles = await tx.role.findMany({ where: { permissions: { some: { permission: { code: 'catalog:review' } } } }, select: { id: true } });
-      await tx.notification.createMany({ data: roles.map((r) => ({ ...base, roleId: r.id, message: `На проверку: «${e.label}»` })) });
-      return;
-    }
-    if (e.action === 'approve') {
-      const roles = await tx.role.findMany({ where: { permissions: { some: { permission: { code: 'catalog:publish' } } } }, select: { id: true } });
-      await tx.notification.createMany({ data: roles.map((r) => ({ ...base, roleId: r.id, message: `Одобрено и ждёт публикации: «${e.label}»` })) });
-    }
-    if (e.authorId && e.authorId !== e.actorId) {
-      const text = {
-        request_changes: `Возвращено на доработку: «${e.label}». ${e.comment ?? ''}`.trim(),
-        approve: `Одобрено: «${e.label}»`,
-        publish: `Опубликовано: «${e.label}»`,
-        archive: `Снято с публикации: «${e.label}»`,
-        restore: `Снова опубликовано: «${e.label}»`,
-        submit: '',
-      }[e.action];
-      if (text) await tx.notification.create({ data: { ...base, userId: e.authorId, message: text } });
-    }
   }
 }
 

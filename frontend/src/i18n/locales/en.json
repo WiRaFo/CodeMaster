@@ -275,5 +275,32 @@
       "synthetic": "Synthetic record for development and testing; not an archival document.",
       "demo": "Demo record of the prototype; it will be replaced with the archive's data."
     }
+  },
+  "exhibitions": {
+    "listLead": "Themed displays of archival documents and photographs. Each exhibition can be viewed in order, from the first exhibit to the last.",
+    "topic": "Topic",
+    "period": "Historical period",
+    "any": "All",
+    "apply": "Show",
+    "reset": "Reset",
+    "empty": "No exhibitions match the selected options.",
+    "itemCount_one": "{{count}} exhibit",
+    "itemCount_other": "{{count}} exhibits",
+    "years": "Years: {{years}}",
+    "start": "Start viewing",
+    "contents": "Exhibits",
+    "breadcrumbs": "Location on the site",
+    "itemOf": "Exhibit {{number}} of {{total}}",
+    "prev": "Previous exhibit",
+    "next": "Next exhibit",
+    "toStart": "Back to the start of the exhibition",
+    "toExhibition": "Back to the exhibition overview",
+    "source": "Source",
+    "linkedDocument": "Document in the e-catalogue",
+    "linkedFond": "Fond",
+    "noImage": "This exhibit has no image.",
+    "imageRegion": "Exhibit image",
+    "keys": "Keys in the image area: left and right arrows go to the previous and next exhibit, “+” and “−” zoom, “0” resets.",
+    "fallbackAlt": "Image of exhibit {{number}}"
   }
 }

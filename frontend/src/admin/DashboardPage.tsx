@@ -51,7 +51,7 @@ export function DashboardPage() {
             <li key={n.id} className={`flex flex-wrap items-center gap-3 rounded border border-border p-3 ${n.read ? 'opacity-75' : 'font-semibold'}`}>
               <span className="flex-1">
                 {n.read ? null : <span className="visually-hidden">Новое: </span>}
-                {n.entityType === 'documents' ? <Link to={`/admin/documents/${n.entityId}`}>{n.message}</Link> : n.message}
+                {n.entityType === 'documents' || n.entityType === 'exhibitions' ? <Link to={`/admin/${n.entityType}/${n.entityId}`}>{n.message}</Link> : n.message}
               </span>
               <time className="text-sm text-muted" dateTime={n.createdAt}>{time(n.createdAt)}</time>
               {n.read ? null : (

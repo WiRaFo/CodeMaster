@@ -115,3 +115,60 @@ export const adminListSchema = z.object({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+/** ЭТАП 8. Выставки в панели управления (ТЗ §6.5, с. 14–15; F-148). */
+export const exhibitionTranslationInputSchema = z.object({
+  title: optionalText(300),
+  lead: optionalText(1000),
+  description: optionalText(10_000),
+});
+
+export const exhibitionInputSchema = z
+  .object({
+    slug: z.string().trim().min(3).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'invalid_slug'),
+    yearFrom: z.coerce.number().int().min(1000).max(2100).nullish().transform((v) => v ?? null),
+    yearTo: z.coerce.number().int().min(1000).max(2100).nullish().transform((v) => v ?? null),
+    isFeatured: z.boolean().default(false),
+    dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+    topics: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+    translations: z.partialRecord(z.enum(LOCALES), exhibitionTranslationInputSchema),
+  })
+  .refine((v) => v.yearFrom === null || v.yearTo === null || v.yearFrom <= v.yearTo, { path: ['yearTo'], message: 'year_order' });
+export type ExhibitionInput = z.infer<typeof exhibitionInputSchema>;
+
+export const exhibitionItemTranslationInputSchema = z.object({
+  title: optionalText(300),
+  description: optionalText(5000),
+  sourceNote: optionalText(1000),
+  altText: optionalText(500),
+});
+
+export const exhibitionItemInputSchema = z.object({
+  documentId: z.uuid().nullish().transform((v) => v ?? null),
+  translations: z.partialRecord(z.enum(LOCALES), exhibitionItemTranslationInputSchema),
+});
+export type ExhibitionItemInput = z.infer<typeof exhibitionItemInputSchema>;
+
+/**
+ * Готовность выставки к проверке и публикации: название, описание, хотя бы один экспонат;
+ * у каждого экспоната название и источник, у экспоната с изображением — текстовая альтернатива (A-004).
+ */
+export function exhibitionCompletenessIssues(ex: {
+  translations: Partial<Record<Locale, { title: string | null; description: string | null }>>;
+  items: Array<{ hasImage: boolean; translations: Partial<Record<Locale, { title: string | null; sourceNote: string | null; altText: string | null }>> }>;
+}): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const locales = LOCALES.filter((l) => ex.translations[l]?.title);
+  if (!locales.length) issues.push({ path: ['translations', 'ru', 'title'], code: 'required' });
+  for (const l of locales) if (!ex.translations[l]?.description) issues.push({ path: ['translations', l, 'description'], code: 'required' });
+  if (!ex.items.length) issues.push({ path: ['items'], code: 'required' });
+  ex.items.forEach((item, index) => {
+    const itemLocales = LOCALES.filter((l) => item.translations[l]?.title);
+    if (!itemLocales.length) issues.push({ path: ['items', String(index), 'title'], code: 'required' });
+    for (const l of itemLocales) {
+      if (!item.translations[l]?.sourceNote) issues.push({ path: ['items', String(index), l, 'sourceNote'], code: 'required' });
+      if (item.hasImage && !item.translations[l]?.altText) issues.push({ path: ['items', String(index), l, 'altText'], code: 'required' });
+    }
+  });
+  return issues;
+}

@@ -304,5 +304,11 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 
 Защита: каждый изменяющий запрос проверяет `Sec-Fetch-Site` и `Origin` (должен совпадать с `Host` или `ADMIN_ALLOWED_ORIGINS`) и заголовок `X-CSRF-Token`; иначе `403 CSRF_FAILED`. Права читаются из БД на каждом запросе, поэтому изменение роли действует сразу. Без сессии — `401`, без права — `403`. Сессия: 30 минут простоя, 8 часов максимум.
 
+### Выставки (ЭТАП 8)
+
+Публичные: `GET /exhibitions?topic&period&lang&page&pageSize` (до 50, по умолчанию 12; в ответе фасет `topics` с числом выставок), `GET /exhibitions/:slug` (экспонаты пронумерованы 1..N), `GET /exhibitions/:slug/items/:number/image`. Чтение только из `public_exhibitions_v` и `public_exhibition_images_v`: изображение отдаётся, если файл открыт, готов и прошёл антивирус, а страница документа — только если она есть в `public_document_pages_v`. Связанный документ и фонд берутся из публичных представлений; закрытые опускаются целиком (ни id, ни названия). Всё прочее — `404`.
+
+Панель (`exhibitions:edit|submit|review|publish`, `assets:upload`): `GET/POST /admin/exhibitions`, `GET /admin/exhibitions/topics`, `GET/PATCH/DELETE /admin/exhibitions/:id`, `POST /admin/exhibitions/:id/items`, `PATCH/DELETE …/items/:itemId`, `POST …/items/:itemId/move` (`up|down`, на краю — `409`), `POST/GET …/items/:itemId/image`, `POST /admin/exhibitions/:id/:action` (те же действия, что у каталога). Полнота: название, описание, хотя бы один экспонат, у каждого — название и источник, у экспоната с изображением — alt на каждом языке перевода.
+
 Не сделано в 10a: `POST /auth/password`, управление пользователями и ролями (F-142, F-143), импорт и экспорт (F-145), ограничение входа хранится в памяти процесса (для одного экземпляра API; при нескольких — Redis), счётчики обзора считаются по всем филиалам.
 

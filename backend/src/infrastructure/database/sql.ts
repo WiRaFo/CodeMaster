@@ -20,6 +20,7 @@ const TRANSLATION_TABLES = {
   news: ['news_translations', 'news_id'],
   publication: ['publication_translations', 'publication_id'],
   exhibition: ['exhibition_translations', 'exhibition_id'],
+  exhibitionItem: ['exhibition_item_translations', 'item_id'],
 } as const;
 export type TranslationTable = keyof typeof TRANSLATION_TABLES;
 
