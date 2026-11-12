@@ -248,3 +248,37 @@
 ## 7. Документирование
 
 OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и публикуется только в dev (`/api/docs`). В prod спецификация собирается в `docs/api/openapi.json` на этапе сборки.
+
+
+## 8. Состояние реализации (ЭТАП 2, 2026-11-09)
+
+Код: `backend/src` (Fastify 5, Zod 4), схемы параметров — `packages/shared/src/api.ts`. Запуск: `npm run dev -w backend`.
+
+### Реализовано
+
+| Маршрут | Примечание |
+|---|---|
+| `GET /health`, `GET /ready` | `ready` проверяет БД; MinIO подключится на этапе хранилища |
+| `GET /api/v1/catalog/documents` | Фильтры `q`, `fond`, `inventory`, `case`, `branch` (slug или uuid), `period` (slug), `type` (код типа), `settlement` (slug), `topic` (slug), `organization` (uuid), `author`, `yearFrom`, `yearTo`, `hasDigitalCopy`, `access`; `sort`, `page`, `pageSize`, `lang`. Если `q` распознан как шифр, ответ содержит `interpretedCode` и фильтрует по фонду, описи и делу |
+| `GET /api/v1/catalog/facets` | Счётчики по типу, периоду, подразделению, доступу, наличию копии с учётом текущих фильтров |
+| `GET /api/v1/catalog/documents/:id` | Две формы ответа: `open` (с `transcription`, `digitalCopy.pageCount`) и `restricted` (с `accessConditions`, без копии и расшифровки) |
+| `GET /api/v1/catalog/documents/:id/pages` | Только для эффективно открытых документов; у ограниченных — 404 |
+| `GET /api/v1/catalog/fonds`, `/fonds/:id`, `/inventories/:id`, `/cases/:id` | Через представления `public_fonds_v`, `public_inventories_v`, `public_cases_v`, `public_documents_v` |
+| `GET /api/v1/catalog/resolve-code?code=` | Разбор шифра и список совпадений (фонд, опись или дело) во всех подразделениях; непонятный шифр — 400 |
+| `GET /api/v1/branches`, `/branches/:slug`, `/branch-types` | Поиск по названию, адресу, текущему и историческому названию населённого пункта; `coordinates` только при заполненных координатах и `show_on_map`; `needsVerification` для несверенных данных |
+| `GET /api/v1/reference/document-types`, `/periods`, `/settlements`, `/topics?kind=` | Справочники для фильтров; добавлены вместо отдельных маршрутов `/history/topics` |
+
+### Правила доступа на сервере
+
+- Все чтения каталога идут только через представления `public_*_v`. Закрытая запись, неопубликованная запись, запись с закрытым или неопубликованным предком (включая подразделение) и неверный id дают одинаковый `404 NOT_FOUND`.
+- Для `restricted` поиск использует только веса A–C вектора (название, описание, историческая справка); вес D (расшифровка, SEO-слова) исключается через `ts_filter`. Расшифровка `restricted` не читается из БД.
+- `hasDigitalCopy` в выдаче означает «копию можно смотреть на сайте»: документ эффективно открыт и есть страница с `processing_status = ready` и `antivirus_status = clean`.
+- Подсветка `highlight` строится `ts_headline` с маркерами, весь текст экранируется, разрешён только `<mark>`.
+
+### Отложено
+
+- ETag (сейчас только `Cache-Control: public, max-age=60` для успешных публичных GET, `no-store` для ошибок).
+- URL производных изображений: `pages[].derivatives` отдаёт параметры без ссылок до подключения MinIO.
+- Общий поиск `/search`, `/search/suggest`, `/search/interpret` — ЭТАП поиска по сайту и ИИ.
+- Сессии, CSRF, RBAC, ограничение входа и аудит — вместе с административным API (ЭТАП 10a); публичный API их не требует.
+- Rate limit и `@fastify/helmet` — ЭТАП безопасности; сейчас выставляются `X-Content-Type-Options` и `X-Request-Id`.

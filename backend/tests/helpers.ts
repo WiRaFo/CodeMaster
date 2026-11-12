@@ -34,3 +34,29 @@ export async function publicPageKeys(db: PrismaClient | Prisma.TransactionClient
     ORDER BY 1`;
   return rows.map((r) => r.key);
 }
+
+/** Приложение Fastify поверх тестовой базы; запросы выполняются через app.inject без сети. */
+export async function testApp() {
+  const { buildApp } = await import('../src/app.ts');
+  const db = testDb();
+  const app = await buildApp({ db, logLevel: 'silent' });
+  return {
+    app,
+    db,
+    async get(url: string, headers: Record<string, string> = {}) {
+      const res = await app.inject({ method: 'GET', url, headers });
+      return { status: res.statusCode, headers: res.headers, body: res.json() as Record<string, unknown> & { items?: Array<Record<string, unknown>> }, raw: res.body };
+    },
+    async close() {
+      await app.close();
+      await db.$disconnect();
+    },
+  };
+}
+
+export async function idOf(db: PrismaClient, table: 'documents' | 'fonds' | 'inventories' | 'cases', key: string): Promise<string> {
+  const rows = await db.$queryRawUnsafe<Array<{ id: string }>>(`SELECT id FROM ${table} WHERE source_system_id = $1`, `synthetic:${key}`);
+  const id = rows[0]?.id;
+  if (!id) throw new Error(`Нет записи ${table} ${key}`);
+  return id;
+}

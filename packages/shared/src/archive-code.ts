@@ -11,18 +11,30 @@ export interface ArchiveCode {
   sheets?: string | undefined;
 }
 
+export interface ArchiveCodeLabels {
+  fond: string;
+  inventory: string;
+  case: string;
+  sheets: string;
+}
+
 /**
- * Сокращения по языкам. Казахские и английские варианты — предложение команды,
- * требуют утверждения архивом (database-design.md §3).
+ * Сокращения по языкам, предварительно зафиксированы пользователем 2026-11-09.
+ * RU и KZ — рабочие обозначения; EN — интерфейсные, могут измениться после согласования с архивом,
+ * поэтому formatArchiveCode принимает собственный набор подписей (docs/database-design.md §3).
  */
-const LABELS: Record<Locale, { fond: string; inventory: string; case: string; sheets: string }> = {
+export const ARCHIVE_CODE_LABELS: Readonly<Record<Locale, ArchiveCodeLabels>> = {
   ru: { fond: 'Ф.', inventory: 'Оп.', case: 'Д.', sheets: 'Л.' },
   kk: { fond: 'Қ.', inventory: 'Тізб.', case: 'Іс', sheets: 'П.' },
   en: { fond: 'F.', inventory: 'Inv.', case: 'File', sheets: 'Fol.' },
 };
 
-export function formatArchiveCode(code: ArchiveCode, locale: Locale = 'ru'): string {
-  const l = LABELS[locale];
+export function formatArchiveCode(
+  code: ArchiveCode,
+  locale: Locale = 'ru',
+  labels: Readonly<Record<Locale, ArchiveCodeLabels>> = ARCHIVE_CODE_LABELS,
+): string {
+  const l = labels[locale];
   const parts = [`${l.fond} ${code.fond}`];
   if (code.inventory) parts.push(`${l.inventory} ${code.inventory}`);
   if (code.case) parts.push(`${l.case} ${code.case}`);
@@ -30,7 +42,7 @@ export function formatArchiveCode(code: ArchiveCode, locale: Locale = 'ru'): str
   return `${parts.join('. ')}.`.replace(/\.\.$/, '.');
 }
 
-const NUMBER = String.raw`([A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]{0,3}-?\d+[A-Za-zА-Яа-яЁё]{0,3})`;
+const NUMBER = String.raw`([A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]{0,4}-?\d+[A-Za-zА-Яа-яЁё]{0,3})`;
 
 const FOND_RE = new RegExp(String.raw`(?:^|[\s.,;])(?:ф|фонд|қ|қор|f|fond|fonds)\.?\s*(?:№\s*)?${NUMBER}`, 'iu');
 const INV_RE = new RegExp(String.raw`(?:оп|опись|тізб|тізбе|inv|inventory|op)\.?\s*(?:№\s*)?${NUMBER}`, 'iu');

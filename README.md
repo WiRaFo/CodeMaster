@@ -19,7 +19,7 @@
 
 ```
 packages/shared   общие типы, статусы согласования, разбор архивного шифра
-backend           Fastify + Prisma (ЭТАП 1: схема БД, миграции, сиды)
+backend           Fastify + Prisma: схема БД, миграции, сиды (ЭТАП 1), публичный API каталога и филиалов (ЭТАП 2)
 infrastructure    Docker, Nginx, скрипты
 docs              проектная документация
 ```
@@ -40,3 +40,12 @@ npm run check                     # typecheck + тесты
 Тесты backend создают отдельную временную базу на сервере из `TEST_DATABASE_URL` и удаляют её после прогона.
 
 Наборы данных (`SEED_SETS`): `migrated` — сведения с текущего сайта, требуют сверки архивом; `synthetic` — тестовые фонды `TEST-*`; `demo` — демонстрационные материалы «[Демо]». Синтетика и демо не загружаются при `NODE_ENV=production`.
+
+## Публичный API (ЭТАП 2)
+
+```bash
+npm run dev -w backend            # http://127.0.0.1:3000, проверка: /health, /ready
+curl -G http://127.0.0.1:3000/api/v1/catalog/documents --data-urlencode q=маслозавод -d lang=ru
+```
+
+Маршруты и правила доступа — [docs/api-design.md §8](docs/api-design.md).
