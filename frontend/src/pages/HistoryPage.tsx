@@ -205,7 +205,7 @@ export function PublicationPage() {
         ) : null}
         {p.events.length > 0 ? (
           <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.events')}</dt>
-            <dd><ul>{p.events.map((x) => <li key={x.slug}><Link to={`/${lang}/history/timeline#event-${x.slug}`}>{`${x.year}: ${x.title}`}</Link></li>)}</ul></dd></div>
+            <dd><ul>{p.events.map((x) => <li key={x.slug}><Link to={`/${lang}/history/timeline?event=${x.slug}`}>{`${x.year}: ${x.title}`}</Link></li>)}</ul></dd></div>
         ) : null}
         {p.authorship ? <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.authorship')}</dt><dd>{p.authorship}</dd></div> : null}
         {p.sourceNote ? <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.source')}</dt><dd>{p.sourceNote}</dd></div> : null}
