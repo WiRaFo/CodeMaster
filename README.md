@@ -35,7 +35,7 @@ cp .env.example backend/.env      # задайте свой SEED_ADMIN_PASSWORD 
 docker compose up -d db           # PostgreSQL 16 + pg_trgm, citext, unaccent, vector
 npm install
 npm run db:migrate                # prisma migrate deploy + prisma generate
-npm run db:seed                   # справочники + наборы из SEED_SETS
+npm run db:seed                   # справочники + наборы из SEED_SETS; файлы страниц пишутся в backend/storage (STORAGE_DIR)
 npm run check                     # typecheck + тесты
 ```
 

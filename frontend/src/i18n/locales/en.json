@@ -215,5 +215,65 @@
   "common": {
     "loading": "Loading…",
     "loadError": "Could not load data. Refresh the page or try again later."
+  },
+  "document": {
+    "breadcrumbs": "Location in the archive",
+    "fond": "Fond",
+    "inventory": "Inventory",
+    "case": "File",
+    "description": "Description",
+    "restrictedTitle": "Restricted access",
+    "restrictedNoCopy": "The digital copy and transcription of this document are not published on the website.",
+    "readingRoomLink": "How the reading room works",
+    "metadata": "Document details",
+    "archiveCode": "Archive reference",
+    "number": "Document number",
+    "date": "Date",
+    "period": "Period",
+    "type": "Document type",
+    "originalLanguages": "Original language",
+    "sheets": "Number of folios",
+    "author": "Author",
+    "organization": "Organisation",
+    "branch": "Held at",
+    "location": "Storage reference",
+    "settlements": "Places",
+    "topics": "Topics",
+    "access": "Access",
+    "updated": "Details updated",
+    "digitalCopy": "Digital copy",
+    "noCopy": "The digital copy has not been published yet.",
+    "transcription": "Transcription",
+    "copyCode": "Copy reference",
+    "codeCopied": "Reference “{{code}}” copied",
+    "copyFailed": "Could not copy. Select the text and copy it manually.",
+    "share": "Share",
+    "linkCopied": "Link to the document copied",
+    "language": {
+      "kk": "Kazakh",
+      "ru": "Russian",
+      "en": "English",
+      "de": "German",
+      "tt": "Tatar",
+      "ar": "Arabic"
+    },
+    "viewer": {
+      "toolbar": "Viewer controls",
+      "prev": "Previous page",
+      "next": "Next page",
+      "pageOf": "Page {{page}} of {{total}}",
+      "pageOfSheet": "Page {{page}} of {{total}} (folio {{sheet}})",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset zoom",
+      "zoomLevel": "Zoom",
+      "stage": "Page image",
+      "keys": "Keys in the image area: left and right arrows turn pages, “+” and “−” zoom, “0” resets.",
+      "fallbackAlt": "Page {{page}} of the digital copy"
+    },
+    "originNote": {
+      "synthetic": "Synthetic record for development and testing; not an archival document.",
+      "demo": "Demo record of the prototype; it will be replaced with the archive's data."
+    }
   }
 }

@@ -250,7 +250,7 @@
 OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и публикуется только в dev (`/api/docs`). В prod спецификация собирается в `docs/api/openapi.json` на этапе сборки.
 
 
-## 8. Состояние реализации (ЭТАПЫ 2, 4 и 5, 2026-11-09)
+## 8. Состояние реализации (ЭТАПЫ 2, 4, 5 и 6, 2026-11-09)
 
 Код: `backend/src` (Fastify 5, Zod 4), схемы параметров — `packages/shared/src/api.ts`. Запуск: `npm run dev -w backend`.
 
@@ -263,6 +263,7 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 | `GET /api/v1/catalog/facets` | Счётчики по типу, периоду, подразделению, населённому пункту, тематике, доступу, наличию копии. С ЭТАПА 5 фасеты дизъюнктивные: счётчик фасета считается со всеми фильтрами, кроме его собственного |
 | `GET /api/v1/catalog/documents/:id` | Две формы ответа: `open` (с `transcription`, `digitalCopy.pageCount`) и `restricted` (с `accessConditions`, без копии и расшифровки) |
 | `GET /api/v1/catalog/documents/:id/pages` | Только для эффективно открытых документов; у ограниченных — 404 |
+| `GET /api/v1/catalog/documents/:id/pages/:page/image` | ЭТАП 6. Файл страницы, только если страница есть в `public_document_pages_v` (документ эффективно открыт, файл обработан и проверен антивирусом). Типы: JPEG, PNG, WebP, SVG; остальные не отдаются. Заголовки: `Content-Disposition: inline`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox`, `Cache-Control: public, max-age=300`. Любой отказ — тот же 404. Файл читается через интерфейс `ObjectStorage` (сейчас `LocalStorage`, каталог `STORAGE_DIR`) |
 | `GET /api/v1/catalog/fonds`, `/fonds/:id`, `/inventories/:id`, `/cases/:id` | Через представления `public_fonds_v`, `public_inventories_v`, `public_cases_v`, `public_documents_v` |
 | `GET /api/v1/catalog/resolve-code?code=` | Разбор шифра и список совпадений (фонд, опись или дело) во всех подразделениях; непонятный шифр — 400 |
 | `GET /api/v1/branches`, `/branches/:slug`, `/branch-types` | Поиск по названию, адресу, текущему и историческому названию населённого пункта; `coordinates` только при заполненных координатах и `show_on_map`; `needsVerification` для несверенных данных |
@@ -280,7 +281,7 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 ### Отложено
 
 - ETag (сейчас только `Cache-Control: public, max-age=60` для успешных публичных GET, `no-store` для ошибок).
-- URL производных изображений: `pages[].derivatives` отдаёт параметры без ссылок до подключения MinIO.
+- URL производных изображений: `pages[].derivatives` отдаёт параметры без ссылок до подключения MinIO. До тех пор страница отдаётся целиком маршрутом `/pages/:page/image` (для синтетических SVG этого достаточно; для настоящих сканов нужны WebP-производные и DZI).
 - Общий поиск `/search`, `/search/suggest`, `/search/interpret` — ЭТАП поиска по сайту и ИИ.
 - Сессии, CSRF, RBAC, ограничение входа и аудит — вместе с административным API (ЭТАП 10a); публичный API их не требует.
 - Rate limit и `@fastify/helmet` — ЭТАП безопасности; сейчас выставляются `X-Content-Type-Options` и `X-Request-Id`.

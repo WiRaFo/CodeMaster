@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import type { PrismaClient } from '@prisma/client';
 import { createPrismaClient } from '../../src/infrastructure/database/client.ts';
+import { LocalStorage, type ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
 import { seedAdmin } from './admin.ts';
 import { seedDemo } from './demo.ts';
 import { seedMigrated } from './migrated.ts';
@@ -19,7 +20,7 @@ export function parseSeedSets(raw: string | undefined): SeedSet[] {
 }
 
 /** Справочники всегда; затем выбранные наборы. synthetic и demo запрещены в production. */
-export async function runSeeds(db: PrismaClient, sets: SeedSet[], production: boolean): Promise<void> {
+export async function runSeeds(db: PrismaClient, sets: SeedSet[], production: boolean, storage: ObjectStorage): Promise<void> {
   if (production && sets.some((s) => s !== 'migrated')) {
     throw new Error('Наборы synthetic и demo нельзя загружать в production');
   }
@@ -27,7 +28,7 @@ export async function runSeeds(db: PrismaClient, sets: SeedSet[], production: bo
   if (sets.includes('synthetic') && !sets.includes('migrated')) throw new Error('Набор synthetic требует migrated');
   await seedReference(db);
   if (sets.includes('migrated')) await seedMigrated(db);
-  if (sets.includes('synthetic')) await seedSynthetic(db);
+  if (sets.includes('synthetic')) await seedSynthetic(db, storage);
   if (sets.includes('demo')) await seedDemo(db);
 }
 
@@ -36,7 +37,7 @@ async function main(): Promise<void> {
   try {
     const sets = parseSeedSets(process.env['SEED_SETS']);
     const production = process.env['NODE_ENV'] === 'production';
-    await runSeeds(db, sets, production);
+    await runSeeds(db, sets, production, new LocalStorage(process.env['STORAGE_DIR'] ?? 'storage'));
     const email = process.env['SEED_ADMIN_EMAIL'];
     const password = process.env['SEED_ADMIN_PASSWORD'];
     if (email && password) await seedAdmin(db, email, password);

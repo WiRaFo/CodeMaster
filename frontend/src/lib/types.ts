@@ -112,3 +112,58 @@ export interface CatalogFacets {
   access: Array<{ value: 'open' | 'restricted'; count: number }>;
   hasDigitalCopy: { true: number; false: number };
 }
+
+/** Карточка документа (GET /catalog/documents/:id). Для ограниченного доступа нет копии и расшифровки. */
+interface DocumentCardBase extends Localized {
+  id: string;
+  title: string | null;
+  description: string | null;
+  historicalNote: string | null;
+  availableLanguages: string[];
+  archiveCode: ArchiveCodeDto;
+  documentNumber: string | null;
+  date: DateRange;
+  period: { slug: string; name: string | null } | null;
+  type: { code: string; name: string | null };
+  originalLanguages: string[];
+  sheetCount: number | null;
+  author: string | null;
+  organization: { id: string; name: string | null } | null;
+  storage: { branch: { slug: string; name: string | null }; location: string | null };
+  hierarchy: {
+    fond: { id: string; number: string; title: string | null };
+    inventory: { id: string; number: string; title: string | null };
+    case: { id: string; number: string; title: string | null };
+  };
+  settlements: Array<{ slug: string; name: string | null }>;
+  topics: Array<{ slug: string; kind: string; name: string | null }>;
+  sourceNote: string | null;
+  updatedAt: string;
+}
+
+export interface OpenDocumentCard extends DocumentCardBase {
+  access: 'open';
+  accessConditions: null;
+  digitalCopy: { availableOnline: boolean; pageCount: number };
+  transcription: string | null;
+}
+
+export interface RestrictedDocumentCard extends DocumentCardBase {
+  access: 'restricted';
+  accessConditions: string | null;
+  digitalCopy: { availableOnline: false };
+}
+
+export type DocumentCard = OpenDocumentCard | RestrictedDocumentCard;
+
+export interface DocumentPageItem {
+  pageNumber: number;
+  sheetLabel: string | null;
+  assetId: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  alt: string | null;
+  altLang: string | null;
+  downloadAllowed: boolean;
+}

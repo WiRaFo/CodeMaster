@@ -296,6 +296,16 @@ export class CatalogRepository {
     return row?.transcription ?? null;
   }
 
+  /** Файл страницы для показа; только через public_document_pages_v. */
+  async findPageFile(documentId: string, pageNumber: number) {
+    const [row] = await this.db.$queryRaw<Array<{ asset_id: string; storage_bucket: string; storage_key: string; mime_type: string }>>`
+      SELECT a.id AS asset_id, a.storage_bucket, a.storage_key, a.mime_type
+      FROM public_document_pages_v pg JOIN digital_assets a ON a.id = pg.asset_id
+      WHERE pg.document_id = ${documentId}::uuid AND pg.page_number = ${pageNumber}
+      LIMIT 1`;
+    return row ?? null;
+  }
+
   async findPages(documentId: string, lang: Locale) {
     const pages = await this.db.$queryRaw<
       Array<{

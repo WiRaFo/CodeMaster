@@ -53,7 +53,7 @@ describe('public_document_pages_v', () => {
   it('не отдаёт копию, если сам файл закрыт, даже при открытом документе', async () => {
     await inRollback(db, async (tx) => {
       await tx.digitalAsset.updateMany({
-        where: { storageKey: 'synthetic/TEST-1/1/1/1/page-1.jpg' },
+        where: { storageKey: { startsWith: 'synthetic/TEST-1/1/1/1/' } },
         data: { accessLevel: 'restricted' },
       });
       expect(await publicPageKeys(tx)).toEqual([]);

@@ -130,10 +130,11 @@ describe('открытый доступ', () => {
     const res = await t.get(`/api/v1/catalog/documents/${id}?lang=ru`);
     expect(res.body['access']).toBe('open');
     expect(res.body['transcription']).toBe('Слушали: о ремонте сепаратора.');
-    expect(res.body['digitalCopy']).toEqual({ availableOnline: true, pageCount: 1 });
-    const pages = await t.get(`/api/v1/catalog/documents/${id}/pages`);
-    expect(pages.body.items).toHaveLength(1);
-    expect(pages.body.items?.[0]).toMatchObject({ pageNumber: 1, sheetLabel: '1', mimeType: 'image/jpeg' });
+    expect(res.body['digitalCopy']).toEqual({ availableOnline: true, pageCount: 3 });
+    const pages = await t.get(`/api/v1/catalog/documents/${id}/pages?lang=ru`);
+    expect(pages.body.items?.map((p) => p['pageNumber'])).toEqual([1, 2, 3]);
+    expect(pages.body.items?.[0]).toMatchObject({ pageNumber: 1, sheetLabel: '1', mimeType: 'image/svg+xml', width: 1240, height: 1754 });
+    expect(String(pages.body.items?.[0]?.['alt'])).toMatch(/^Синтетическая страница 1 из 3/);
     const search = await t.get(`/api/v1/catalog/documents?q=${encodeURIComponent('сепаратора')}`);
     expect(search.body.items?.map((d) => d['id'])).toEqual([id]);
   });
@@ -182,5 +183,50 @@ describe('навигация фонд → опись → дело', () => {
       const res = await t.get(`/api/v1/catalog/resolve-code?code=${encodeURIComponent(code)}`);
       expect(res.body['matches'], code).toEqual([]);
     }
+  });
+});
+
+describe('изображения страниц (ЭТАП 6, F-041)', () => {
+  const image = (id: string, page: number | string) => `/api/v1/catalog/documents/${id}/pages/${page}/image`;
+
+  it('страница открытого документа отдаётся с безопасными заголовками', async () => {
+    const id = await idOf(t.db, 'documents', 'TEST-1/1/1/1');
+    const res = await t.app.inject({ method: 'GET', url: image(id, 2) });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('image/svg+xml');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(String(res.headers['content-security-policy'])).toContain('sandbox');
+    expect(res.body).toContain('ТЕСТОВЫЕ ДАННЫЕ');
+    expect(res.body).toContain('— 2 / 3 —');
+    expect(res.body).not.toMatch(/<script/i);
+  });
+
+  it('страницы ограниченных, закрытых, неопубликованных документов и непроверенные файлы — тот же 404', async () => {
+    const missing = await t.app.inject({ method: 'GET', url: image('00000000-0000-4000-8000-000000000000', 1) });
+    expect(missing.statusCode).toBe(404);
+    // TEST-1/1/1/2 — restricted с файлом в хранилище; TEST-2 — restricted по фонду; TEST-1/1/1/5 — антивирус не завершён.
+    for (const key of ['TEST-1/1/1/2', 'TEST-2/1/1/1', 'TEST-1/1/1/5', 'TEST-1/1/1/3', 'TEST-1/1/1/4']) {
+      const res = await t.app.inject({ method: 'GET', url: image(await idOf(t.db, 'documents', key), 1) });
+      expect(res.statusCode, key).toBe(404);
+      expect(res.json()).toMatchObject({ error: { code: 'NOT_FOUND', message: missing.json().error.message } });
+    }
+  });
+
+  it('несуществующая страница, неверный номер и неверный id — 404', async () => {
+    const id = await idOf(t.db, 'documents', 'TEST-1/1/1/1');
+    for (const url of [image(id, 4), image(id, 0), image(id, 'abc'), image(id, '1.5'), image('not-a-uuid', 1)]) {
+      expect((await t.app.inject({ method: 'GET', url })).statusCode, url).toBe(404);
+    }
+  });
+
+  it('страница скрывается сразу после ограничения документа', async () => {
+    const id = await idOf(t.db, 'documents', 'TEST-1/1/1/1');
+    try {
+      await t.db.document.update({ where: { id }, data: { accessLevel: 'restricted' } });
+      expect((await t.app.inject({ method: 'GET', url: image(id, 1) })).statusCode).toBe(404);
+    } finally {
+      await t.db.document.update({ where: { id }, data: { accessLevel: 'open' } });
+    }
+    expect((await t.app.inject({ method: 'GET', url: image(id, 1) })).statusCode).toBe(200);
   });
 });

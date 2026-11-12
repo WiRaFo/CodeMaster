@@ -1,4 +1,6 @@
 import type { AccessLevel, AntivirusStatus, PrismaClient, PublicationStatus } from '@prisma/client';
+import { createHash } from 'node:crypto';
+import type { ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
 import { SYNTHETIC_PREFIX, type Tri } from './lib.ts';
 
 /**
@@ -20,8 +22,8 @@ interface DocSeed {
   accessConditions?: Tri<string>;
   /** Расшифровка. У ограниченных документов она не публикуется и не участвует в поиске (тест ЭТАПА 2). */
   transcription?: Tri<string>;
-  /** Цифровая копия из одной страницы; antivirus по умолчанию clean. */
-  copy?: { antivirus?: AntivirusStatus };
+  /** Цифровая копия: pages страниц (по умолчанию 1); antivirus по умолчанию clean. */
+  copy?: { antivirus?: AntivirusStatus; pages?: number };
   /** slug населённых пунктов и тематик (для фасетов каталога, ЭТАП 5). */
   settlements?: string[];
   topics?: string[];
@@ -82,7 +84,7 @@ const FONDS: FondSeed[] = [
               'Discussion of the butter production plan and workshop repairs.',
             ),
             transcription: tri('Слушали: о ремонте сепаратора.', 'Тыңдалды: сепараторды жөндеу туралы.', 'Heard: on the separator repair.'),
-            copy: {},
+            copy: { pages: 3 },
           },
           {
             number: '2',
@@ -212,9 +214,37 @@ const prefixed = (t: Tri<string>): Tri<string> => ({
 });
 
 const LOCALES = ['ru', 'kk', 'en'] as const;
+const SYNTHETIC_BUCKET = 'archive-synthetic';
+const PAGE_WIDTH = 1240;
+const PAGE_HEIGHT = 1754;
+
+const xml = (text: string) => text.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
+/**
+ * Изображение синтетической страницы: лист с крупной пометкой «ТЕСТОВЫЕ ДАННЫЕ», шифром и текстом.
+ * Нужен, чтобы просмотрщик можно было проверить без настоящих сканов; за архивный скан не выдаётся.
+ */
+function syntheticPageSvg(code: string, page: number, pages: number, title: string, text?: string): string {
+  const lines = (text ?? 'Текст страницы отсутствует.').match(/.{1,48}(\s|$)/g) ?? [];
+  const body = lines
+    .map((line, i) => `<text x="120" y="${560 + i * 64}" font-size="40" fill="#2b2b2b">${xml(line.trim())}</text>`)
+    .join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${PAGE_HEIGHT}" viewBox="0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}" font-family="DejaVu Serif, Georgia, serif">
+<rect width="100%" height="100%" fill="#f4ecd8"/>
+<rect x="60" y="60" width="${PAGE_WIDTH - 120}" height="${PAGE_HEIGHT - 120}" fill="none" stroke="#b9a77f" stroke-width="4"/>
+<text x="120" y="190" font-size="56" font-weight="700" fill="#8a1c1c" font-family="DejaVu Sans, Arial, sans-serif">ТЕСТОВЫЕ ДАННЫЕ · TEST DATA</text>
+<text x="120" y="260" font-size="34" fill="#5a4a2a" font-family="DejaVu Sans, Arial, sans-serif">Синтетическая страница, не архивный документ</text>
+<text x="120" y="380" font-size="44" font-weight="700" fill="#2b2b2b"${title.length > 40 ? ` textLength="${PAGE_WIDTH - 240}" lengthAdjust="spacingAndGlyphs"` : ''}>${xml(title)}</text>
+<text x="120" y="450" font-size="34" fill="#5a4a2a">${xml(code)} · Л. ${page}</text>
+${body}
+<text x="${PAGE_WIDTH / 2}" y="${PAGE_HEIGHT - 120}" font-size="34" text-anchor="middle" fill="#5a4a2a">— ${page} / ${pages} —</text>
+</svg>
+`;
+}
 const statusFor = (locale: (typeof LOCALES)[number]) => (locale === 'ru' ? 'reviewed' : 'machine') as 'reviewed' | 'machine';
 
-export async function seedSynthetic(db: PrismaClient): Promise<void> {
+export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): Promise<void> {
   const branchType = await db.branchType.findUnique({ where: { code: 'branch' } });
   if (!branchType) throw new Error('Нет справочника типов подразделений; сначала запустите справочники');
   const draftBranch = await db.branch.upsert({
@@ -348,31 +378,54 @@ export async function seedSynthetic(db: PrismaClient): Promise<void> {
         await db.documentCategory.deleteMany({ where: { documentId: doc.id } });
         await db.documentCategory.createMany({ data: (d.topics ?? []).map((x) => ({ documentId: doc.id, categoryId: need(topicIds, x) })) });
 
+        // Страницы пересоздаются при каждом запуске сида (раньше страницы были .jpg без файла).
+        await db.documentAsset.deleteMany({ where: { documentId: doc.id } });
         if (d.copy) {
-          const storageKey = `synthetic/${docKey}/page-1.jpg`;
-          const assetData = {
-            kind: 'scan_page' as const,
-            originalFilename: 'page-1.jpg',
-            mimeType: 'image/jpeg',
-            sizeBytes: 0n,
-            sha256: '0'.repeat(64),
-            accessLevel: 'open' as const,
-            processingStatus: 'ready' as const,
-            antivirusStatus: d.copy.antivirus ?? 'clean',
-            dataOrigin: 'synthetic' as const,
-            sourceNote: 'Синтетическая страница без файла.',
-          };
-          const asset = await db.digitalAsset.upsert({
-            where: { storageBucket_storageKey: { storageBucket: 'archive-synthetic', storageKey } },
-            update: assetData,
-            create: { storageBucket: 'archive-synthetic', storageKey, ...assetData },
-          });
-          await db.documentAsset.createMany({
-            data: [{ documentId: doc.id, assetId: asset.id, pageNumber: 1, sheetLabel: '1' }],
-            skipDuplicates: true,
-          });
+          const pageCount = d.copy.pages ?? 1;
+          for (let page = 1; page <= pageCount; page++) {
+            const storageKey = `synthetic/${docKey}/page-${page}.svg`;
+            const svg = syntheticPageSvg(`Ф. ${f.number}. Оп. ${f.inventory.number}. Д. ${c.number}. Док. ${d.number}`, page, pageCount, d.title.ru, d.transcription?.ru);
+            await storage.write(SYNTHETIC_BUCKET, storageKey, svg);
+            const assetData = {
+              kind: 'scan_page' as const,
+              originalFilename: `page-${page}.svg`,
+              mimeType: 'image/svg+xml',
+              sizeBytes: BigInt(Buffer.byteLength(svg)),
+              sha256: createHash('sha256').update(svg).digest('hex'),
+              width: PAGE_WIDTH,
+              height: PAGE_HEIGHT,
+              accessLevel: 'open' as const,
+              processingStatus: 'ready' as const,
+              antivirusStatus: d.copy.antivirus ?? 'clean',
+              dataOrigin: 'synthetic' as const,
+              sourceNote: 'Синтетическое изображение страницы, сгенерировано сидом; не является сканом архивного документа.',
+            };
+            const asset = await db.digitalAsset.upsert({
+              where: { storageBucket_storageKey: { storageBucket: SYNTHETIC_BUCKET, storageKey } },
+              update: assetData,
+              create: { storageBucket: SYNTHETIC_BUCKET, storageKey, ...assetData },
+            });
+            await db.documentAsset.createMany({
+              data: [{ documentId: doc.id, assetId: asset.id, pageNumber: page, sheetLabel: String(page) }],
+              skipDuplicates: true,
+            });
+            await db.assetTranslation.deleteMany({ where: { assetId: asset.id } });
+            await db.assetTranslation.createMany({
+              data: LOCALES.map((locale) => ({
+                assetId: asset.id,
+                locale,
+                altText: {
+                  ru: `Синтетическая страница ${page} из ${pageCount}: тестовое изображение с надписью «${d.title.ru}»`,
+                  kk: `${pageCount} беттің ${page}-синтетикалық беті: «${d.title.kk}» жазуы бар сынақ суреті`,
+                  en: `Synthetic page ${page} of ${pageCount}: test image labelled “${d.title.en}”`,
+                }[locale],
+                translationStatus: statusFor(locale),
+              })),
+            });
+          }
         }
       }
     }
   }
+  await db.digitalAsset.deleteMany({ where: { storageBucket: SYNTHETIC_BUCKET, documentPages: { none: {} } } });
 }
