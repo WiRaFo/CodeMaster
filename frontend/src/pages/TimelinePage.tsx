@@ -88,22 +88,30 @@ export function TimelinePage() {
   const span = Math.max(1, maxYear - minYear);
   const pos = (year: number) => `${((year - minYear) / span) * 100}%`;
 
-  // Шкала как полоса прокрутки видео: щелчок в любое место или перетаскивание выбирает ближайшее событие,
-  // при наведении видна подсказка. Это дополнение: те же события выбираются кнопками-отметками и клавишами (A-012).
-  const [hover, setHover] = useState<{ x: number; event: TimelineEvent } | null>(null);
+  // Шкала как полоса прокрутки видео: ползунок двигается свободно (щелчок в любое место или перетаскивание),
+  // а рядом с отметкой (ближе SNAP_PX) притягивается к ней. Карточка показывает событие, к которому
+  // ползунок ближе всего слева, как глава видео. Это дополнение: те же события выбираются отметками и клавишами (A-012).
+  const SNAP_PX = 14;
+  const [free, setFree] = useState<number | null>(null);
+  const [hover, setHover] = useState<{ year: number; event: TimelineEvent; snapped: boolean } | null>(null);
   const [dragging, setDragging] = useState(false);
-  const nearestAt = (clientX: number) => {
+  useEffect(() => { if (!dragging) setFree(null); }, [selected?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pointAt = (clientX: number) => {
     const rect = axis.current?.getBoundingClientRect();
     if (!rect || rect.width === 0 || filtered.length === 0) return null;
     const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
     const year = minYear + (x / rect.width) * span;
-    let best = filtered[0]!;
-    for (const e of filtered) if (Math.abs(e.year - year) < Math.abs(best.year - year)) best = e;
-    return { x: (x / rect.width) * 100, event: best };
+    let near = filtered[0]!;
+    for (const e of filtered) if (Math.abs(e.year - year) < Math.abs(near.year - year)) near = e;
+    if ((Math.abs(near.year - year) / span) * rect.width <= SNAP_PX) return { year: near.year, event: near, snapped: true };
+    const before = filtered.filter((e) => e.year <= year);
+    return { year, event: before[before.length - 1] ?? filtered[0]!, snapped: false };
   };
   const scrubTo = (clientX: number) => {
-    const hit = nearestAt(clientX);
-    if (hit && hit.event.slug !== selected?.slug) choose(hit.event);
+    const hit = pointAt(clientX);
+    if (!hit) return null;
+    setFree(hit.snapped ? null : hit.year);
+    if (hit.event.slug !== selected?.slug) set({ event: hit.event.slug });
     return hit;
   };
   const onScrubDown = (ev: ReactPointerEvent<HTMLDivElement>) => {
@@ -111,14 +119,13 @@ export function TimelinePage() {
     const onDot = (ev.target as HTMLElement).closest('.tl-dot');
     const startX = ev.clientX;
     let moved = !onDot;
-    if (!onDot) scrubTo(ev.clientX);
     setDragging(true);
+    if (!onDot) setHover(scrubTo(ev.clientX));
     const move = (e: PointerEvent) => {
       if (!moved && Math.abs(e.clientX - startX) < 4) return;
       moved = true;
       e.preventDefault();
-      const hit = scrubTo(e.clientX);
-      if (hit) setHover(hit);
+      setHover(scrubTo(e.clientX));
     };
     const up = () => {
       setDragging(false);
@@ -131,6 +138,7 @@ export function TimelinePage() {
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
   };
+  const thumbYear = free ?? selected?.year ?? minYear;
   // Несколько событий одного года — отметки друг над другом.
   const stackOf = new Map<string, number>();
   const perYear = new Map<number, number>();
@@ -191,16 +199,16 @@ export function TimelinePage() {
           <div className="tl-axis-wrap">
             <div ref={axis} className={`tl-axis${dragging ? ' drag' : ''}`} role="group" aria-label={t('timeline.axis')} onKeyDown={onAxisKey}
               onPointerDown={onScrubDown}
-              onPointerMove={(e) => { if (!dragging && e.pointerType === 'mouse') setHover(nearestAt(e.clientX)); }}
+              onPointerMove={(e) => { if (!dragging && e.pointerType === 'mouse') setHover(pointAt(e.clientX)); }}
               onPointerLeave={() => { if (!dragging) setHover(null); }}>
               <span className="tl-band" style={{ left: pos(from), width: `calc(${pos(Math.min(to + 1, maxYear))} - ${pos(from)})` }} aria-hidden="true" />
               <span className="tl-line" aria-hidden="true" />
-              {selected ? <span className="tl-played" style={{ width: pos(selected.year) }} aria-hidden="true" /> : null}
-              {hover ? <span className="tl-hover" style={{ left: `${hover.x}%` }} aria-hidden="true" /> : null}
-              {selected ? <span className="tl-thumb" style={{ left: pos(selected.year) }} aria-hidden="true" /> : null}
+              {selected ? <span className="tl-played" style={{ width: pos(thumbYear) }} aria-hidden="true" /> : null}
+              {hover && !dragging ? <span className="tl-hover" style={{ left: pos(hover.year) }} aria-hidden="true" /> : null}
+              {selected ? <span className={`tl-thumb${free === null ? ' snap' : ''}`} style={{ left: pos(thumbYear) }} aria-hidden="true" /> : null}
               {hover ? (
-                <span className="tl-preview" style={{ left: pos(hover.event.year) }} aria-hidden="true">
-                  <b>{hover.event.year}</b> {hover.event.title}
+                <span className="tl-preview" style={{ left: pos(hover.year) }} aria-hidden="true">
+                  <b>{Math.round(hover.year)}</b>{hover.snapped ? ` ${hover.event.title ?? ''}` : null}
                 </span>
               ) : null}
               {all.map((e) => {

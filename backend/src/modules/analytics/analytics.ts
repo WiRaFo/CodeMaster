@@ -70,11 +70,12 @@ export async function analyticsRoutes(app: FastifyInstance, { db, allowedOrigins
     const where = sectionOf(path);
     if (where && !doNotTrack(request)) {
       const day = today();
+      // Счётчик не должен ломать сайт: сбой записи только в журнал сервера.
       await db.analyticsPageView.upsert({
         where: { day_section_locale: { day, ...where } },
         update: { views: { increment: 1 } },
         create: { day, ...where, views: 1 },
-      });
+      }).catch((error: unknown) => request.log.warn({ error: String(error) }, 'analytics: view not counted'));
     }
     return reply.code(204).header('Cache-Control', 'no-store').send();
   });
@@ -90,7 +91,7 @@ export async function analyticsRoutes(app: FastifyInstance, { db, allowedOrigins
         where: { day_kind_path: { day, kind: input.kind, path } },
         update: { count: { increment: 1 } },
         create: { day, kind: input.kind, path, count: 1 },
-      });
+      }).catch((error: unknown) => request.log.warn({ error: String(error) }, 'analytics: error not counted'));
     }
     return reply.code(204).header('Cache-Control', 'no-store').send();
   });

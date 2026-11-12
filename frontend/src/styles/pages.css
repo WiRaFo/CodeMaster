@@ -354,7 +354,8 @@ html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
 .tl-axis.drag .tl-played,.tl-axis.drag .tl-thumb{transition:none}
 .tl-hover{position:absolute;bottom:24px;width:2px;height:20px;margin-left:-1px;background:rgba(255,255,255,.7);pointer-events:none}
 .tl-thumb{position:absolute;bottom:32px;width:16px;height:16px;margin:0 0 -8px -8px;border-radius:50%;background:var(--gold);pointer-events:none;transform:scale(0);transition:transform .15s,left .25s}
-.tl-axis:hover .tl-thumb,.tl-axis.drag .tl-thumb{transform:scale(1)}
+.tl-axis:hover .tl-thumb,.tl-axis.drag .tl-thumb,.tl-thumb:not(.snap){transform:scale(1)}
+.tl-axis.drag .tl-thumb.snap{transform:scale(1.35)}
 .tl-preview{position:absolute;bottom:62px;transform:translateX(-50%);max-width:260px;padding:6px 10px;border-radius:10px;background:#fff;color:var(--ink);font-size:calc(14px * var(--fs,1));line-height:1.3;white-space:normal;text-align:center;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:2}
 .tl-dot{z-index:1}
 .tl-tick{position:absolute;bottom:0;transform:translateX(-50%);font-size:calc(14px * var(--fs,1));font-weight:700;color:var(--odm);white-space:nowrap}
