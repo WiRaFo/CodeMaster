@@ -1,6 +1,8 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { SECTIONS } from '../lib/sections.ts';
 import { AccessibilityPage } from '../pages/AccessibilityPage.tsx';
+import { BranchPage } from '../pages/BranchPage.tsx';
+import { BranchesPage } from '../pages/BranchesPage.tsx';
 import { CatalogPage } from '../pages/CatalogPage.tsx';
 import { DocumentPage } from '../pages/DocumentPage.tsx';
 import { ExhibitionPage, ExhibitPage } from '../pages/ExhibitionPage.tsx';
@@ -14,7 +16,7 @@ import { SectionStubPage } from '../pages/SectionStubPage.tsx';
 import { LangLayout } from './LangLayout.tsx';
 import { preferredLocale } from './preferred-locale.ts';
 
-const IMPLEMENTED = new Set<string>(['catalog', 'news', 'exhibitions']);
+const IMPLEMENTED = new Set<string>(['catalog', 'news', 'exhibitions', 'branches']);
 
 function RootRedirect() {
   return <Navigate to={`/${preferredLocale()}`} replace />;
@@ -38,6 +40,8 @@ export const routes: RouteObject[] = [
       { path: 'exhibitions', element: <ExhibitionsPage /> },
       { path: 'exhibitions/:slug', element: <ExhibitionPage /> },
       { path: 'exhibitions/:slug/:number', element: <ExhibitPage /> },
+      { path: 'branches', element: <BranchesPage /> },
+      { path: 'branches/:slug', element: <BranchPage /> },
       ...SECTIONS.filter((s) => s.path && !IMPLEMENTED.has(s.path)).map((s) => ({ path: s.path, element: <SectionStubPage section={s.key} /> })),
       { path: 'accessibility', element: <AccessibilityPage /> },
       { path: 'search', element: <SearchPage /> },

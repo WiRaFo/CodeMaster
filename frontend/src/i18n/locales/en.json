@@ -214,7 +214,8 @@
   },
   "common": {
     "loading": "Loading…",
-    "loadError": "Could not load data. Refresh the page or try again later."
+    "loadError": "Could not load data. Refresh the page or try again later.",
+    "newTab": "(opens in a new tab)"
   },
   "document": {
     "breadcrumbs": "Location in the archive",
@@ -302,5 +303,64 @@
     "imageRegion": "Exhibit image",
     "keys": "Keys in the image area: left and right arrows go to the previous and next exhibit, “+” and “−” zoom, “0” resets.",
     "fallbackAlt": "Image of exhibit {{number}}"
+  },
+  "branches": {
+    "listLead": "Addresses, phone numbers and opening hours of the archive, its sites and branches.",
+    "searchForm": "Find a branch",
+    "search": "Name or town",
+    "type": "Type",
+    "any": "All",
+    "apply": "Show",
+    "reset": "Reset",
+    "found": "Branches found: {{count}}",
+    "empty": "Nothing found. Try a different query.",
+    "mapTitle": "Map of branches",
+    "mapNote": "All addresses and contacts are also listed below.",
+    "mapPending": "The map will appear once the archive has verified the coordinates. Until then, use the addresses and route links on each card.",
+    "details": "Details",
+    "needsVerification": "Being verified",
+    "needsVerificationNote": "This information was carried over from the archive's current website and has not been verified yet. Please call before visiting.",
+    "breadcrumbs": "You are here",
+    "contacts": "Contacts and hours",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "schedule": "Opening hours",
+    "readingRoom": "Reading room",
+    "about": "About",
+    "description": "Overview",
+    "competence": "What to contact us about",
+    "serviceArea": "Service area",
+    "directions": "Main fonds and areas",
+    "accessibility": "Building accessibility",
+    "coordinates": "Coordinates",
+    "fonds": "Main fonds",
+    "catalogLink": "This branch's records in the catalog",
+    "sites": "Sites",
+    "verifiedAt": "Verified by the archive on {{date}}.",
+    "source": "Source",
+    "route": {
+      "title": "Getting there",
+      "mode": "Travel mode",
+      "from": "From",
+      "fromHint": "Starting address. Leave it empty and the map service will offer your location itself.",
+      "here": "My location",
+      "locate": "Use my location",
+      "locating": "Locating…",
+      "clearHere": "Enter an address instead",
+      "denied": "Could not get your location. Please enter a starting address.",
+      "distance": "Straight-line distance: {{km}} km",
+      "distanceNote": "The road route is longer; the map service will show it.",
+      "noCoordinates": "The distance will be shown once the coordinates are verified.",
+      "google": "Route in Google Maps",
+      "twoGis": "Open in 2GIS",
+      "external": "The route is built by an external website. The link passes on only the addresses and, if you allowed it, your location.",
+      "modes": {
+        "driving": "By car",
+        "walking": "On foot",
+        "transit": "Public transport"
+      }
+    }
   }
 }

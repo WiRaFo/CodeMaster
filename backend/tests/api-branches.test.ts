@@ -46,6 +46,24 @@ describe('филиалы (ТЗ §5.5)', () => {
   });
 });
 
+describe('координаты для карты (ЭТАП 9, F-060, F-147)', () => {
+  it('координаты отдаются, только если подразделение отмечено для карты; иначе их нет ни в списке, ни в карточке', async () => {
+    const coords = { lat: 50.1, lng: 83.2 }; // тестовые значения, не координаты филиала
+    await t.db.branch.update({ where: { slug: 'zaisan' }, data: { ...coords, showOnMap: false } });
+    try {
+      const hidden = await t.get('/api/v1/branches?q=' + encodeURIComponent('Зайсан'));
+      expect(hidden.body.items?.[0]?.['coordinates']).toBeNull();
+      expect((await t.get('/api/v1/branches/zaisan')).body['coordinates']).toBeNull();
+      await t.db.branch.update({ where: { slug: 'zaisan' }, data: { showOnMap: true } });
+      const shown = await t.get('/api/v1/branches?q=' + encodeURIComponent('Зайсан'));
+      expect(shown.body.items?.[0]?.['coordinates']).toEqual(coords);
+      expect((await t.get('/api/v1/branches/zaisan')).body['coordinates']).toEqual(coords);
+    } finally {
+      await t.db.branch.update({ where: { slug: 'zaisan' }, data: { lat: null, lng: null, showOnMap: false } });
+    }
+  });
+});
+
 describe('справочники', () => {
   it('типы документов, периоды, тематики и населённые пункты', async () => {
     expect((await t.get('/api/v1/reference/document-types')).body.items).toHaveLength(7);

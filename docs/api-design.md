@@ -310,5 +310,9 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 
 Панель (`exhibitions:edit|submit|review|publish`, `assets:upload`): `GET/POST /admin/exhibitions`, `GET /admin/exhibitions/topics`, `GET/PATCH/DELETE /admin/exhibitions/:id`, `POST /admin/exhibitions/:id/items`, `PATCH/DELETE …/items/:itemId`, `POST …/items/:itemId/move` (`up|down`, на краю — `409`), `POST/GET …/items/:itemId/image`, `POST /admin/exhibitions/:id/:action` (те же действия, что у каталога). Полнота: название, описание, хотя бы один экспонат, у каждого — название и источник, у экспоната с изображением — alt на каждом языке перевода.
 
+### Филиалы (ЭТАП 9)
+
+Новых маршрутов нет: страницы используют `GET /branches?q&type&settlement&lang` и `GET /branches/:slug` (ЭТАП 2). `coordinates` приходит, только если заполнены широта и долгота и `show_on_map = true`; иначе `null` и в списке, и в карточке (API-тест). Маршруты строит внешний сервис по ссылке; сервер в этом не участвует.
+
 Не сделано в 10a: `POST /auth/password`, управление пользователями и ролями (F-142, F-143), импорт и экспорт (F-145), ограничение входа хранится в памяти процесса (для одного экземпляра API; при нескольких — Redis), счётчики обзора считаются по всем филиалам.
 

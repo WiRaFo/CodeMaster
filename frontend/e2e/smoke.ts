@@ -14,7 +14,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -119,7 +119,7 @@ async function main() {
     }
 
     for (const width of WIDTHS) {
-      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC]) {
+      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC, '/ru/branches', '/ru/branches/main']) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         await openWithPrefs(page, path, {});
         const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -304,6 +304,73 @@ async function main() {
       await page.getByRole('link', { name: 'Вернуться к началу выставки' }).click();
       await page.getByTestId('exhibit-counter').filter({ hasText: 'Экспонат 1 из 4' }).waitFor();
       check(true, 'сценарий 7: с последнего экспоната можно вернуться к первому');
+      await page.close();
+    }
+
+    {
+      // Сценарий 8 (ЭТАП 9): найти филиал по историческому названию города, открыть карточку, построить маршрут.
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      await openWithPrefs(page, '/ru/branches', {});
+      await page.getByText('Найдено подразделений: 6').waitFor();
+      check(await page.getByTestId('map-pending').isVisible(), 'сценарий 8: без сверенных координат вместо карты — пояснение');
+      check(!(await page.getByTestId('branch-map').count()), 'сценарий 8: карта не показывается без координат');
+      await page.getByRole('searchbox', { name: 'Название или населённый пункт' }).fill('Лениногорск');
+      await page.keyboard.press('Enter');
+      await page.waitForURL(/q=/);
+      const found = await page.waitForFunction(() => {
+        const cards = [...document.querySelectorAll('#main article')];
+        return cards.length === 1 && cards[0]?.textContent?.includes('Риддер');
+      }, undefined, { timeout: 5000 }).then(() => true, () => false);
+      check(found, 'сценарий 8: поиск по историческому названию «Лениногорск» находит филиал в Риддере');
+      await page.getByRole('link', { name: 'Сбросить' }).click();
+      await page.getByRole('link', { name: 'Государственный архив Восточно-Казахстанской области', exact: true }).click();
+      await page.getByRole('heading', { level: 2, name: 'Как добраться' }).waitFor();
+      check(await page.getByText('Сведения уточняются').first().isVisible(), 'сценарий 8: несверенные сведения помечены');
+      // Геолокация без разрешения: страница работает, остаётся ввод адреса.
+      await page.getByRole('button', { name: 'Определить моё местоположение' }).click();
+      const denied = await page.getByText('Не удалось определить местоположение').waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(denied, 'сценарий 8: отказ в геолокации показывает понятное сообщение');
+      await page.getByRole('radio', { name: 'Пешком' }).check();
+      await page.getByRole('textbox', { name: 'Откуда' }).fill('ул. Крылова, 39');
+      const google = new URL((await page.getByRole('link', { name: /Маршрут в Google Картах/ }).getAttribute('href')) ?? '');
+      check(
+        google.searchParams.get('destination') === 'г. Усть-Каменогорск, ул. Головкова, 26/1' && google.searchParams.get('travelmode') === 'walking' && google.searchParams.get('origin') === 'ул. Крылова, 39',
+        `сценарий 8: ссылка маршрута Google: ${google.toString()}`,
+      );
+      check((await axe(page)).length === 0, `axe карточка филиала: ${(await axe(page)).join('; ')}`);
+      // Разрешённая геолокация: отправная точка — координаты пользователя.
+      await context.grantPermissions(['geolocation']);
+      await context.setGeolocation({ latitude: 49.95, longitude: 82.62 });
+      await page.getByRole('button', { name: 'Определить моё местоположение' }).click();
+      const here = await page.waitForFunction(() => document.querySelector<HTMLAnchorElement>('a[href*="google.com/maps"]')?.href.includes('origin=49.95%2C82.62'), undefined, { timeout: 5000 }).then(() => true, () => false);
+      check(here, 'сценарий 8: после разрешения маршрут строится от местоположения пользователя');
+      await context.close();
+    }
+
+    {
+      // Сценарий 8, карта: подставляем координаты в ответ API (в базе их нет, пока архив не сверил). Тайлы не грузим.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await page.route('https://tile.openstreetmap.org/**', (r) => r.abort());
+      await page.route(/\/api\/v1\/branches\?/, async (r) => {
+        const res = await r.fetch();
+        const body = (await res.json()) as { items: Array<{ slug: string; coordinates: unknown }> };
+        for (const b of body.items) if (b.slug === 'main') b.coordinates = { lat: 49.95, lng: 82.61 };
+        await r.fulfill({ response: res, json: body });
+      });
+      await openWithPrefs(page, '/ru/branches', {});
+      const marker = page.locator('[data-testid=branch-map] .leaflet-marker-icon');
+      await marker.first().waitFor();
+      check((await marker.count()) === 1, 'сценарий 8: на карте только подразделения с координатами');
+      await marker.focus();
+      await page.keyboard.press('Enter');
+      const popup = await page.getByRole('link', { name: 'Подробнее' }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(popup, 'сценарий 8: маркер открывается с клавиатуры, в подсказке ссылка на карточку');
+      check((await page.locator('#main article').count()) === 6, 'сценарий 8: при карте список подразделений остаётся полным');
+      // Подсказка Leaflet появляется с анимацией прозрачности; axe проверяем после её окончания.
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('.leaflet-popup') as Element).opacity === '1');
+      const mapAxe = await axe(page);
+      check(mapAxe.length === 0, `axe страница филиалов с картой: ${mapAxe.join('; ')}`);
       await page.close();
     }
 
