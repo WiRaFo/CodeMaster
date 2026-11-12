@@ -362,5 +362,63 @@
         "transit": "Public transport"
       }
     }
+  },
+  "assistant": {
+    "lead": "The assistant helps you find open materials on the site and points you to the right section.",
+    "disclaimer": "The assistant works by rules: it analyses your question and shows only published materials with links; it does not make up text. It does not accept applications or requests.",
+    "question": "Your question",
+    "ask": "Ask",
+    "you": "You",
+    "bot": "Assistant",
+    "tooMany": "Too many questions. Please try again in a minute.",
+    "examplesTitle": "Example questions",
+    "examples": {
+      "photos": "Photos of Oskemen in the 1960s",
+      "service": "How do I apply for an archive certificate?",
+      "term": "What is an inventory?",
+      "branch": "Address of the branch in Ridder"
+    },
+    "understood": "I understood your request as:",
+    "kinds": {
+      "type": "Type",
+      "settlement": "Place",
+      "years": "Years",
+      "topic": "Topic"
+    },
+    "dropped": {
+      "topic": "topic",
+      "keywords": "keywords",
+      "type": "material type"
+    },
+    "sources": "Documents found",
+    "answers": {
+      "service": "This website is for information only: it does not accept applications, requests, orders or payments. See “For visitors” to learn how to contact the archive, and “Branches and contacts” for addresses and phone numbers.",
+      "navigation": "You will find this in the section:",
+      "unknown": "I could not understand the question. Try naming a material type, a place or years, for example “Photos of Oskemen in the 1960s”. You can also search the catalog yourself.",
+      "termNote": "This is a general explanation. Ask the archive staff about a specific document.",
+      "branches": "Addresses and contacts:",
+      "noData": "Nothing was found among the site's open materials for this request. Try different conditions or contact the archive.",
+      "openCatalog": "Open the catalog with these conditions",
+      "relaxed": "No exact matches. I searched without: {{what}}.",
+      "found": "Documents found: {{count}}.",
+      "allResults": "All results in the catalog",
+      "suggestions": "You may also try:"
+    },
+    "suggest": {
+      "withCopy": "Only with a digital copy",
+      "prevDecade": "Previous decade",
+      "nextDecade": "Next decade",
+      "allTypes": "All material types"
+    },
+    "terms": {
+      "fond": "A fonds is a body of records that belong together historically or logically, for example all records of one organisation or one person. Each fonds has a number.",
+      "inventory": "An inventory is a list of the files in a fonds with their titles and dates. It is used to find the file you need.",
+      "case": "A file (storage unit) is a set of documents gathered on one matter and kept under one number in the inventory.",
+      "sheet": "A folio is a numbered page of a file. Folio numbers show where a document is within the file.",
+      "archiveCode": "An archive reference code is the document's address in the archive: the fonds, inventory, file and folio numbers, for example “F. 1. Inv. 2. File 3. Fol. 4”. You can type a code into the catalog search.",
+      "restricted": "Restricted documents appear on the site only as a record card with access conditions, without a copy or transcription. Closed documents are not published on the site.",
+      "readingRoom": "In the reading room you can work with original documents and copies that are not published on the site. The address and hours are in “Branches and contacts”.",
+      "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one."
+    }
   }
 }

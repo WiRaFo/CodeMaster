@@ -235,3 +235,38 @@ export interface PeriodRef {
   yearFrom: number | null;
   yearTo: number | null;
 }
+
+/** ЭТАП 12. Ответ архивного помощника (GET /assistant/ask). Текст ответа строится по словарю интерфейса. */
+export type AssistantSection = 'exhibitions' | 'news' | 'history' | 'accessibility' | 'faq' | 'about' | 'visitors' | 'catalog' | 'branches';
+export type AssistantRecognized =
+  | { kind: 'years'; yearFrom: number; yearTo: number; text: string }
+  | { kind: 'type' | 'settlement' | 'topic'; value: string; label: string; text: string };
+export interface AssistantDocument {
+  id: string;
+  title: string | null;
+  code: string | null;
+  date: { from: string | null; to: string | null };
+  type: string | null;
+  access: 'open' | 'restricted';
+  hasDigitalCopy: boolean;
+  dataOrigin: DataOrigin;
+}
+export type AssistantAnswer =
+  | { intent: 'service_request' | 'navigation' | 'unknown'; links: AssistantSection[] }
+  | { intent: 'term'; term: string; links: AssistantSection[] }
+  | {
+      intent: 'branch';
+      recognized: AssistantRecognized[];
+      links: AssistantSection[];
+      branches: Array<{ slug: string; name: string | null; address: string | null; phone: string | null; email: string | null; needsVerification: boolean }>;
+    }
+  | {
+      intent: 'search';
+      recognized: AssistantRecognized[];
+      total: number;
+      catalogQuery: string;
+      requestedQuery: string;
+      dropped: Array<'topic' | 'keywords' | 'type'>;
+      documents: AssistantDocument[];
+      suggestions: Array<{ reason: 'withCopy' | 'prevDecade' | 'nextDecade' | 'allTypes'; query: string }>;
+    };
