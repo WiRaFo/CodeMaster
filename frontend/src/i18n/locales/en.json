@@ -218,7 +218,10 @@
       "yearTo": "To year (inclusive)",
       "apply": "Apply",
       "yearInvalid": "Enter a four-digit year between 1000 and 2100.",
-      "yearOrder": "The start year must not be later than the end year."
+      "yearOrder": "The start year must not be later than the end year.",
+      "organization": "Organisation",
+      "author": "Author or compiler",
+      "authorHint": "Part of a name is enough."
     },
     "semantic": {
       "title": "Similar in meaning",
@@ -476,7 +479,8 @@
     "authorship": "Author",
     "source": "Source",
     "sourceUrl": "Source link",
-    "related": "More on this theme"
+    "related": "More on this theme",
+    "settlement": "Place"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",

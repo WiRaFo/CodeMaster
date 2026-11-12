@@ -133,6 +133,23 @@ describe('фасеты каталога (ЭТАП 5, F-031)', () => {
     expect(docs.body['total']).toBe(0);
   });
 
+  it('организации и автор (F-034): фасет и фильтры только по публичным документам', async () => {
+    const facets = await t.get('/api/v1/catalog/facets?lang=ru');
+    const orgs = facets.body['organizations'] as Array<{ value: string; name: string; count: number }>;
+    // Закрытый TEST-1/1/1/3 той же организации в счётчик не входит: открытый и ограниченный.
+    expect(orgs).toHaveLength(1);
+    expect(orgs[0]).toMatchObject({ name: '[Синтетика] Маслозавод (тестовая организация)', count: 2 });
+    const byOrg = await t.get(`/api/v1/catalog/documents?organization=${orgs[0]?.value ?? ''}`);
+    expect(byOrg.body['total']).toBe(2);
+    // Счётчик организаций не учитывает собственный фильтр, но учитывает остальные.
+    const withType = await t.get(`/api/v1/catalog/facets?organization=${orgs[0]?.value ?? ''}&type=photo`);
+    expect(withType.body['organizations']).toEqual([]);
+    const byAuthor = await t.get('/api/v1/catalog/documents?author=%D1%82%D0%B5%D1%81%D1%82%D0%BE%D0%B2');
+    expect(byAuthor.body['total']).toBe(1);
+    // Автор закрытого документа не находится.
+    expect((await t.get('/api/v1/catalog/documents?author=%D0%97%D0%B0%D0%BA%D1%80%D1%8B%D1%82%D0%BE%D0%B2')).body['total']).toBe(0);
+  });
+
   it('фильтры по населённому пункту, тематике и периоду в выдаче', async () => {
     const bySettlement = await t.get('/api/v1/catalog/documents?settlement=ust-kamenogorsk&sort=date_asc');
     expect(bySettlement.body['total']).toBe(3);

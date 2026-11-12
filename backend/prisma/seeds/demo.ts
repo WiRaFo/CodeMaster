@@ -23,7 +23,7 @@ interface TextSeed {
   body: Tri<string>;
 }
 
-const PUBLICATIONS: Array<TextSeed & { topic: string }> = [
+const PUBLICATIONS: Array<TextSeed & { topic: string; settlements?: string[] }> = [
   {
     slug: 'demo-how-to-read-archive-code',
     topic: 'region',
@@ -42,6 +42,8 @@ const PUBLICATIONS: Array<TextSeed & { topic: string }> = [
   {
     slug: 'demo-reading-room-visit',
     topic: 'family',
+    // Читальный зал основного архива находится в Усть-Каменогорске.
+    settlements: ['ust-kamenogorsk'],
     title: { ru: 'Как подготовиться к работе в читальном зале', kk: 'Оқу залында жұмысқа қалай дайындалу керек', en: 'Preparing for a reading room visit' },
     lead: {
       ru: 'Найдите документы в каталоге заранее и выпишите их шифры.',
@@ -174,6 +176,8 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
     if (categoryId) {
       await db.publicationCategory.createMany({ data: [{ publicationId: row.id, categoryId }], skipDuplicates: true });
     }
+    const settlementIds = (await db.settlement.findMany({ where: { slug: { in: p.settlements ?? [] } }, select: { id: true } })).map((x) => x.id);
+    await db.publicationSettlement.createMany({ data: settlementIds.map((settlementId) => ({ publicationId: row.id, settlementId })), skipDuplicates: true });
   }
 
   // Вопросы без собственного ключа: демо-набор пересоздаётся целиком.

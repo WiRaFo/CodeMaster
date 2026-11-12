@@ -167,6 +167,8 @@ export interface CatalogFacets {
   branches: FacetValue[];
   settlements: FacetValue[];
   topics: FacetValue[];
+  /** 30 самых частых организаций выдачи; value — id. Старый API поле не отдаёт. */
+  organizations?: FacetValue[];
   access: Array<{ value: 'open' | 'restricted'; count: number }>;
   hasDigitalCopy: { true: number; false: number };
 }
@@ -323,6 +325,8 @@ export interface PublicationSummary extends Localized {
 }
 export interface PublicationList extends Paged<PublicationSummary> {
   topics: Array<{ slug: string; name: string | null; count: number }>;
+  /** Населённые пункты с публикациями. Старый API поле не отдаёт. */
+  settlements?: Array<{ slug: string; name: string | null; count: number }>;
 }
 export interface PublicationDetail extends PublicationSummary {
   bodyText: string | null;

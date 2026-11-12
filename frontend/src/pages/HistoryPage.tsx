@@ -29,7 +29,8 @@ function PublicationCard({ p }: { p: PublicationSummary }) {
 
 /**
  * Цифровая история региона — «Большой архив памяти» (ТЗ §5.6, с. 8; F-080, F-081).
- * Тематические направления ТЗ показаны все, с числом публикаций; фильтр хранится в адресе.
+ * Тематические направления ТЗ показаны все, с числом публикаций. Фильтры (направление, период,
+ * населённый пункт; F-084) хранятся в адресе и сочетаются.
  */
 export function HistoryPage() {
   const { t } = useTranslation();
@@ -38,12 +39,14 @@ export function HistoryPage() {
   const navigate = useNavigate();
   const topic = params.get('topic') ?? '';
   const period = params.get('period') ?? '';
+  const settlement = params.get('settlement') ?? '';
   const page = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1);
-  const filters = { ...(topic ? { topic } : {}), ...(period ? { period } : {}) };
+  const filters = { ...(topic ? { topic } : {}), ...(period ? { period } : {}), ...(settlement ? { settlement } : {}) };
   const list = useApi<PublicationList>(`/history?${new URLSearchParams({ lang, page: String(page), ...filters }).toString()}`);
   const periods = useApi<Paged<PeriodRef>>(`/reference/periods?lang=${lang}`);
   const all = useApi<PublicationList>(`/history?lang=${lang}&pageSize=1`);
-  const topicHref = (slug: string) => `/${lang}/history?${new URLSearchParams({ ...(period ? { period } : {}), topic: slug }).toString()}`;
+  const topicHref = (slug: string) => `/${lang}/history?${new URLSearchParams({ ...filters, topic: slug }).toString()}`;
+  const settlements = all.status === 'ready' ? (all.data.settlements ?? []) : [];
 
   return (
     <>
@@ -81,8 +84,12 @@ export function HistoryPage() {
         className="mb-6 flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          const v = new FormData(e.currentTarget).get('period');
-          const next = new URLSearchParams({ ...(topic ? { topic } : {}), ...(typeof v === 'string' && v ? { period: v } : {}) });
+          const form = new FormData(e.currentTarget);
+          const picked = (name: string) => {
+            const v = form.get(name);
+            return typeof v === 'string' && v ? { [name]: v } : {};
+          };
+          const next = new URLSearchParams({ ...(topic ? { topic } : {}), ...picked('period'), ...picked('settlement') });
           navigate(`/${lang}/history${next.size ? `?${next.toString()}` : ''}`);
         }}
       >
@@ -93,8 +100,17 @@ export function HistoryPage() {
             {periods.status === 'ready' ? periods.data.items.map((x) => <option key={x.slug} value={x.slug}>{x.name}</option>) : null}
           </select>
         </label>
+        {settlements.length > 0 || settlement ? (
+          <label className="flex min-w-0 flex-col gap-1 font-semibold">
+            {t('history.settlement')}
+            <select name="settlement" defaultValue={settlement} key={`s-${settlement}`} className="input max-w-full font-normal">
+              <option value="">{t('history.any')}</option>
+              {settlements.map((x) => <option key={x.slug} value={x.slug}>{`${x.name ?? x.slug} (${x.count})`}</option>)}
+            </select>
+          </label>
+        ) : null}
         <button type="submit" className="btn-primary">{t('history.apply')}</button>
-        {topic || period ? <Link to={`/${lang}/history`} className="btn-secondary">{t('history.reset')}</Link> : null}
+        {topic || period || settlement ? <Link to={`/${lang}/history`} className="btn-secondary">{t('history.reset')}</Link> : null}
       </form>
 
       {list.status !== 'ready' ? (
@@ -142,7 +158,7 @@ export function PublicationPage() {
             <dd>{p.topics.map((x, i) => <span key={x.slug}>{i > 0 ? ', ' : ''}<Link to={`/${lang}/history?topic=${x.slug}`}>{x.name ?? x.slug}</Link></span>)}</dd></div>
         ) : null}
         {p.settlements.length > 0 ? (
-          <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.settlements')}</dt><dd>{p.settlements.map((x) => x.name ?? x.slug).join(', ')}</dd></div>
+          <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.settlements')}</dt><dd>{p.settlements.map((x, i) => <span key={x.slug}>{i > 0 ? ', ' : ''}<Link to={`/${lang}/history?settlement=${x.slug}`}>{x.name ?? x.slug}</Link></span>)}</dd></div>
         ) : null}
         {p.document ? (
           <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.document')}</dt>

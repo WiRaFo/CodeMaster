@@ -47,6 +47,29 @@ describe('каталог: фильтры и фасеты (ЭТАП 5)', () => {
     await waitFor(() => expect(router.state.location.search).toBe(''));
   });
 
+  it('автор и организация (F-034): поле автора и фасет организаций пишутся в адрес и снимаются кнопкой', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt('/ru/catalog');
+    const aside = screen.getByRole('complementary', { name: 'Фильтры' });
+    const orgs = await within(aside).findByRole('group', { name: 'Организация' });
+    await user.click(within(orgs).getByRole('checkbox', { name: /Маслозавод/ }));
+    await waitFor(() => expect(new URLSearchParams(router.state.location.search).get('organization')).toBe('11111111-1111-4111-8111-111111111111'));
+    const author = within(aside).getByRole('textbox', { name: 'Автор или составитель' });
+    expect(author).toHaveAccessibleDescription('Можно ввести часть имени.');
+    await user.type(author, ' Тестов ');
+    await user.click(within(author.closest('form') as HTMLElement).getByRole('button', { name: 'Применить' }));
+    await waitFor(() => expect(lastParams('/api/v1/catalog/documents?').get('author')).toBe('Тестов'));
+    expect(screen.getByRole('button', { name: 'Убрать фильтр «Организация: Маслозавод»' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Убрать фильтр «Автор или составитель: Тестов»' }));
+    await waitFor(() => expect(new URLSearchParams(router.state.location.search).get('author')).toBeNull());
+  });
+
+  it('испорченный id организации в адресе отбрасывается, а не уходит в API', async () => {
+    renderAt('/ru/catalog?organization=abc');
+    await waitFor(() => expect(calls('/api/v1/catalog/documents?').length).toBeGreaterThan(0));
+    expect(lastParams('/api/v1/catalog/documents?').get('organization')).toBeNull();
+  });
+
   it('годы: проверка ввода с понятным сообщением, применение по кнопке', async () => {
     const user = userEvent.setup();
     const { router } = renderAt('/ru/catalog');
@@ -55,12 +78,12 @@ describe('каталог: фильтры и фасеты (ЭТАП 5)', () => {
     const to = within(aside).getByRole('textbox', { name: 'До года (включительно)' });
     await user.type(from, '1990');
     await user.type(to, '1950');
-    await user.click(within(aside).getByRole('button', { name: 'Применить' }));
+    await user.click(within(from.closest('form') as HTMLElement).getByRole('button', { name: 'Применить' }));
     expect(within(aside).getByRole('alert')).toHaveTextContent('Начальный год должен быть не больше конечного.');
     expect(from).toHaveAttribute('aria-invalid', 'true');
     await user.clear(to);
     await user.type(to, '1995');
-    await user.click(within(aside).getByRole('button', { name: 'Применить' }));
+    await user.click(within(from.closest('form') as HTMLElement).getByRole('button', { name: 'Применить' }));
     await waitFor(() => expect(router.state.location.search).toBe('?yearFrom=1990&yearTo=1995'));
   });
 

@@ -103,6 +103,7 @@ export const FIXTURES = {
     branches: [{ slug: 'main', name: 'ГА ВКО', count: 3 }],
     settlements: [{ slug: 'ridder', name: 'Риддер', count: 1 }, { slug: 'ust-kamenogorsk', name: 'Усть-Каменогорск', count: 2 }],
     topics: [{ slug: 'industry', name: 'История промышленных предприятий', count: 2 }],
+    organizations: [{ value: '11111111-1111-4111-8111-111111111111', name: 'Маслозавод', count: 2 }],
     access: [{ value: 'open', count: 2 }, { value: 'restricted', count: 1 }],
     hasDigitalCopy: { true: 1, false: 2 },
   },

@@ -30,6 +30,22 @@ describe('цифровая история региона (F-080–F-082)', () =>
     expect((await t.get('/api/v1/history?topic=military')).body['total']).toBe(0);
   });
 
+  it('фильтр по населённому пункту (F-084): список только с публикациями, сочетается с направлением', async () => {
+    const res = await t.get('/api/v1/history?lang=ru');
+    expect(res.body['settlements']).toEqual([{ slug: 'ust-kamenogorsk', name: 'Усть-Каменогорск', count: 1 }]);
+    const uk = await t.get('/api/v1/history?settlement=ust-kamenogorsk');
+    expect((uk.body.items ?? []).map((p) => p['slug'])).toEqual(['demo-reading-room-visit']);
+    expect((await t.get('/api/v1/history?settlement=ust-kamenogorsk&topic=region')).body['total']).toBe(0);
+    expect((await t.get('/api/v1/history?settlement=ridder')).body['total']).toBe(0);
+    // Снятая публикация не попадает и в список населённых пунктов.
+    await t.db.publication.update({ where: { slug: 'demo-reading-room-visit' }, data: { publicationStatus: 'archived' } });
+    try {
+      expect((await t.get('/api/v1/history')).body['settlements']).toEqual([]);
+    } finally {
+      await t.db.publication.update({ where: { slug: 'demo-reading-room-visit' }, data: { publicationStatus: 'published' } });
+    }
+  });
+
   it('черновик и снятая публикация — 404 так же, как несуществующая', async () => {
     const slug = 'demo-reading-room-visit';
     await t.db.publication.update({ where: { slug }, data: { publicationStatus: 'draft' } });

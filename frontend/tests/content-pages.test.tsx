@@ -13,6 +13,7 @@ const STORY = {
 const LIST: PublicationList = {
   items: [STORY], page: 1, pageSize: 12, total: 1, totalPages: 1,
   topics: [{ slug: 'region', name: 'История области', count: 1 }, { slug: 'military', name: 'Военная история', count: 0 }],
+  settlements: [{ slug: 'ust-kamenogorsk', name: 'Усть-Каменогорск', count: 1 }],
 };
 const DETAIL: PublicationDetail = {
   ...STORY, bodyText: 'Первый абзац.\n\nВторой абзац.', sourceNote: 'Демонстрационный материал.', authorship: 'Команда (демо)', sourceUrl: null,
@@ -56,6 +57,18 @@ describe('цифровая история региона (F-080–F-084)', () =>
     const card = screen.getByRole('link', { name: '[Демо] Как читать шифр' }).closest('article') as HTMLElement;
     expect(within(card).getByText('Демо')).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('фильтр по населённому пункту сочетается с направлением и хранится в адресе', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt('/ru/history?topic=region');
+    const select = await screen.findByRole('combobox', { name: 'Населённый пункт' });
+    await user.selectOptions(select, 'ust-kamenogorsk');
+    await user.click(screen.getByRole('button', { name: 'Показать' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?topic=region&settlement=ust-kamenogorsk'));
+    await waitFor(() => expect(fetchMock.mock.calls.map(([u]) => String(u)).some((u) => u.includes('settlement=ust-kamenogorsk') && u.includes('topic=region'))).toBe(true));
+    // Ссылка направления сохраняет выбранный населённый пункт.
+    expect(screen.getByRole('link', { name: /История области/ })).toHaveAttribute('href', '/ru/history?topic=region&settlement=ust-kamenogorsk');
   });
 
   it('публикация: абзацы текста, тематика, документ каталога с пометкой доступа, источник', async () => {
