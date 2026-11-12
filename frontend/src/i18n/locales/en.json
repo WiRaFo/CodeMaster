@@ -1,0 +1,119 @@
+{
+  "site": {
+    "name": "State Archive of East Kazakhstan Region",
+    "shortName": "State Archive of EKR",
+    "tagline": "The digital memory of East Kazakhstan",
+    "homeLink": "State Archive of EKR — home page"
+  },
+  "skip": { "toMain": "Skip to main content" },
+  "nav": {
+    "label": "Main sections",
+    "home": "Home",
+    "about": "About the archive",
+    "catalog": "Fonds and e-catalogue",
+    "visitors": "For visitors",
+    "history": "Digital history of the region",
+    "exhibitions": "Online exhibitions",
+    "news": "News and events",
+    "branches": "Branches and contacts",
+    "faq": "Questions and answers",
+    "assistant": "AI assistant",
+    "accessibility": "Accessibility"
+  },
+  "header": {
+    "searchLabel": "Search the site",
+    "searchPlaceholder": "Title, reference code or keywords",
+    "searchSubmit": "Search",
+    "catalogButton": "E-catalogue",
+    "menuOpen": "Menu",
+    "menuTitle": "Site sections",
+    "close": "Close"
+  },
+  "lang": {
+    "label": "Site language",
+    "kk": "Қазақша",
+    "ru": "Русский",
+    "en": "English"
+  },
+  "theme": {
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "a11y": {
+    "button": "Accessibility",
+    "title": "Accessibility settings",
+    "description": "Settings are stored only in this browser and apply to the whole site immediately.",
+    "fontSize": "Text size",
+    "lineHeight": "Line spacing",
+    "letterSpacing": "Letter spacing",
+    "spacingNormal": "Standard",
+    "spacingWide": "Wider",
+    "spacingWidest": "Widest",
+    "contrast": "High contrast",
+    "scheme": "Colour scheme",
+    "schemeSystem": "Follow system",
+    "schemeLight": "Light",
+    "schemeDark": "Dark",
+    "schemeAlt": "Warm (cream background)",
+    "font": "Highly legible font",
+    "motion": "Animation",
+    "motionSystem": "Follow system",
+    "motionReduce": "Reduce",
+    "motionFull": "Do not reduce",
+    "simplified": "Simplified mode",
+    "simplifiedHint": "Fewer decorative elements, larger links. All content stays available.",
+    "reset": "Reset settings",
+    "resetDone": "Accessibility settings have been reset",
+    "sample": "Sample text: reference code F. 12. Inv. 3. File 45.",
+    "moreInfo": "More about site accessibility"
+  },
+  "footer": {
+    "contacts": "Contacts",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "schedule": "Opening hours",
+    "needsVerification": "Details were transferred from the current website and are being verified",
+    "allBranches": "All branches and contacts",
+    "contactsUnavailable": "Contact details could not be loaded right now.",
+    "social": "Social media",
+    "socialPending": "Links to the archive's official social media pages will appear once the archive confirms them.",
+    "infoOnly": "This website is for information only: applications, requests and orders are not accepted through it.",
+    "sections": "Sections",
+    "copyright": "© {{year}} State Archive of East Kazakhstan Region"
+  },
+  "stub": {
+    "text": "This section will be added in later stages of the prototype.",
+    "toHome": "Back to the home page"
+  },
+  "home": {
+    "intro": "Documents, fonds and history of East Kazakhstan Region: e-catalogue search, online exhibitions and information for visitors.",
+    "sectionsTitle": "Site sections"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "Check the address or use the search and menu.",
+    "toHome": "Home page"
+  },
+  "search": { "title": "Site search", "query": "Query: “{{q}}”" },
+  "accessibilityPage": {
+    "lead": "We want everyone to be able to use this website, including people with visual, hearing, motor and cognitive impairments. Our target is WCAG 2.2 level AA.",
+    "panelTitle": "Settings panel",
+    "panelText": "The “Accessibility” button is in the header of every page. In the panel you can enlarge text up to 200%, change spacing, turn on high contrast, the dark or warm scheme and a highly legible font, reduce animation and enable simplified mode. Settings are stored only in your browser.",
+    "keyboardTitle": "Keyboard use",
+    "keyboardItems": [
+      "Tab and Shift+Tab move between elements; focus is always visible.",
+      "The first link on every page is “Skip to main content”.",
+      "Enter follows a link; Enter or Space presses a button.",
+      "Esc closes menus and panels."
+    ],
+    "limitsTitle": "Known limitations",
+    "limitsItems": [
+      "Not every scan of an archival document has a text transcription; when one is missing, this is stated next to the scan.",
+      "External route services (maps) follow their own accessibility rules.",
+      "Some historical images have low original quality."
+    ],
+    "feedbackTitle": "Report a problem",
+    "feedbackText": "If something on the site is inconvenient or inaccessible, write to us via the feedback and suggestions form. This is not an official appeal: a reply is not guaranteed, but every message is taken into account when improving the site."
+  }
+}

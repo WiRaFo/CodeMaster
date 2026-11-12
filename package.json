@@ -2,14 +2,23 @@
   "name": "archive-vko",
   "private": true,
   "description": "Официальный сайт Государственного архива Восточно-Казахстанской области",
-  "workspaces": ["packages/*", "backend"],
-  "engines": { "node": ">=22" },
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm run test",
     "db:migrate": "npm run db:migrate -w backend",
     "db:seed": "npm run db:seed -w backend",
-    "db:reset": "npm run db:reset -w backend"
+    "db:reset": "npm run db:reset -w backend",
+    "dev:api": "npm run dev -w backend",
+    "dev:web": "npm run dev -w frontend",
+    "e2e": "npm run e2e -w frontend"
   }
 }
