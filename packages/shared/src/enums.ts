@@ -46,3 +46,7 @@ export function strictestAccess(levels: readonly AccessLevel[]): AccessLevel {
   }
   return result;
 }
+
+/** Темы отзывов о сайте (ЭТАП 7). */
+export const FEEDBACK_TOPICS = ['site', 'catalog', 'accessibility', 'content', 'suggestion', 'other'] as const;
+export type FeedbackTopic = (typeof FEEDBACK_TOPICS)[number];

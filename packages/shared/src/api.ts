@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LOCALES } from './enums.ts';
+import { FEEDBACK_TOPICS, LOCALES } from './enums.ts';
 
 /**
  * Схемы входных параметров публичного API (docs/api-design.md §1, §3).
@@ -95,3 +95,30 @@ export type ExhibitionListQuery = z.infer<typeof exhibitionListSchema>;
 /** ЭТАП 12. Архивный помощник на правилах (ТЗ §5.8 А, Б): вопрос до 300 символов. */
 export const assistantAskSchema = z.object({ q: shortText(300), lang: langSchema.optional() });
 export type AssistantAskQuery = z.infer<typeof assistantAskSchema>;
+
+/** ЭТАП 7. Цифровая история региона (ТЗ §5.6, с. 8): фильтр по тематике, периоду и населённому пункту. */
+export const historyListSchema = z
+  .object({
+    topic: shortText(100).optional(),
+    period: shortText(100).optional(),
+    settlement: shortText(100).optional(),
+    lang: langSchema.optional(),
+  })
+  .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(12) }));
+export type HistoryListQuery = z.infer<typeof historyListSchema>;
+
+/** ЭТАП 7. Отзывы и предложения (разрешены организаторами; это не обращение и не заявление). */
+export const feedbackInputSchema = z
+  .object({
+    topic: z.enum(FEEDBACK_TOPICS),
+    message: z.string().trim().min(10).max(2000),
+    contactEmail: z.union([z.literal(''), z.email().max(254)]).optional().transform((v) => v || null),
+    /** Согласие на обработку адреса почты; обязательно, только если адрес указан. */
+    consent: z.boolean().optional(),
+    pagePath: z.string().max(300).regex(/^\//).optional(),
+    /** Ловушка для ботов: поле скрыто от людей и должно быть пустым. */
+    website: z.string().max(200).optional(),
+    lang: langSchema,
+  })
+  .refine((v) => v.contactEmail === null || v.consent === true, { path: ['consent'], message: 'consent is required when an email is given' });
+export type FeedbackInput = z.input<typeof feedbackInputSchema>;

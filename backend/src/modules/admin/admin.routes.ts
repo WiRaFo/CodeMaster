@@ -572,6 +572,39 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
 
   await exhibitionAdminRoutes(app, { db, storage });
 
+  /** Отзывы и предложения посетителей (ЭТАП 7): чтение и смена статуса — право feedback:read. */
+  app.get('/admin/feedback', async (request) => {
+    requirePermission(request, 'feedback:read');
+    const q = z
+      .object({ status: z.enum(['new', 'read', 'archived']).optional(), page: z.coerce.number().int().min(1).max(10_000).default(1) })
+      .parse(request.query);
+    const where: Prisma.FeedbackMessageWhereInput = q.status ? { status: q.status } : { status: { not: 'archived' } };
+    const [total, rows] = await Promise.all([
+      db.feedbackMessage.count({ where }),
+      db.feedbackMessage.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * 50, take: 50 }),
+    ]);
+    return pageOf(
+      rows.map((r) => ({ id: r.id, topic: r.topic, message: r.message, contactEmail: r.contactEmail, locale: r.locale, pagePath: r.pagePath, status: r.status, createdAt: r.createdAt.toISOString() })),
+      total,
+      q.page,
+      50,
+    );
+  });
+
+  app.post('/admin/feedback/:id/status', async (request) => {
+    const staff = requirePermission(request, 'feedback:read');
+    const { id } = z.object({ id: z.uuid() }).parse(request.params);
+    const { status } = z.object({ status: z.enum(['new', 'read', 'archived']) }).parse(request.body);
+    const before = await db.feedbackMessage.findUnique({ where: { id }, select: { status: true } });
+    if (!before) throw notFound();
+    await db.$transaction(async (tx) => {
+      await tx.feedbackMessage.update({ where: { id }, data: { status, moderatedById: staff.session.userId, moderatedAt: new Date() } });
+      await writeAudit(tx, request, { userId: staff.session.userId, action: 'status_change', entityType: 'feedback', entityId: id, summary: `Отзыв: ${before.status} → ${status}`, changes: { status: { from: before.status, to: status } } });
+    });
+    return { id, status };
+  });
+
+
   /** Журнал действий (F-152): только для права audit:read. */
   app.get('/admin/audit-logs', async (request) => {
     requirePermission(request, 'audit:read');

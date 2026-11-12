@@ -14,7 +14,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant'];
+const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about'];
 const THEMES: Array<[string, Record<string, unknown>]> = [
   ['light', { scheme: 'light' }],
   ['dark', { scheme: 'dark' }],
@@ -399,6 +399,29 @@ async function main() {
       await openWithPrefs(page, `/en/assistant?q=${encodeURIComponent('What is an inventory?')}`, {});
       const term = await page.getByTestId('assistant-answer').getByText(/An inventory is a list/).waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(term, 'сценарий 16: термин объясняется на английском');
+      await page.close();
+    }
+
+    {
+      // Сценарий 17 (ЭТАП 7): с главной в цифровую историю и к публикации; отзыв о сайте с клавиатуры.
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await openWithPrefs(page, '/ru/history', {});
+      await page.getByRole('link', { name: /История семьи и поколений/ }).click();
+      await page.waitForURL(/topic=family/);
+      await page.getByRole('link', { name: /Как подготовиться к работе в читальном зале/ }).click();
+      const story = await page.getByRole('heading', { level: 1, name: /Как подготовиться/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(story, 'сценарий 17: тематика ведёт к публикации');
+      check(await page.getByText('Демонстрационный материал команды разработки', { exact: false }).first().isVisible(), 'сценарий 17: у публикации указан источник');
+
+      await openWithPrefs(page, '/ru/feedback', {});
+      await page.getByRole('button', { name: 'Отправить' }).click();
+      const focused = await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'alert', undefined, { timeout: 3000 }).then(() => true, () => false);
+      check(focused, 'сценарий 17: при ошибках фокус на сводке ошибок');
+      await page.getByRole('combobox', { name: 'Тема' }).selectOption('site');
+      await page.getByRole('textbox', { name: /Сообщение/ }).fill('[e2e] Проверка формы отзывов');
+      await page.getByRole('button', { name: 'Отправить' }).click();
+      const sent = await page.getByText('Спасибо! Отзыв отправлен.').waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(sent, 'сценарий 17: отзыв отправлен');
       await page.close();
     }
 

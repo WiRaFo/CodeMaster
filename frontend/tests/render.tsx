@@ -12,6 +12,8 @@ export const MAIN_BRANCH = {
   scheduleText: 'Пн–пт, 9:00–18:00',
   readingRoomSchedule: 'Читальный зал: пн–пт, 10:00–17:00',
   needsVerification: true,
+  slug: 'main',
+  sites: [],
 };
 
 export function renderAt(path: string) {

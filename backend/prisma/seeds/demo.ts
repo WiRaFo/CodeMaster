@@ -30,7 +30,7 @@ const PUBLICATIONS: Array<TextSeed & { topic: string }> = [
     title: { ru: 'Как читать архивный шифр', kk: 'Мұрағаттық шифрды қалай оқуға болады', en: 'How to read an archival reference code' },
     lead: {
       ru: 'Шифр указывает фонд, опись, дело и листы. По нему документ находят в хранилище.',
-      kk: 'Шифр қорды, тізімдемені, істі және парақтарды көрсетеді. Құжат қоймадан осы арқылы табылады.',
+      kk: 'Шифр қорды, тізбені, істі және парақтарды көрсетеді. Құжат қоймадан осы арқылы табылады.',
       en: 'The code names the fond, inventory, file and folios, which is how a document is located in storage.',
     },
     body: {
@@ -89,6 +89,62 @@ const NEWS: Array<TextSeed & { daysAgo: number }> = [
   },
 ];
 
+
+/**
+ * Вопросы и ответы о работе сайта (ЭТАП 7). Только сведения о самом сайте, без фактов об архиве,
+ * которые нужно сверять; помечены как демо, пока архив не утвердит формулировки.
+ */
+const FAQ: Array<{ q: Tri<string>; a: Tri<string> }> = [
+  {
+    q: { ru: 'Можно ли подать заявление или заказать архивную справку через сайт?', kk: 'Сайт арқылы өтініш беруге немесе мұрағаттық анықтамаға тапсырыс беруге бола ма?', en: 'Can I submit an application or order an archive certificate on this website?' },
+    a: {
+      ru: 'Нет. Сайт носит информационно-справочный характер: заявления, запросы, заказы и оплата через него не принимаются. Адреса и телефоны архива — в разделе «Филиалы и контакты».',
+      kk: 'Жоқ. Сайт ақпараттық-анықтамалық сипатта: өтініштер, сұраулар, тапсырыстар мен төлемдер ол арқылы қабылданбайды. Мұрағаттың мекенжайлары мен телефондары — «Филиалдар мен байланыс» бөлімінде.',
+      en: 'No. This website is for information only: it does not accept applications, requests, orders or payments. The archive’s addresses and phone numbers are in “Branches and contacts”.',
+    },
+  },
+  {
+    q: { ru: 'Как найти документ по архивному шифру?', kk: 'Құжатты мұрағаттық шифр бойынша қалай табуға болады?', en: 'How do I find a document by its reference code?' },
+    a: {
+      ru: 'Введите шифр в строку поиска каталога, например «Ф. 12. Оп. 3. Д. 45». Каталог распознаёт шифр и покажет соответствующую запись, если она опубликована.',
+      kk: 'Шифрды каталогтың іздеу жолына енгізіңіз, мысалы «Қ. 12. Тізб. 3. Іс 45». Каталог шифрды таниды және жазба жарияланған болса, оны көрсетеді.',
+      en: 'Type the code into the catalog search box, for example “F. 12. Inv. 3. File 45”. The catalog recognises the code and shows the record if it is published.',
+    },
+  },
+  {
+    q: { ru: 'Почему у документа нет цифровой копии?', kk: 'Неліктен құжаттың цифрлық көшірмесі жоқ?', en: 'Why is there no digital copy of a document?' },
+    a: {
+      ru: 'Копии публикуются только у открытых документов и только после проверки файла. Документы с ограниченным доступом показываются карточкой с условиями доступа, без копии и расшифровки.',
+      kk: 'Көшірмелер тек ашық құжаттарда және файл тексерілгеннен кейін ғана жарияланады. Қолжетімділігі шектеулі құжаттар көшірмесіз және мәтінсіз, қолжетімділік шарттары бар карточкамен көрсетіледі.',
+      en: 'Copies are published only for open documents and only after the file has been checked. Restricted documents are shown as a record card with access conditions, without a copy or transcription.',
+    },
+  },
+  {
+    q: { ru: 'Что означают пометки «Демо» и «Тестовые данные»?', kk: '«Демо» және «Сынақ деректері» белгілері нені білдіреді?', en: 'What do the “Demo” and “Test data” labels mean?' },
+    a: {
+      ru: 'Это материалы прототипа, подготовленные командой разработки. Они не являются архивными документами и будут заменены материалами архива.',
+      kk: 'Бұл әзірлеушілер командасы дайындаған прототип материалдары. Олар мұрағат құжаттары емес және мұрағат материалдарымен ауыстырылады.',
+      en: 'These are prototype materials prepared by the development team. They are not archival records and will be replaced with the archive’s materials.',
+    },
+  },
+  {
+    q: { ru: 'Как увеличить шрифт или включить высокую контрастность?', kk: 'Қаріпті қалай үлкейтуге немесе жоғары контрастты қалай қосуға болады?', en: 'How do I enlarge the text or switch on high contrast?' },
+    a: {
+      ru: 'Нажмите кнопку «Доступность» в шапке сайта. Там можно изменить размер текста, интервалы, контраст и отключить анимацию; настройки сохраняются в браузере.',
+      kk: 'Сайттың жоғарғы жағындағы «Қолжетімділік» батырмасын басыңыз. Онда мәтін өлшемін, аралықтарды, контрастты өзгертуге және анимацияны өшіруге болады; баптаулар браузерде сақталады.',
+      en: 'Press “Accessibility” in the site header. There you can change the text size, spacing and contrast and turn off animation; the settings are kept in your browser.',
+    },
+  },
+  {
+    q: { ru: 'На каких языках работает сайт?', kk: 'Сайт қандай тілдерде жұмыс істейді?', en: 'Which languages is the website available in?' },
+    a: {
+      ru: 'На казахском, русском и английском. Язык переключается в шапке сайта; если материал ещё не переведён, рядом показывается пометка.',
+      kk: 'Қазақ, орыс және ағылшын тілдерінде. Тіл сайттың жоғарғы жағында ауыстырылады; материал әлі аударылмаса, қасында белгі көрсетіледі.',
+      en: 'Kazakh, Russian and English. Switch the language in the site header; if a text has not been translated yet, a note is shown next to it.',
+    },
+  },
+];
+
 export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promise<void> {
   const topics = new Map((await db.category.findMany({ where: { kind: 'history_topic' } })).map((c) => [c.slug, c.id]));
   const newsRubric = await db.category.findUnique({ where: { kind_slug: { kind: 'news_rubric', slug: 'news' } } });
@@ -118,6 +174,19 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
     if (categoryId) {
       await db.publicationCategory.createMany({ data: [{ publicationId: row.id, categoryId }], skipDuplicates: true });
     }
+  }
+
+  // Вопросы без собственного ключа: демо-набор пересоздаётся целиком.
+  await db.faqItem.deleteMany({ where: { dataOrigin: 'demo' } });
+  for (const [i, f] of FAQ.entries()) {
+    await db.faqItem.create({
+      data: {
+        sortOrder: i,
+        publicationStatus: 'published',
+        dataOrigin: 'demo',
+        translations: { create: LOCALES.map((locale) => ({ locale, question: f.q[locale], answer: f.a[locale], translationStatus: statusFor(locale) })) },
+      },
+    });
   }
 
   for (const n of NEWS) {
