@@ -62,7 +62,12 @@ export function AdminApp() {
     robots.name = 'robots';
     robots.content = 'noindex, nofollow';
     document.head.append(robots);
-    return () => robots.remove();
+    // Оформление панели в общем стиле сайта (styles/admin.css) включается классом на body.
+    document.body.classList.add('adm');
+    return () => {
+      robots.remove();
+      document.body.classList.remove('adm');
+    };
   }, []);
 
   useEffect(() => {
@@ -153,18 +158,20 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
       >
         Перейти к основному содержимому
       </a>
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <p className="text-lg font-bold">Панель управления ГА ВКО</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm">
-              {me.user.fullName}
-              {me.roles?.length ? <span className="text-muted"> · {me.roles.map((r) => r.name).join(', ')}</span> : null}
-            </span>
-            <button type="button" className="btn-secondary" onClick={() => void logout()}>Выйти</button>
+      <header className="adm-head">
+        <div className="adm-top">
+          <div className="adm-bar mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <p className="adm-brand"><img src="/design/logo-seal-256.png" alt="" width={40} height={41} /><span>Панель управления ГА ВКО</span></p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="adm-user text-sm">
+                {me.user.fullName}
+                {me.roles?.length ? <span className="text-muted"> · {me.roles.map((r) => r.name).join(', ')}</span> : null}
+              </span>
+              <button type="button" className="btn-secondary adm-logout" onClick={() => void logout()}>Выйти</button>
+            </div>
           </div>
         </div>
-        <nav aria-label="Разделы панели" className="mx-auto max-w-7xl px-4 pb-2">
+        <nav aria-label="Разделы панели" className="adm-nav mx-auto max-w-7xl px-4 py-2">
           <ul className="flex flex-wrap gap-1">
             <AdminNavItem to="/admin" end label={unread ? `Обзор (${unread} новых)` : 'Обзор'} />
             {catalog ? <AdminNavItem to="/admin/documents" label="Документы" /> : null}
@@ -259,7 +266,7 @@ export function AdminHeading({ title, children }: { title: string; children?: Re
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 tabIndex={-1} className="text-3xl font-bold focus:outline-none">{title}</h1>
-      {children}
+      {children ? <div className="flex flex-wrap items-center gap-3">{children}</div> : null}
     </div>
   );
 }
