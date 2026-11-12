@@ -229,7 +229,7 @@ async function main() {
       await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'EN' }).click();
       await page.waitForURL(/\/en\/catalog\/documents\//);
       await page.getByText('Archive reference', { exact: true }).waitFor();
-      check(await page.getByText(/^F\. TEST-1\. Inv\. 1\. File 1\./).first().isVisible(), 'сценарий 13: шифр с английскими сокращениями');
+      check(await page.locator('.document-meta').getByText(/^F\. TEST-1\. Inv\. 1\. File 1\./).first().waitFor({ timeout: 5000 }).then(() => true, () => false), 'сценарий 13: шифр с английскими сокращениями');
       await page.goto(BASE + '/');
       await page.waitForURL(/\/en$/);
       check(new URL(page.url()).pathname === '/en', 'сценарий 13: корень сайта открывает последний выбранный язык');
@@ -440,7 +440,7 @@ async function main() {
       await page.getByRole('link', { name: /Как подготовиться к работе в читальном зале/ }).click();
       const story = await page.getByRole('heading', { level: 1, name: /Как подготовиться/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(story, 'сценарий 17: тематика ведёт к публикации');
-      check(await page.getByText('Демонстрационный материал команды разработки', { exact: false }).first().isVisible(), 'сценарий 17: у публикации указан источник');
+      check(!(await page.getByText('Демонстрационный материал', { exact: false }).count()), 'сценарий 17: пометок демо у публикации нет (решение 11.11.2026)');
 
       await openWithPrefs(page, '/ru/feedback', {});
       await page.getByRole('button', { name: 'Отправить' }).click();
@@ -461,7 +461,7 @@ async function main() {
       for (const block of ['Электронный каталог', 'Цифровая история региона', 'Онлайн-выставки', 'Филиалы и контакты', 'Новости и события']) {
         check(await page.getByRole('heading', { level: 2, name: block }).isVisible(), `главная: блок «${block}»`);
       }
-      check((await page.getByText('Демо', { exact: true }).count()) > 0, 'главная: демо-записи помечены');
+      check((await page.getByText('Демо', { exact: true }).count()) === 0, 'главная: пометок «Демо» нет (решение 11.11.2026)');
       const input = page.getByRole('searchbox', { name: 'Поиск в электронном каталоге' });
       await input.focus();
       await page.keyboard.type('протокол заседания');
@@ -487,7 +487,7 @@ async function main() {
       await box.press('Enter');
       await page.getByText(/По запросу «маслозавод» найдено/).waitFor();
       const titles = await page.getByRole('article').getByRole('link').allTextContents();
-      check(titles.length >= 2 && titles.every((x) => x.includes('[Синтетика]')), `сценарий 2: выдача по словам (${titles.join(' | ')})`);
+      check(titles.length >= 2 && titles.some((x) => /маслозавод/i.test(x)) && !titles.some((x) => x.includes('[Синтетика]')), `сценарий 2: выдача по словам, без пометок «[Синтетика]» (${titles.join(' | ')})`);
       check(!(await page.getByText('Закрытый документ').count()), 'сценарий 2: закрытый документ не найден');
       await box.fill('Ф. TEST-1, Оп. 1, Д. 1');
       await box.press('Enter');
@@ -554,7 +554,7 @@ async function main() {
       const h1 = page.getByRole('heading', { level: 1, name: /Протокол заседания/ });
       const opened = await h1.waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(opened, `сценарий 4: открыта карточка (${await page.getByRole('heading', { level: 1 }).first().textContent()})`);
-      check(await page.getByText('Тестовые данные').first().isVisible(), 'сценарий 4: синтетический документ помечен');
+      check(!(await page.getByText('Тестовые данные').count()), 'сценарий 4: пометки «Тестовые данные» нет (решение 11.11.2026)');
       await page.getByRole('button', { name: 'Скопировать шифр' }).click();
       await page.getByTestId('copy-notice').waitFor();
       const clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -831,7 +831,7 @@ async function memoryAdminScenario(browser: Browser) {
 
   const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await site.goto(`${BASE}/ru/history/timeline`);
-  check(await site.getByRole('region', { name: '1990-е' }).getByRole('heading', { name: title }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: событие из панели в хронологии');
+  check(await site.locator('.tl-list').getByText(title).first().waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: событие из панели в списке хронологии');
   await site.close();
 
   await page.getByRole('button', { name: `Удалить: ${title}` }).click();
@@ -1099,7 +1099,7 @@ async function adminScenarios(browser: Browser) {
   await site.waitForLoadState('networkidle');
   check((await site.locator('h1').textContent()) === title, `сценарий 11: после публикации документ на сайте (${await site.locator('h1').textContent()})`);
   check(await site.getByTestId('restricted-notice').getByText('Только в читальном зале.').isVisible(), 'сценарий 11: на сайте условия доступа');
-  check(await site.getByText('Демо', { exact: true }).first().isVisible(), 'сценарий 11: демо-запись помечена на сайте');
+  check(!(await site.getByText('Демо', { exact: true }).count()), 'сценарий 11: пометки «Демо» на сайте нет (решение 11.11.2026)');
 
   // Сценарий 12: без прав действие недоступно и в интерфейсе, и на сервере.
   await a.reload();
