@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react';
+import { ArrowUp, RotateCcw, Sparkles } from 'lucide-react';
 import { LOCALES, type Locale } from '@archive-vko/shared/enums';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -236,68 +236,106 @@ export function AssistantPage() {
   const main = useMainBranch(lang);
   const phone = main.status === 'ready' ? main.branch.phone : null;
 
+  // Лента сообщений прокручивается к последнему ответу, как в чате (сама страница не прыгает).
+  const feed = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = feed.current;
+    if (el && turns.length > 0 && typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: document.documentElement.dataset['motion'] === 'reduce' ? 'auto' : 'smooth' });
+  }, [turns]);
+
+  const Avatar = () => <span className="chat-ava" aria-hidden="true"><Sparkles className="size-5" /></span>;
+
   return (
     <div className="asst-page">
       <PageHeading title={t('nav.assistant')} variant="plain">
         <p className="lead mb-6">{t('assistant.lead')}</p>
       </PageHeading>
 
-      <ol className="asst-log" aria-live="polite" data-testid="assistant-log">
-        {turns.map((turn) => (
-          <li key={turn.id} className="flex flex-col gap-4">
-            <p className="asst-you">
-              <span className="visually-hidden">{t('assistant.you')}: </span>
-              {turn.question}
-            </p>
-            <div className="card asst-bot" data-testid="assistant-answer">
-              <div className="asst-langs" role="group" aria-label={t('assistant.answerLang')}>
-                {LOCALES.map((l) => (
-                  <button key={l} type="button" className="asst-lang" aria-pressed={turn.lang === l} onClick={() => switchLang(turn, l)}>
-                    <span aria-hidden="true">{LANG_SHORT[l]}</span><span className="sr-only">{t(`assistant.langName.${l}`)}</span>
-                  </button>
-                ))}
-              </div>
-              <AnswerIn lang={turn.lang}>
-                <span className="visually-hidden">{t('assistant.bot')}: </span>
-                {turn.state === 'loading' ? <p>{t('common.loading')}</p> : null}
-                {turn.state === 'error' ? <p role="alert">{turn.tooMany ? t('assistant.tooMany') : t('common.loadError')}</p> : null}
-                {turn.state === 'ready' ? <Answer answer={turn.answer} /> : null}
-              </AnswerIn>
+      <section className="chat" aria-label={t('assistant.chatLabel')}>
+        <header className="chat-head">
+          <Avatar />
+          <div className="min-w-0">
+            <p className="chat-name">{t('assistant.botName')}</p>
+            <p className="chat-status"><span className="chat-dot" aria-hidden="true" />{t('assistant.status')}</p>
+          </div>
+          {turns.length > 0 ? (
+            <button type="button" className="chat-new" onClick={() => setTurns([])}>
+              <RotateCcw aria-hidden="true" className="size-4" /><span className="chat-new-t">{t('assistant.restart')}</span>
+            </button>
+          ) : null}
+        </header>
+
+        <div ref={feed} className="chat-feed">
+          {/* Приветствие и подсказки, пока диалог пуст, — как в чат-ботах. */}
+          <div className="chat-row">
+            <Avatar />
+            <div className="chat-bubble">
+              <p className="m-0">{t('assistant.greeting')}</p>
             </div>
-          </li>
-        ))}
-      </ol>
+          </div>
+          {turns.length === 0 ? (
+            <section aria-labelledby="assistant-examples" className="chat-examples">
+              <h2 id="assistant-examples" className="chat-ex-title">{t('assistant.examplesTitle')}</h2>
+              <ul className="chat-ex-list">
+                {EXAMPLES.map((key) => (
+                  <li key={key}>
+                    <button type="button" className="chat-ex" onClick={() => ask(t(`assistant.examples.${key}`))}>{t(`assistant.examples.${key}`)}</button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-      <form
-        className="mb-8"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(draft);
-        }}
-      >
-        <label htmlFor="assistant-q" className="label">{t('assistant.question')}</label>
-        <div className="field-row">
-          <input id="assistant-q" type="text" className="field" maxLength={300} value={draft} onChange={(e) => setDraft(e.target.value)} autoComplete="off" />
-          <button type="submit" className="btn" disabled={!draft.trim()}>
-            <Send aria-hidden="true" className="size-5" />
-            {t('assistant.ask')}
-          </button>
+          <ol className="asst-log" aria-live="polite" data-testid="assistant-log">
+            {turns.map((turn) => (
+              <li key={turn.id} className="flex flex-col gap-4">
+                <p className="asst-you">
+                  <span className="visually-hidden">{t('assistant.you')}: </span>
+                  {turn.question}
+                </p>
+                <div className="chat-row">
+                  <Avatar />
+                  <div className="chat-bubble asst-bot" data-testid="assistant-answer">
+                    {turn.state === 'ready' ? (
+                      <div className="asst-langs" role="group" aria-label={t('assistant.answerLang')}>
+                        {LOCALES.map((l) => (
+                          <button key={l} type="button" className="asst-lang" aria-pressed={turn.lang === l} onClick={() => switchLang(turn, l)}>
+                            <span aria-hidden="true">{LANG_SHORT[l]}</span><span className="sr-only">{t(`assistant.langName.${l}`)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <AnswerIn lang={turn.lang}>
+                      <span className="visually-hidden">{t('assistant.bot')}: </span>
+                      {turn.state === 'loading' ? (
+                        <p className="chat-typing"><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /><span className="sr-only">{t('common.loading')}</span></p>
+                      ) : null}
+                      {turn.state === 'error' ? <p role="alert">{turn.tooMany ? t('assistant.tooMany') : t('common.loadError')}</p> : null}
+                      {turn.state === 'ready' ? <Answer answer={turn.answer} /> : null}
+                    </AnswerIn>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
-      </form>
 
-      <section aria-labelledby="assistant-examples" className="mb-6">
-        <h2 id="assistant-examples" className="h3 mb-4">{t('assistant.examplesTitle')}</h2>
-        <ul className="flex flex-wrap gap-2.5">
-          {EXAMPLES.map((key) => (
-            <li key={key}>
-              <button type="button" className="btn line text-left" onClick={() => ask(t(`assistant.examples.${key}`))}>{t(`assistant.examples.${key}`)}</button>
-            </li>
-          ))}
-        </ul>
+        <form
+          className="chat-compose"
+          onSubmit={(e) => {
+            e.preventDefault();
+            ask(draft);
+          }}
+        >
+          <label htmlFor="assistant-q" className="sr-only">{t('assistant.question')}</label>
+          <input id="assistant-q" type="text" className="chat-input" maxLength={300} value={draft} placeholder={t('assistant.placeholder')}
+            onChange={(e) => setDraft(e.target.value)} autoComplete="off" />
+          <button type="submit" className="chat-send" disabled={!draft.trim()} aria-label={t('assistant.ask')} title={t('assistant.ask')}>
+            <ArrowUp aria-hidden="true" className="size-5" />
+          </button>
+        </form>
       </section>
-      {turns.length > 0 ? (
-        <button type="button" className="btn ghost sm mb-10" onClick={() => setTurns([])}>{t('assistant.restart')}</button>
-      ) : null}
+
       <p className="muted mt-6">
         {t('assistant.notFound')} <Link to={`/${lang}/faq`} className="font-bold">{t('assistant.notFoundFaq')}</Link>
         {phone ? <>{` ${t('assistant.notFoundCall')} `}<a href={telHref(phone)} className="font-bold">{phone}</a></> : null}.

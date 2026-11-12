@@ -199,7 +199,12 @@ export async function assistantRoutes(app: FastifyInstance, opts: AssistantOptio
     reply.header('Cache-Control', 'no-store');
 
     // Сначала база знаний, которую ведут сотрудники; затем правила.
-    const known = opts.db ? await findKnowledge(opts.db, query.q, lang) : null;
+    const known = opts.db
+      ? await findKnowledge(opts.db, query.q, lang).catch((error: unknown) => {
+        app.log.warn({ error: String(error) }, 'assistant: knowledge base unavailable, answering by rules');
+        return null;
+      })
+      : null;
     const parsed = parseQuery(query.q, await settlements());
     const intent: Intent = known ? { kind: 'unknown' } : classifyIntent(normalize(query.q), parsed);
     const kind = known ? 'knowledge' : intent.kind;

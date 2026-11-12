@@ -591,7 +591,12 @@
       "kk": "Kazakh",
       "ru": "Russian",
       "en": "English"
-    }
+    },
+    "chatLabel": "Chat with the AI assistant",
+    "botName": "Archive AI assistant",
+    "status": "Answers from the website’s open materials",
+    "greeting": "Hello! I am the AI assistant of the State Archive of East Kazakhstan Region. Ask about documents, branches, opening hours or archival terms, and I will give you links to the right sections of the website.",
+    "placeholder": "Ask about the archive…"
   },
   "history": {
     "lead": "The “Great Archive of Memory”: stories about the region's history based on archival records.",
