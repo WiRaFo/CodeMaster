@@ -117,6 +117,28 @@ export interface BranchDetail extends BranchSummary {
   verifiedAt: string | null;
   sites: BranchSummary[];
   highlightedFonds: Array<{ id: string; number: string; title: string | null }>;
+  staff: StaffContact[];
+}
+
+/** Контакт сотрудника из сведений, переданных архивом. */
+export interface StaffContact {
+  id: string;
+  fullName: string;
+  position: string;
+  department: string | null;
+  phone: string | null;
+  email: string | null;
+  contentLang: string;
+  translationStatus: string;
+}
+
+export type HistoryBlock = { type: 'p' | 'h'; text: string } | { type: 'ol' | 'ul'; items: string[] };
+
+/** Ответ /about: история, структура, соцсети. */
+export interface AboutInfo {
+  history: { title: string; blocks: HistoryBlock[]; contentLang: string; translationStatus: string; dataOrigin: DataOrigin } | null;
+  staff: StaffContact[];
+  social: Array<{ network: 'instagram' | 'facebook'; label: string; url: string }>;
 }
 
 export interface FacetValue {
@@ -294,4 +316,93 @@ export interface PublicationDetail extends PublicationSummary {
   sourceUrl: string | null;
   document: { id: string; title: string | null; access: 'open' | 'restricted'; code: { formatted: string } } | null;
   related: PublicationSummary[];
+}
+
+export interface CalendarItem {
+  id: string;
+  month: number | null;
+  day: number | null;
+  dateLabel: string;
+  text: string;
+  contentLang: string;
+  translationStatus: string;
+}
+
+/** Ответ /calendar: доступные годы, выбранный год и записи. */
+export interface CalendarData {
+  years: number[];
+  year: number | null;
+  items: CalendarItem[];
+}
+
+/** Ответ /anticorruption. */
+export interface AnticorruptionInfo {
+  text: { title: string; blocks: HistoryBlock[]; contentLang: string; translationStatus: string } | null;
+  officer: { fullName: string; position: string } | null;
+  documents: Array<{
+    key: string;
+    title: string;
+    scanned: boolean;
+    files: Array<{ locale: string; url: string; sizeBytes: number; pages: number }>;
+  }>;
+}
+
+/** Блок справочной страницы (GET /pages/:key): pending — сведения, которые архив ещё не передал. */
+export type InfoBlock =
+  | { type: 'p' | 'h' | 'pending'; text: string }
+  | { type: 'ol' | 'ul'; items: string[] }
+  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> };
+
+export interface InfoPageData {
+  key: string;
+  title: string;
+  lead: string | null;
+  blocks: InfoBlock[];
+  actualizedAt: string;
+  contentLang: string;
+  translationStatus: string;
+  dataOrigin: DataOrigin;
+}
+
+/** Навигация по каталогу: фонд → опись → дело → документ (F-030). */
+export type AccessDto = 'open' | 'restricted';
+export interface FondSummary extends Localized {
+  id: string;
+  number: string;
+  archiveCode: ArchiveCodeDto;
+  title: string | null;
+  annotation: string | null;
+  historyNote: string | null;
+  kind: 'organization' | 'personal' | 'collection';
+  years: { from: number | null; to: number | null };
+  unitsCount: number | null;
+  access: AccessDto;
+  branch: { slug: string; name: string | null };
+}
+export interface FondDetail extends FondSummary {
+  inventories: Array<{ id: string; number: string; title: string | null; contentLang: string | null; years: { from: number | null; to: number | null }; access: AccessDto }>;
+}
+export interface InventoryDetail extends Localized {
+  id: string;
+  number: string;
+  title: string | null;
+  annotation: string | null;
+  archiveCode: ArchiveCodeDto;
+  years: { from: number | null; to: number | null };
+  access: AccessDto;
+  fond: { id: string; number: string; title: string | null };
+  cases: Array<{ id: string; number: string; title: string | null; contentLang: string | null; date: DateRange; sheetCount: number | null; access: AccessDto }>;
+}
+export interface CaseDetail extends Localized {
+  id: string;
+  number: string;
+  title: string | null;
+  annotation: string | null;
+  archiveCode: ArchiveCodeDto;
+  date: DateRange;
+  sheetCount: number | null;
+  access: AccessDto;
+  fond: { id: string; number: string; title: string | null };
+  inventory: { id: string; number: string; title: string | null };
+  documents: DocumentSummary[];
 }

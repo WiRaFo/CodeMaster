@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from 'lucide-re
 import { useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -23,7 +24,7 @@ export function ExhibitionPage() {
 
   return (
     <article>
-      <Breadcrumbs lang={lang} />
+      <ExhibitionCrumbs lang={lang} item={e.title ?? e.slug} />
       <PageHeading title={e.title ?? e.slug} meta={{ description: e.lead ?? e.description ?? undefined }}>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <OriginBadge origin={e.dataOrigin} />
@@ -63,22 +64,16 @@ export function ExhibitionPage() {
   );
 }
 
-function Breadcrumbs({ lang, exhibition }: { lang: string; exhibition?: { slug: string; title: string } }) {
+function ExhibitionCrumbs({ lang, exhibition, item }: { lang: string; exhibition?: { slug: string; title: string }; item?: string }) {
   const { t } = useTranslation();
   return (
-    <nav aria-label={t('exhibitions.breadcrumbs')} className="mb-4 text-sm">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <li>
-          <Link to={`/${lang}/exhibitions`}>{t('nav.exhibitions')}</Link>
-        </li>
-        {exhibition ? (
-          <li className="flex items-center gap-2">
-            <span aria-hidden="true">/</span>
-            <Link to={`/${lang}/exhibitions/${exhibition.slug}`}>{exhibition.title}</Link>
-          </li>
-        ) : null}
-      </ol>
-    </nav>
+    <Breadcrumbs
+      items={[
+        { label: t('nav.exhibitions'), to: `/${lang}/exhibitions` },
+        ...(exhibition ? [{ label: exhibition.title, to: `/${lang}/exhibitions/${exhibition.slug}` }] : []),
+        ...(item ? [{ label: item }] : []),
+      ]}
+    />
   );
 }
 
@@ -133,7 +128,7 @@ function Exhibit({ lang, exhibition: e, item }: { lang: string; exhibition: Exhi
 
   return (
     <article>
-      <Breadcrumbs lang={lang} exhibition={{ slug: e.slug, title: e.title ?? e.slug }} />
+      <ExhibitionCrumbs lang={lang} exhibition={{ slug: e.slug, title: e.title ?? e.slug }} item={item.title ?? t('exhibitions.itemOf', { number: item.number, total })} />
       <PageHeading title={item.title ?? t('exhibitions.itemOf', { number: item.number, total })}>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold" data-testid="exhibit-counter">{t('exhibitions.itemOf', { number: item.number, total })}</span>

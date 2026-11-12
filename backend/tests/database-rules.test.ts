@@ -79,16 +79,21 @@ describe('ограничения целостности', () => {
 });
 
 describe('перенесённые данные (docs/requirements-matrix.md Q-22, Q-23)', () => {
-  it('подразделения помечены migrated, имеют источник, не сверены и не выводятся на карту', async () => {
-    const branches = await db.branch.findMany({ where: { dataOrigin: 'migrated' }, orderBy: { sortOrder: 'asc' } });
-    expect(branches.map((b) => b.slug)).toEqual(['main', 'main-krylova', 'ust-kamenogorsk-personnel', 'zaisan', 'ridder', 'altai']);
-    for (const b of branches) {
+  it('перенесённое со старого сайта помечено migrated, имеет источник и не сверено; переданное архивом — verified с датой', async () => {
+    const migrated = await db.branch.findMany({ where: { dataOrigin: 'migrated' }, orderBy: { sortOrder: 'asc' } });
+    expect(migrated.map((b) => b.slug)).toEqual(['main-krylova']);
+    for (const b of migrated) {
       expect(b.sourceUrl).toMatch(/^http:\/\/e-arhiv\.vko\.gov\.kz\//);
       expect(b.verifiedAt).toBeNull();
+    }
+    const verified = await db.branch.findMany({ where: { dataOrigin: 'verified' } });
+    expect(verified).toHaveLength(14);
+    for (const b of verified) expect(b.verifiedAt?.toISOString().slice(0, 10)).toBe('2026-11-10');
+    // Координаты не выдумываются: ни у одной записи их нет, на карту ничего не выводится.
+    for (const b of [...migrated, ...verified]) {
       expect(b.lat).toBeNull();
       expect(b.lng).toBeNull();
       expect(b.showOnMap).toBe(false);
-      expect(b.postalCode).toBeNull();
     }
   });
 

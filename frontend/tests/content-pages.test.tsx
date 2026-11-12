@@ -22,9 +22,23 @@ const DETAIL: PublicationDetail = {
 const FAQ = { items: [{ id: 'f1', question: 'Можно ли подать заявление через сайт?', answer: 'Нет. Сайт справочный.', dataOrigin: 'demo', contentLang: 'ru', translationStatus: 'reviewed' }] };
 
 let fetchMock: MockInstance<typeof fetch>;
+const SERVICES = {
+  key: 'services', title: 'Государственная услуга', lead: 'Заявления на сайте не принимаются.', actualizedAt: '2026-11-10',
+  contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified',
+  blocks: [
+    { type: 'h', text: 'Куда обращаться' },
+    { type: 'links', items: [{ label: 'Портал электронного правительства eGov.kz', url: 'https://egov.kz', note: 'внешний ресурс' }] },
+    { type: 'pending', text: 'Сроки и стоимость будут опубликованы позже.' },
+  ],
+};
+const READING_ROOM = {
+  key: 'reading-room', title: 'Оқу залы', lead: null, actualizedAt: '2026-11-10', contentLang: 'kk', translationStatus: 'machine', dataOrigin: 'verified',
+  blocks: [{ type: 'ul', items: ['Шифрларды жазып алыңыз.'] }],
+};
+
 beforeEach(() => {
   fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
+    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/pages/services?': SERVICES, '/api/v1/pages/reading-room?': READING_ROOM, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
   );
 });
 
@@ -105,7 +119,77 @@ describe('«Посетителям» и «Об архиве»', () => {
     expect(screen.getByText(/Правила читального зала и перечень услуг архива будут опубликованы/)).toBeInTheDocument();
     expect(within(screen.getByRole('main')).getByText(/заявления, запросы и заказы через него не принимаются/)).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
-    renderAt('/en/about');
-    expect(await screen.findByText(/will be published once the archive provides the texts/)).toBeInTheDocument();
+  });
+
+  it('«Об архиве» показывает историю от архива с пометкой языка и ссылки на соцсети', async () => {
+    const { container } = renderAt('/en/about');
+    expect(await screen.findByText(/образован в 1940 году/)).toBeInTheDocument();
+    expect(screen.getByText(/This text is available only in/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '@arhiv_vko' })).toHaveAttribute('href', 'https://www.instagram.com/arhiv_vko/');
+    expect(screen.getByRole('link', { name: 'Archive structure and management' })).toHaveAttribute('href', '/en/about/structure');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('«Структура» группирует сотрудников по отделам', async () => {
+    const { container } = renderAt('/en/about/structure');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Management' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Information Technology Department' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '8 (7232) 25-13-22' })).toBeInTheDocument();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+
+describe('«Календарь памятных дат»', () => {
+  it('годы — ссылки, текущий отмечен; записи по месяцам, юбилеи без даты в конце; английская версия с пометкой языка', async () => {
+    const { container } = renderAt('/en/calendar');
+    expect(await screen.findByRole('heading', { level: 2, name: 'January' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Anniversaries of the year without an exact date' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '2026' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: '2025' })).toHaveAttribute('href', '/en/calendar?year=2025');
+    expect(screen.getByText(/This text is available only in/)).toBeInTheDocument();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+
+describe('«Противодействие коррупции»', () => {
+  it('комплаенс-офицер, документы на двух языках с размером и пометкой скана, ссылка в подвале', async () => {
+    const { container } = renderAt('/kk/anticorruption');
+    expect(await screen.findByText('Ешенгельдиев Тырек Молболович')).toBeInTheDocument();
+    const ru = screen.getByRole('link', { name: /^Русский, PDF, 6 бет, 0,8 МБ$|^Орысша, PDF, 6 бет, 0,8 МБ$/ });
+    expect(ru).toHaveAttribute('href', '/files/anticorruption/polozhenie-ru.pdf');
+    expect(screen.getByText(/экрандық диктор оны оқи алмайды/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Сыбайлас жемқорлық тәуекелдеріне ішкі талдау жүргізу туралы' })).toBeInTheDocument();
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Сыбайлас жемқорлыққа қарсы іс-қимыл' })).toHaveAttribute('href', '/kk/anticorruption');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+
+
+describe('справочные разделы по дополнению к ТЗ', () => {
+  it('госуслуга: внешние ссылки помечены, незаполненное — «ожидаются сведения», без форм заявлений', async () => {
+    const { container } = renderAt('/ru/services');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Государственная услуга' })).toBeInTheDocument();
+    const egov = screen.getByRole('link', { name: /Портал электронного правительства eGov\.kz.*внешний ресурс/ });
+    expect(egov).toHaveAttribute('href', 'https://egov.kz');
+    expect(egov).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByText('Внешний ресурс: egov.kz')).toBeInTheDocument();
+    expect(screen.getByText('Ожидаются сведения архива.')).toBeInTheDocument();
+    expect(screen.getByText('Сведения актуализированы: 10 ноября 2026 г..')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Платные услуги архива' })).toHaveAttribute('href', '/ru/services/paid');
+    expect(container.querySelector('main form')).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('читальный зал: машинный перевод помечен, часы читального зала из реестра, ссылка в подвале', async () => {
+    const { container } = renderAt('/kk/reading-room');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Оқу залы' })).toBeInTheDocument();
+    expect(screen.getByText('Шифрларды жазып алыңыз.')).toBeInTheDocument();
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Оқу залы' })).toHaveAttribute('href', '/kk/reading-room');
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('неизвестная справочная страница — 404', async () => {
+    renderAt('/ru/symbols');
+    expect(await screen.findByRole('heading', { level: 1, name: /не найдена/i })).toBeInTheDocument();
   });
 });

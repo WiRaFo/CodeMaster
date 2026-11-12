@@ -76,6 +76,10 @@ export function Footer() {
             ))}
             <li><Link to={`/${lang}/accessibility`}>{t('nav.accessibility')}</Link></li>
             <li><Link to={`/${lang}/feedback`}>{t('nav.feedback')}</Link></li>
+            <li><Link to={`/${lang}/anticorruption`}>{t('anticorruption.title')}</Link></li>
+            {(['legislation', 'reading-room', 'symbols', 'links'] as const).map((key) => (
+              <li key={key}><Link to={`/${lang}/${key}`}>{t(`reference.nav.${key}`)}</Link></li>
+            ))}
           </ul>
         </nav>
 

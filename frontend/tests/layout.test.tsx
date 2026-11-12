@@ -50,11 +50,11 @@ describe('каркас страницы', () => {
     expect(within(banner).getByRole('button', { name: 'Доступность' })).toBeInTheDocument();
   });
 
-  it('меню содержит все 10 разделов ТЗ §4 в порядке ТЗ', async () => {
+  it('меню содержит 10 разделов ТЗ §4 и раздел госуслуги из дополнения к ТЗ', async () => {
     renderAt('/en');
     const nav = await screen.findByRole('navigation', { name: 'Main sections' });
     expect(within(nav).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual([
-      '/en', '/en/about', '/en/catalog', '/en/visitors', '/en/history', '/en/exhibitions', '/en/news', '/en/branches', '/en/faq', '/en/assistant',
+      '/en', '/en/about', '/en/catalog', '/en/visitors', '/en/services', '/en/history', '/en/exhibitions', '/en/news', '/en/branches', '/en/faq', '/en/assistant',
     ]);
   });
 

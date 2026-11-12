@@ -22,7 +22,8 @@
     "faq": "Questions and answers",
     "assistant": "AI assistant",
     "accessibility": "Accessibility",
-    "feedback": "Feedback and suggestions"
+    "feedback": "Feedback and suggestions",
+    "services": "Public service"
   },
   "header": {
     "searchLabel": "Search the site",
@@ -363,7 +364,10 @@
         "walking": "On foot",
         "transit": "Public transport"
       }
-    }
+    },
+    "structureLink": "Archive structure and management",
+    "basis": "The branches were established and renamed by Resolution No. 142 of the East Kazakhstan Regional Akimat of 2 June 2026.",
+    "basisLink": "Text of the resolution (PDF, 6 pages, 1.3 MB, in Kazakh and Russian, scanned)"
   },
   "assistant": {
     "lead": "The assistant helps you find open materials on the site and points you to the right section.",
@@ -477,9 +481,16 @@
     }
   },
   "faq": {
-    "lead": "Frequently asked questions about the website.",
+    "lead": "Frequently asked questions, grouped by topic.",
     "demoNote": "The answers were prepared by the development team and will be agreed with the archive.",
-    "more": "Didn't find an answer? Ask the assistant or leave feedback:"
+    "more": "Didn't find an answer? Ask the assistant or leave feedback:",
+    "topic": {
+      "services": "Certificates and services",
+      "catalog": "Catalogue and search",
+      "access": "Access to documents",
+      "visit": "Visiting the archive",
+      "site": "Using the website"
+    }
   },
   "visitors": {
     "lead": "How to prepare for a visit to the archive.",
@@ -496,9 +507,99 @@
     "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions."
   },
   "about": {
-    "lead": "State Archive of East Kazakhstan Region.",
+    "lead": "State Archive of East Kazakhstan Region: history, structure and contacts.",
     "contactsTitle": "Archive contacts",
     "moreTitle": "Site sections",
-    "pending": "Information about the archive's history, structure and management will be published once the archive provides the texts."
+    "socialTitle": "The archive on social media",
+    "network": {
+      "instagram": "Instagram",
+      "facebook": "Facebook"
+    },
+    "historyTitle": "History of the archive",
+    "structureTitle": "Structure and management",
+    "structureLead": "Management and departments of the State Archive of East Kazakhstan Region. Branch directors are listed on the branch pages.",
+    "structureLink": "Archive structure and management",
+    "source": "Information provided by the archive on 10 November 2026.",
+    "unavailable": "This section has not been filled in yet."
+  },
+  "calendar": {
+    "title": "Calendar of memorable dates",
+    "lead": "Anniversaries and memorable dates of East Kazakhstan Region compiled by the archive for each year.",
+    "years": "Calendar year",
+    "empty": "There are no entries for this year.",
+    "undated": "Anniversaries of the year without an exact date",
+    "source": "Compiled by the State Archive of East Kazakhstan Region.",
+    "homeTitle": "Memorable dates: {{month}} {{year}}",
+    "all": "Full calendar",
+    "month": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    }
+  },
+  "anticorruption": {
+    "title": "Anti-corruption",
+    "lead": "Anti-corruption compliance service of the State Archive of East Kazakhstan Region: regulations, corruption risk analysis and action plan.",
+    "officerTitle": "Compliance officer",
+    "contact": "Contact the archive using the details on the “About the archive” page.",
+    "documentsTitle": "Documents",
+    "file": "{{lang}}, PDF, {{pages}} p., {{size}} MB",
+    "scanned": "Scanned document without a text layer: screen readers cannot read it. A summary is given in the information below.",
+    "newsTitle": "Compliance service information"
+  },
+  "reference": {
+    "contactsTitle": "Archive contacts",
+    "paidLink": "Paid services of the archive",
+    "actualized": "Information updated: {{date}}.",
+    "pending": "Awaiting information from the archive.",
+    "external": "(external website, opens another site)",
+    "externalHost": "External website: {{host}}",
+    "nav": {
+      "legislation": "Legislation",
+      "reading-room": "Reading room",
+      "symbols": "State symbols",
+      "links": "Useful links",
+      "paid": "Paid services"
+    }
+  },
+  "breadcrumbs": {
+    "label": "Breadcrumb"
+  },
+  "fonds": {
+    "title": "Fonds",
+    "lead": "Guide to the fonds: open a fond, then an inventory and a file to see its documents. Only published descriptions are shown; closed fonds are not listed.",
+    "kindFilter": "Type of fond",
+    "kind": {
+      "all": "All fonds",
+      "organization": "Organisation fonds",
+      "personal": "Personal fonds",
+      "collection": "Collections"
+    },
+    "empty": "There are no fonds of this type in the catalogue yet.",
+    "count_one": "{{count}} fond found",
+    "count_other": "{{count}} fonds found",
+    "toSearch": "Search documents across the catalogue",
+    "branch": "Held at",
+    "years": "Years",
+    "units": "Storage units",
+    "historyNote": "Historical note",
+    "inventories": "Inventories",
+    "noInventories": "No published inventories.",
+    "cases": "Files",
+    "noCases": "No published files.",
+    "sheets_one": "{{count}} folio",
+    "sheets_other": "{{count}} folios",
+    "documents": "Documents",
+    "noDocuments": "Document descriptions for this file have not been added to the website yet. The file can be requested in the reading room by its reference code.",
+    "guide": "Guide to the fonds"
   }
 }

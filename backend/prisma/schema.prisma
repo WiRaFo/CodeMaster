@@ -1489,6 +1489,8 @@ model GalleryItem {
 
 model FaqItem {
   id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Тема для группировки (дополнение к ТЗ §2): site, catalog, services, visit, access
+  topic             String            @default("site")
   sortOrder         Int               @default(0) @map("sort_order")
   publicationStatus PublicationStatus @default(draft) @map("publication_status")
   dataOrigin        DataOrigin        @map("data_origin")
@@ -1497,6 +1499,7 @@ model FaqItem {
 
   translations FaqItemTranslation[]
 
+  @@index([topic, sortOrder])
   @@map("faq_items")
 }
 
@@ -1718,4 +1721,38 @@ model UrlRedirect {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("url_redirects")
+}
+
+/// Календарь юбилейных и памятных дат области, который архив составляет на каждый год (передан 10.11.2026).
+/// Дата — как в источнике: день и месяц, только месяц или ни того ни другого (юбилей года без даты).
+model MemorableDate {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  calendarYear      Int               @map("calendar_year")
+  month             Int?
+  day               Int?
+  sortOrder         Int               @default(0) @map("sort_order")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  dataOrigin        DataOrigin        @map("data_origin")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  translations MemorableDateTranslation[]
+
+  @@index([calendarYear, month])
+  @@map("memorable_dates")
+}
+
+model MemorableDateTranslation {
+  memorableDateId   String            @map("memorable_date_id") @db.Uuid
+  locale            Locale
+  /// Подпись даты из источника: «8 января», «май», «1761 г.»
+  dateLabel         String            @map("date_label")
+  text              String
+  translationStatus TranslationStatus @default(missing) @map("translation_status")
+
+  memorableDate MemorableDate @relation(fields: [memorableDateId], references: [id], onDelete: Cascade)
+
+  @@id([memorableDateId, locale])
+  @@map("memorable_date_translations")
 }

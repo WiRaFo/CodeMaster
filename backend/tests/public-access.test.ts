@@ -65,6 +65,6 @@ describe('public_fonds_v', () => {
   it('не показывает закрытые фонды и фонды неопубликованных подразделений', async () => {
     const rows = await db.$queryRaw<Array<{ fond_number: string }>>`
       SELECT fond_number FROM public_fonds_v WHERE data_origin = 'synthetic' ORDER BY 1`;
-    expect(rows.map((r) => r.fond_number)).toEqual(['TEST-1', 'TEST-2']);
+    expect(rows.map((r) => r.fond_number)).toEqual(['TEST-1', 'TEST-2', 'TEST-5']);
   });
 });

@@ -1,10 +1,52 @@
 import type { FastifyInstance } from 'fastify';
 import { type PrismaClient } from '@prisma/client';
-import { feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
-import { ApiError } from '../../http/errors.ts';
+import { z } from 'zod';
+import { FAQ_TOPICS, feedbackInputSchema, langOnlySchema, type Locale } from '@archive-vko/shared';
+import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { assertSameOrigin } from '../../http/staff.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
+import { publicStaff } from './staff.ts';
+
+const historyBlocksSchema = z.array(z.discriminatedUnion('type', [
+  z.object({ type: z.enum(['p', 'h']), text: z.string() }),
+  z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
+]));
+
+const infoBodySchema = z.object({
+  actualizedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  blocks: z.array(z.discriminatedUnion('type', [
+    z.object({ type: z.enum(['p', 'h', 'pending']), text: z.string() }),
+    z.object({ type: z.enum(['ol', 'ul']), items: z.array(z.string()) }),
+    z.object({ type: z.literal('links'), items: z.array(z.object({ label: z.string(), url: z.string().url().startsWith('https://'), note: z.string().optional() })) }),
+  ])),
+});
+
+/** Справочные страницы, которые отдаёт GET /pages/:key. Остальные страницы имеют свои маршруты. */
+export const INFO_PAGE_KEYS = ['services', 'services/paid', 'legislation', 'reading-room', 'symbols', 'links'] as const;
+const infoPageParamsSchema = z.object({ key: z.enum(INFO_PAGE_KEYS) });
+
+const calendarQuerySchema = langOnlySchema.extend({
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+});
+
+const tri = z.object({ ru: z.string(), kk: z.string(), en: z.string() });
+const anticorruptionSchema = z.object({
+  officer: z.object({ fullName: z.string(), position: tri }),
+  documents: z.array(z.object({
+    key: z.string(),
+    title: tri,
+    scanned: z.boolean(),
+    files: z.array(z.object({ locale: z.enum(['ru', 'kk', 'en']), url: z.string().startsWith('/files/'), sizeBytes: z.number().int(), pages: z.number().int() })),
+  })),
+});
+
+const socialLinksSchema = z.array(z.object({
+  network: z.enum(['instagram', 'facebook']),
+  label: z.string(),
+  url: z.string().url().startsWith('https://'),
+}));
 
 /**
  * Вопросы и ответы (ТЗ §4; F-001) и форма отзывов и предложений (разрешена организаторами).
@@ -17,16 +59,125 @@ export async function siteRoutes(app: FastifyInstance, opts: { db: PrismaClient;
 
   app.get('/faq', async (request, reply) => {
     const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
-    const items = await db.faqItem.findMany({
+    const rows = await db.faqItem.findMany({
       where: { publicationStatus: 'published' },
       orderBy: { sortOrder: 'asc' },
       include: { translations: true },
     });
+    // Группы по темам в порядке FAQ_TOPICS (дополнение к ТЗ §2), внутри темы — по sortOrder.
+    const rank = (t: string) => FAQ_TOPICS.findIndex((x) => x === t);
+    const items = rows.sort((a, b) => rank(a.topic) - rank(b.topic) || a.sortOrder - b.sortOrder);
     return {
       items: items.flatMap((f) => {
         const t = f.translations.find((x) => x.locale === lang) ?? f.translations.find((x) => x.locale === 'ru') ?? f.translations[0];
-        return t ? [{ id: f.id, question: t.question, answer: t.answer, dataOrigin: f.dataOrigin, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
+        return t ? [{ id: f.id, topic: f.topic, question: t.question, answer: t.answer, dataOrigin: f.dataOrigin, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
       }),
+    };
+  });
+
+  /**
+   * «Об архиве» (ТЗ §5.2, с. 5): история, структура и ссылки на соцсети из сведений, переданных архивом.
+   * Нет перевода — отдаётся русский текст, contentLang сообщает язык.
+   */
+  app.get('/about', async (request, reply) => {
+    const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const [page, main, social] = await Promise.all([
+      db.page.findFirst({
+        where: { key: 'about/history', publicationStatus: 'published', deletedAt: null },
+        include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+      }),
+      db.branch.findFirst({ where: { isMain: true, publicationStatus: 'published', deletedAt: null }, select: { id: true } }),
+      db.siteSetting.findUnique({ where: { key: 'social_links' } }),
+    ]);
+    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+    const links = socialLinksSchema.safeParse(social?.value);
+    return {
+      history: page && t ? {
+        title: t.title,
+        blocks: historyBlocksSchema.parse(t.body),
+        contentLang: t.locale,
+        translationStatus: t.translationStatus,
+        dataOrigin: page.dataOrigin,
+      } : null,
+      staff: main ? await publicStaff(db, main.id, lang) : [],
+      social: links.success ? links.data : [],
+    };
+  });
+
+  /**
+   * Календарь юбилейных и памятных дат области (сведения архива). Без года — текущий год, если он есть,
+   * иначе последний. month — только записи этого месяца (для блока на главной); без даты в году — month IS NULL.
+   */
+  app.get('/calendar', async (request, reply) => {
+    const query = calendarQuerySchema.parse(request.query);
+    const lang: Locale = resolveLang(request, reply, query.lang);
+    const published = { publicationStatus: 'published' as const, deletedAt: null };
+    const years = (await db.memorableDate.groupBy({ by: ['calendarYear'], where: published, orderBy: { calendarYear: 'desc' } }))
+      .map((y) => y.calendarYear);
+    const current = new Date().getFullYear();
+    const year = query.year ?? (years.includes(current) ? current : years[0]);
+    if (year === undefined || !years.includes(year)) return { years, year: year ?? null, items: [] };
+    const rows = await db.memorableDate.findMany({
+      where: { ...published, calendarYear: year, ...(query.month ? { month: query.month } : {}) },
+      orderBy: { sortOrder: 'asc' },
+      include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+    });
+    return {
+      years,
+      year,
+      items: rows.flatMap((r) => {
+        const t = r.translations.find((x) => x.locale === lang) ?? r.translations.find((x) => x.locale === 'ru') ?? r.translations[0];
+        return t ? [{ id: r.id, month: r.month, day: r.day, dateLabel: t.dateLabel, text: t.text, contentLang: t.locale, translationStatus: t.translationStatus }] : [];
+      }),
+    };
+  });
+
+  /** «Противодействие коррупции» (сведения архива): текст, комплаенс-офицер, документы на русском и казахском. */
+  app.get('/anticorruption', async (request, reply) => {
+    const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const [page, setting] = await Promise.all([
+      db.page.findFirst({
+        where: { key: 'anticorruption', publicationStatus: 'published', deletedAt: null },
+        include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+      }),
+      db.siteSetting.findUnique({ where: { key: 'anticorruption' } }),
+    ]);
+    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+    const info = anticorruptionSchema.safeParse(setting?.value);
+    return {
+      text: t ? { title: t.title, blocks: historyBlocksSchema.parse(t.body), contentLang: t.locale, translationStatus: t.translationStatus } : null,
+      officer: info.success ? { fullName: info.data.officer.fullName, position: info.data.officer.position[lang] } : null,
+      documents: info.success
+        ? info.data.documents.map((d) => ({ key: d.key, title: d.title[lang], scanned: d.scanned, files: d.files }))
+        : [],
+    };
+  });
+
+  /**
+   * Справочные разделы по дополнению к ТЗ: государственная и платные услуги, законодательство, читальный зал,
+   * государственные символы, полезные ссылки. Только сведения и внешние ссылки — заявления сайт не принимает.
+   * Ключ вне списка и неопубликованная страница — одинаковый 404.
+   */
+  app.get('/pages/*', async (request, reply) => {
+    const lang: Locale = resolveLang(request, reply, langOnlySchema.parse(request.query).lang);
+    const params = infoPageParamsSchema.safeParse({ key: (request.params as { '*': string })['*'] });
+    if (!params.success) throw notFound();
+    const page = await db.page.findFirst({
+      where: { key: params.data.key, publicationStatus: 'published', deletedAt: null },
+      include: { translations: { where: { translationStatus: { not: 'missing' } } } },
+    });
+    const t = page && (page.translations.find((x) => x.locale === lang) ?? page.translations.find((x) => x.locale === 'ru') ?? page.translations[0]);
+    if (!page || !t) throw notFound();
+    const body = infoBodySchema.parse(t.body);
+    return {
+      key: page.key,
+      title: t.title,
+      lead: t.lead,
+      blocks: body.blocks,
+      actualizedAt: body.actualizedAt,
+      contentLang: t.locale,
+      translationStatus: t.translationStatus,
+      dataOrigin: page.dataOrigin,
     };
   });
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { RoutePlanner } from '../components/branches/RoutePlanner.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
@@ -35,9 +36,7 @@ export function BranchPage() {
 
   return (
     <>
-      <nav aria-label={t('branches.breadcrumbs')} className="mb-2 text-sm">
-        <Link to={`/${lang}/branches`}>{t('nav.branches')}</Link>
-      </nav>
+      <Breadcrumbs items={[{ label: t('nav.branches'), to: `/${lang}/branches` }, { label: b.shortName ?? b.name ?? b.slug }]} />
       <PageHeading title={b.name ?? b.shortName ?? b.slug}>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-muted">{b.type.name}</span>
@@ -58,7 +57,9 @@ export function BranchPage() {
           {b.website ? <Field label={t('branches.website')}><a href={b.website} rel="noopener noreferrer">{b.website}</a></Field> : null}
           {text('branches.schedule', b.scheduleText)}
           {text('branches.readingRoom', b.readingRoomSchedule)}
+          {b.isMain ? null : b.staff.map((s) => <Field key={s.id} label={s.position}>{s.fullName}</Field>)}
         </dl>
+        {b.isMain ? <p className="mt-2"><Link to={`/${lang}/about/structure`}>{t('branches.structureLink')}</Link></p> : null}
       </section>
 
       {b.address ? <RoutePlanner address={b.address} coordinates={b.coordinates} /> : null}

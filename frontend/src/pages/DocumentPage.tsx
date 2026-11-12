@@ -2,6 +2,7 @@ import { Copy, Share2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { useAnnounce } from '../app/Announcer.tsx';
 import { DocumentViewer } from '../components/document/DocumentViewer.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
@@ -28,26 +29,15 @@ export function DocumentPage() {
 
   return (
     <article>
-      <nav aria-label={t('document.breadcrumbs')} className="mb-4 text-sm">
-        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <li>
-            <Link to={`/${lang}/catalog`}>{t('nav.catalog')}</Link>
-          </li>
-          {[
-            { label: t('document.fond'), level: d.hierarchy.fond },
-            { label: t('document.inventory'), level: d.hierarchy.inventory },
-            { label: t('document.case'), level: d.hierarchy.case },
-          ].map(({ label, level }) => (
-            <li key={level.id} className="flex items-center gap-2">
-              <span aria-hidden="true">/</span>
-              <span>
-                {label} {level.number}
-                {level.title ? <span className="text-muted">: {level.title}</span> : null}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: t('nav.catalog'), to: `/${lang}/catalog` },
+          { label: `${t('document.fond')} ${d.hierarchy.fond.number}`, to: `/${lang}/catalog/fonds/${d.hierarchy.fond.id}` },
+          { label: `${t('document.inventory')} ${d.hierarchy.inventory.number}`, to: `/${lang}/catalog/inventories/${d.hierarchy.inventory.id}` },
+          { label: `${t('document.case')} ${d.hierarchy.case.number}`, to: `/${lang}/catalog/cases/${d.hierarchy.case.id}` },
+          { label: d.title ?? d.archiveCode.formatted },
+        ]}
+      />
 
       <PageHeading title={d.title ?? d.archiveCode.formatted}>
         <div className="mt-3 flex flex-wrap items-center gap-2">

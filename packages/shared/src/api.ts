@@ -68,7 +68,7 @@ export type DocumentSearchQuery = z.infer<typeof documentSearchSchema>;
 export const langOnlySchema = z.object({ lang: langSchema.optional() });
 
 export const fondListSchema = z
-  .object({ branch: multi(shortText(100)), q: shortText(200).optional(), lang: langSchema.optional() })
+  .object({ branch: multi(shortText(100)), q: shortText(200).optional(), kind: z.enum(['organization', 'personal', 'collection']).optional(), lang: langSchema.optional() })
   .and(paginationSchema);
 
 export const resolveCodeSchema = z.object({ code: shortText(100), lang: langSchema.optional() });

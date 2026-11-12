@@ -14,7 +14,8 @@ export type ErrorCode =
   | 'INVALID_STATUS_TRANSITION'
   | 'INCOMPLETE_RECORD'
   | 'CONFIRMATION_REQUIRED'
-  | 'CONFLICT';
+  | 'CONFLICT'
+  | 'SELF_CHANGE';
 
 export class ApiError extends Error {
   constructor(

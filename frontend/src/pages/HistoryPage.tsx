@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -48,6 +49,7 @@ export function HistoryPage() {
     <>
       <PageHeading title={t('nav.history')}>
         <p className="mt-2 max-w-3xl">{t('history.lead')}</p>
+        <p className="mt-2"><Link to={`/${lang}/calendar`}>{t('calendar.title')}</Link></p>
       </PageHeading>
 
       <section aria-labelledby="history-topics" className="mb-8">
@@ -122,9 +124,7 @@ export function PublicationPage() {
   const years = p.periodText ?? yearsLabel(p.yearFrom, p.yearTo);
   return (
     <>
-      <nav aria-label={t('history.breadcrumbs')} className="mb-2 text-sm">
-        <Link to={`/${lang}/history`}>{t('nav.history')}</Link>
-      </nav>
+      <Breadcrumbs items={[{ label: t('nav.history'), to: `/${lang}/history` }, { label: p.title ?? p.slug }]} />
       <PageHeading title={p.title ?? p.slug} meta={{ description: p.lead ?? undefined }}>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <OriginBadge origin={p.dataOrigin} />

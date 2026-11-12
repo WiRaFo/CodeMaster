@@ -21,8 +21,8 @@ describe('главная (ТЗ §5.1)', () => {
     expect(banner).not.toBeNull();
     const b = within(banner as HTMLElement);
     expect(b.getByRole('link', { name: 'Найти архивный документ' })).toHaveAttribute('href', '/ru/catalog');
-    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/visitors');
-    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/visitors');
+    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/services');
+    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/reading-room');
     expect(b.getByRole('link', { name: 'Найти филиал' })).toHaveAttribute('href', '/ru/branches');
     expect(b.getByRole('link', { name: /онлайн-выставки/i })).toHaveAttribute('href', '/ru/exhibitions');
   });
@@ -49,6 +49,15 @@ describe('главная (ТЗ §5.1)', () => {
     expect(await within(branches).findByText('г. Усть-Каменогорск, ул. Головкова, 26/1')).toBeInTheDocument();
     expect(within(branches).getByText(/уточняются/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/home?lang=ru', expect.anything());
+  });
+
+  it('памятные даты текущего месяца из календаря архива, со ссылкой на весь календарь', async () => {
+    renderAt('/ru');
+    const block = await screen.findByRole('region', { name: /^Памятные даты: / });
+    expect(within(block).getByText(/Ефима Николаевича Пермитина/)).toBeInTheDocument();
+    expect(within(block).getByRole('link', { name: /Весь календарь/ })).toHaveAttribute('href', '/ru/calendar');
+    const month = fetchMock.mock.calls.map(([u]) => String(u)).find((u) => u.startsWith('/api/v1/calendar?'));
+    expect(month).toBe(`/api/v1/calendar?lang=ru&month=${new Date().getMonth() + 1}`);
   });
 
   it('без данных пустые блоки не показываются, при ошибке — понятное сообщение', async () => {

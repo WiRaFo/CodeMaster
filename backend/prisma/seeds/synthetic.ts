@@ -40,6 +40,8 @@ interface CaseSeed {
 
 interface FondSeed {
   number: string;
+  /** Документы организаций (по умолчанию) или личного происхождения (ТЗ §5.3; дополнение к ТЗ §2 «Личные фонды»). */
+  kind?: 'organization' | 'personal';
   branch: string;
   access: AccessLevel;
   status?: PublicationStatus;
@@ -205,6 +207,16 @@ const FONDS: FondSeed[] = [
       },
     ],
   },
+  {
+    // Пример личного фонда для перехода «Личные фонды»: без документов, чтобы не менять выдачу каталога.
+    number: 'TEST-5',
+    kind: 'personal',
+    branch: 'main',
+    access: 'open',
+    title: tri('Личный фонд краеведа (тестовый)', 'Өлкетанушының жеке қоры (сынақ)', 'Personal fond of a local historian (test)'),
+    inventory: { number: '1', access: 'open' },
+    cases: [{ number: '1', access: 'open', sheets: 12, title: tri('Рукописи и заметки', 'Қолжазбалар мен жазбалар', 'Manuscripts and notes'), docs: [] }],
+  },
 ];
 
 const prefixed = (t: Tri<string>): Tri<string> => ({
@@ -281,6 +293,7 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
     const branchId = branchIds.get(f.branch);
     if (!branchId) throw new Error(`Нет подразделения ${f.branch}; сначала запустите набор migrated`);
     const fondData = {
+      fondKind: f.kind ?? 'organization',
       fondNumberSort: Number(f.number.replace(/\D/g, '')),
       accessLevel: f.access,
       publicationStatus: f.status ?? 'published',

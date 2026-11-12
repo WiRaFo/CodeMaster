@@ -23,7 +23,7 @@ export function configureAdminApi(opts: { csrf?: string; unauthenticated?: () =>
   if (opts.activity) onActivity = opts.activity;
 }
 
-export async function adminRequest<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
+export async function adminRequest<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     method,
     credentials: 'same-origin',

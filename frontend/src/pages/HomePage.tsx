@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { CatalogSearchForm } from '../components/catalog/CatalogSearchForm.tsx';
 import { BlockHeading, LinkCard } from '../components/home/cards.tsx';
+import { MonthDates } from '../components/home/MonthDates.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -23,8 +24,8 @@ export function HomePage() {
 
   const quickLinks = [
     { key: 'findDocument', to: href('catalog'), Icon: FileSearch },
-    { key: 'certificate', to: href('visitors'), Icon: BookOpen },
-    { key: 'readingRoom', to: href('visitors'), Icon: Building2 },
+    { key: 'certificate', to: href('services'), Icon: BookOpen },
+    { key: 'readingRoom', to: href('reading-room'), Icon: Building2 },
     { key: 'findBranch', to: href('branches'), Icon: MapPin },
   ] as const;
 
@@ -167,6 +168,8 @@ function HomeBlocks({ data, lang }: { data: HomeData; lang: string }) {
           ) : null}
         </section>
       ) : null}
+
+      <MonthDates />
 
       {data.exhibitions.length > 0 ? (
         <section aria-labelledby="home-exhibitions" className="mb-10">
