@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { testApp } from './helpers.ts';
 
@@ -141,18 +142,43 @@ describe('«Противодействие коррупции» (сведени�
 
 
 describe('справочные разделы по дополнению к ТЗ (GET /pages/:key)', () => {
-  it('шесть страниц на трёх языках, внешние ссылки только https, незаполненное помечено pending', async () => {
+  it('шесть страниц на трёх языках, ссылки — https или PDF на самом сайте, незаполненное помечено pending', async () => {
     for (const key of ['services', 'services/paid', 'legislation', 'reading-room', 'symbols', 'links']) {
       const ru = await t.get(`/api/v1/pages/${key}?lang=ru`);
       expect(ru.status).toBe(200);
-      expect(ru.body).toMatchObject({ key, contentLang: 'ru', translationStatus: 'reviewed', actualizedAt: '2026-11-10' });
+      expect(ru.body).toMatchObject({ key, contentLang: 'ru', translationStatus: 'reviewed', actualizedAt: key === 'services/paid' ? '2026-11-11' : '2026-11-10' });
       const en = await t.get(`/api/v1/pages/${key}?lang=en`);
       expect(en.body).toMatchObject({ contentLang: 'en', translationStatus: 'machine' });
       const blocks = ru.body['blocks'] as Array<{ type: string; items?: Array<{ url?: string }> }>;
-      for (const b of blocks) if (b.type === 'links') for (const l of b.items ?? []) expect(l.url).toMatch(/^https:\/\//);
+      for (const b of blocks) if (b.type === 'links') for (const l of b.items ?? []) expect(l.url).toMatch(/^(https:\/\/|\/files\/documents\/[a-z0-9._-]+\.pdf$)/);
     }
-    const paid = await t.get('/api/v1/pages/services/paid?lang=kk');
-    expect((paid.body['blocks'] as Array<{ type: string }>).some((b) => b.type === 'pending')).toBe(true);
+    const services = await t.get('/api/v1/pages/services?lang=kk');
+    expect((services.body['blocks'] as Array<{ type: string }>).some((b) => b.type === 'pending')).toBe(true);
+  });
+
+  it('платные услуги: прейскурант по постановлению № 289, PDF на двух языках лежат в публичной папке сайта', async () => {
+    const paid = await t.get('/api/v1/pages/services/paid?lang=ru');
+    const blocks = paid.body['blocks'] as Array<{ type: string; text?: string; items?: Array<string | { url: string }> }>;
+    expect(blocks.some((b) => b.type === 'pending')).toBe(false);
+    expect(blocks.find((b) => b.type === 'p')?.text).toContain('от 15 декабря 2023 года № 289');
+    const files = blocks.filter((b) => b.type === 'links').flatMap((b) => (b.items ?? []).map((i) => (typeof i === 'string' ? i : i.url)));
+    expect(files).toEqual(['/files/documents/preyskurant-289-2023-ru.pdf', '/files/documents/preyskurant-289-2023-kk.pdf']);
+    for (const f of files) expect(existsSync(new URL(`../../frontend/public${f}`, import.meta.url))).toBe(true);
+    // Прейскурант целиком: 8 разделов, в каждом таблица из 4 столбцов; 218 строк, как в документе.
+    const tables = blocks.filter((b): b is { type: 'table'; head: string[]; rows: string[][] } => b.type === 'table');
+    expect(tables).toHaveLength(8);
+    expect(tables[0]?.head).toEqual(['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге']);
+    const rows = tables.flatMap((tb) => tb.rows);
+    expect(rows).toHaveLength(218);
+    for (const r of rows) expect(r).toHaveLength(4);
+    expect(rows).toContainEqual(['6.1.', expect.stringContaining('Научное консультирование') as string, '1 час', '3331,0']);
+    expect(rows).toContainEqual(['8.5.3.', 'документа 1946 г. – XXI в. формата А4', 'образ, кадр листа без оборота', '221,0']);
+    expect(blocks.filter((b) => b.type === 'p').some((b) => b.text?.startsWith('** '))).toBe(true);
+    const kk = await t.get('/api/v1/pages/services/paid?lang=kk');
+    const kkTables = (kk.body['blocks'] as Array<{ type: string; rows?: string[][] }>).filter((b) => b.type === 'table');
+    // Казахский текст — те же пункты (точка в конце номера в документах стоит по-разному) и те же цены.
+    const key = (r: string[]) => `${(r[0] ?? '').replace(/\.$/, '')} ${r[3] ?? ''}`;
+    expect(kkTables.flatMap((tb) => tb.rows ?? []).map(key)).toEqual(rows.map(key));
   });
 
   it('ключ вне списка и служебные страницы — одинаковый 404', async () => {

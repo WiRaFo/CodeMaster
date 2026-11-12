@@ -390,7 +390,8 @@ export interface AnticorruptionInfo {
 export type InfoBlock =
   | { type: 'p' | 'h' | 'pending'; text: string }
   | { type: 'ol' | 'ul'; items: string[] }
-  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> };
+  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> }
+  | { type: 'table'; head: string[]; rows: string[][] };
 
 export interface InfoPageData {
   key: string;

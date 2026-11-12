@@ -8,7 +8,7 @@ import { formatDate } from '../lib/format.ts';
 import type { AboutInfo, AboutSection, BranchDetail, HistoryBlock, StaffContact } from '../lib/types.ts';
 import { useApi } from '../lib/useApi.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
-import { InfoBlockView } from './ReferencePage.tsx';
+import { InfoBlockView, headingBefore } from './ReferencePage.tsx';
 
 /** Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте. */
 export function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) {
@@ -154,7 +154,7 @@ function AboutSectionBody({ section }: { section: AboutSection }) {
       <TranslationNote contentLang={section.contentLang} translationStatus={section.translationStatus} />
       <div className="mt-2 flex max-w-[75ch] flex-col gap-3" lang={section.contentLang}>
         {section.lead ? <p className="text-lg">{section.lead}</p> : null}
-        {section.blocks.map((block, i) => <InfoBlockView key={i} block={block} headingLevel={3} />)}
+        {section.blocks.map((block, i) => <InfoBlockView key={i} block={block} headingLevel={3} label={headingBefore(section.blocks, i)} />)}
       </div>
       {section.actualizedAt ? <p className="mt-2 text-sm text-muted">{t('about.actualized', { date: formatDate(section.actualizedAt, lang) })}</p> : null}
     </>

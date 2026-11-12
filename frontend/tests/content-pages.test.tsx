@@ -36,6 +36,14 @@ const SERVICES = {
     { type: 'pending', text: 'Сроки и стоимость будут опубликованы позже.' },
   ],
 };
+const PAID = {
+  key: 'services/paid', title: 'Платные услуги', lead: null, actualizedAt: '2026-11-11', contentLang: 'ru', translationStatus: 'reviewed', dataOrigin: 'verified',
+  blocks: [
+    { type: 'links', items: [{ label: 'Постановление № 289 с прейскурантом (на русском языке)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 страниц, 1,6 МБ' }] },
+    { type: 'h', text: '4. Депозитарное хранение архивных документов' },
+    { type: 'table', head: ['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге'], rows: [['1.1.', 'Разработка номенклатур дел', '', ''], ['1.1.1.', 'Составление типовых (примерных) номенклатур дел', 'позиция', '832,0'], ['5.2.1.1.', 'до 25 экспонатов;', 'выставка / экспонат', '67 620,0 / 2704,8']] },
+  ],
+};
 const READING_ROOM = {
   key: 'reading-room', title: 'Оқу залы', lead: null, actualizedAt: '2026-11-10', contentLang: 'kk', translationStatus: 'machine', dataOrigin: 'verified',
   blocks: [{ type: 'ul', items: ['Шифрларды жазып алыңыз.'] }],
@@ -43,7 +51,7 @@ const READING_ROOM = {
 
 beforeEach(() => {
   fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/pages/services?': SERVICES, '/api/v1/pages/reading-room?': READING_ROOM, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
+    apiMock({ '/api/v1/history/demo-a?': DETAIL, '/api/v1/history?': LIST, '/api/v1/faq?': FAQ, '/api/v1/pages/services?': SERVICES, '/api/v1/pages/services/paid?': PAID, '/api/v1/pages/reading-room?': READING_ROOM, '/api/v1/reference/periods?': { items: [], page: 1, pageSize: 100, total: 0, totalPages: 0 } }),
   );
 });
 
@@ -209,6 +217,23 @@ describe('справочные разделы по дополнению к ТЗ'
     expect(screen.getByText('Сведения актуализированы: 10 ноября 2026 г..')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Платные услуги архива' })).toHaveAttribute('href', '/ru/services/paid');
     expect(container.querySelector('main form')).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('платные услуги: прейскурант — PDF на самом сайте, без пометки внешнего ресурса', async () => {
+    const { container } = renderAt('/ru/services/paid');
+    const pdf = await screen.findByRole('link', { name: 'Постановление № 289 с прейскурантом (на русском языке)' });
+    expect(pdf).toHaveAttribute('href', '/files/documents/preyskurant-289-2023-ru.pdf');
+    expect(pdf).toHaveAttribute('type', 'application/pdf');
+    expect(screen.getByText('Документ PDF на этом сайте')).toBeInTheDocument();
+    expect(screen.queryByText(/Внешний ресурс/)).toBeNull();
+    // Таблица прейскуранта: заголовки столбцов и строк, строка группы, число не разрывается внутри.
+    expect(screen.getByRole('region', { name: '4. Депозитарное хранение архивных документов' })).toHaveAttribute('tabindex', '0');
+    const table = screen.getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге']);
+    expect(within(table).getByRole('rowheader', { name: '1.1.1.' })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: /Разработка номенклатур дел/ })).toHaveClass('font-semibold');
+    expect(within(table).getByRole('cell', { name: '67 620,0 / 2704,8' })).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
   });
 

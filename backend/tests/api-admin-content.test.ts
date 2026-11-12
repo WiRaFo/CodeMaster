@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { INFO_PAGES } from '../prisma/seeds/info-pages.ts';
 import { parseMarkup, toMarkup } from '../src/modules/admin/page-markup.ts';
 import { testApp } from './helpers.ts';
 import { cleanupStaff, createStaff, login, type Client } from './staff.ts';
@@ -34,8 +35,41 @@ describe('разметка страниц', () => {
     expect(blocks.map((b) => b.type)).toEqual(['h', 'ul', 'p', 'pending', 'links', 'ol']);
     expect(blocks[2]).toEqual({ type: 'p', text: 'Абзац продолжение.' });
     expect(parseMarkup(toMarkup(blocks)).blocks).toEqual(blocks);
-    expect(parseMarkup('Текст\n[Сайт](http://example.kz)').issues).toEqual([{ line: 2, message: 'Адрес ссылки должен начинаться с https:// (http://example.kz)' }]);
+    expect(parseMarkup('Текст\n[Сайт](http://example.kz)').issues).toEqual([{ line: 2, message: 'Адрес ссылки должен начинаться с https:// или /files/documents/ (http://example.kz)' }]);
+    // Документ на самом сайте: только PDF из /files/documents/, без выхода из папки.
+    expect(parseMarkup('[Прейскурант](/files/documents/preyskurant-289-2023-ru.pdf) — скан').blocks).toEqual([{ type: 'links', items: [{ label: 'Прейскурант', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан' }] }]);
+    for (const bad of ['/files/documents/../x.pdf', '/files/documents/a.html', '/admin/x.pdf', 'javascript:alert(1)']) {
+      const parsed = parseMarkup(`[x](${bad})`);
+      expect(parsed.issues.length).toBeGreaterThan(0);
+      expect(parsed.blocks.some((b) => b.type === 'links')).toBe(false);
+    }
     expect(parseMarkup('<script>alert(1)</script>').blocks).toEqual([{ type: 'p', text: '<script>alert(1)</script>' }]);
+  });
+
+  it('таблица: первая строка — заголовки, пустые ячейки сохраняются; лишняя ячейка и плохой заголовок — ошибки с номером строки', () => {
+    const { blocks, issues } = parseMarkup('## Цены\n| Индекс | Наименование | Цена |\n| 1.1. | Группа | |\n| 1.1.1. | Позиция | 832,0 |\nПосле таблицы.');
+    expect(issues).toEqual([]);
+    expect(blocks).toEqual([
+      { type: 'h', text: 'Цены' },
+      { type: 'table', head: ['Индекс', 'Наименование', 'Цена'], rows: [['1.1.', 'Группа', ''], ['1.1.1.', 'Позиция', '832,0']] },
+      { type: 'p', text: 'После таблицы.' },
+    ]);
+    expect(parseMarkup(toMarkup(blocks)).blocks).toEqual(blocks);
+    expect(parseMarkup('| a | b |\n| 1 | 2 | 3 |').issues).toEqual([{ line: 2, message: 'В строке таблицы 3 ячеек, а в заголовке 2' }]);
+    expect(parseMarkup('| только один |').issues).toContainEqual({ line: 1, message: 'Заголовок таблицы: от 2 до 6 непустых столбцов через «|»' });
+    expect(parseMarkup('| a | | b |').issues[0]?.message).toMatch(/^Заголовок таблицы/);
+  });
+
+  it('прейскурант целиком помещается в редактор и переживает сохранение без потерь', () => {
+    const paid = INFO_PAGES.find((p) => p.key === 'services/paid');
+    for (const lang of ['ru', 'kk'] as const) {
+      const blocks = paid?.blocks[lang] ?? [];
+      const markup = toMarkup(blocks);
+      expect(markup.length).toBeLessThanOrEqual(30_000);
+      const parsed = parseMarkup(markup);
+      expect(parsed.issues).toEqual([]);
+      expect(parsed.blocks).toEqual(blocks);
+    }
   });
 });
 

@@ -611,7 +611,9 @@
       "symbols": "State symbols",
       "links": "Useful links",
       "paid": "Paid services"
-    }
+    },
+    "pdf": "PDF document on this website",
+    "table": "Table"
   },
   "breadcrumbs": {
     "label": "Breadcrumb"

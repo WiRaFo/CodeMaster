@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: archive
       POSTGRES_DB: archive_dev
     ports:
-      - "5432:5432"
+      # Порт на компьютере: DB_PORT=5433, если 5432 уже занят (например, установленным PostgreSQL).
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./infrastructure/docker/db-init:/docker-entrypoint-initdb.d:ro

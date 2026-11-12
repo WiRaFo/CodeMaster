@@ -13,7 +13,7 @@ import { hasGrant } from '../auth/session.ts';
 import { writeAudit } from '../audit/audit.ts';
 import { aboutBodySchema } from '../content/site.routes.ts';
 import { MASTER_BUCKET, ruFirst, sniffImage, syncTranslations } from './admin-common.ts';
-import { parseMarkup, toMarkup, type InfoBlock } from './page-markup.ts';
+import { blocksPlainText, parseMarkup, toMarkup } from './page-markup.ts';
 
 /**
  * «Об архиве» в панели (ТЗ §5.2; F-023, F-021): разделы текста, сотрудники основного архива («Структура и
@@ -52,8 +52,6 @@ const gallerySelect = {
 } as const;
 type GalleryRow = Prisma.GalleryItemGetPayload<{ select: typeof gallerySelect }>;
 
-const blocksText = (blocks: InfoBlock[]) =>
-  blocks.map((b) => ('items' in b ? b.items.map((i) => (typeof i === 'string' ? i : i.label)).join('\n') : b.text)).join('\n\n');
 
 const staffOut = (s: StaffRow) => ({
   id: s.id, phone: s.phone, email: s.email, sortOrder: s.sortOrder, published: s.publicationStatus === 'published',
@@ -167,7 +165,7 @@ export async function aboutAdminRoutes(app: FastifyInstance, { db, storage }: { 
         }
         const body = { actualizedAt: input.actualizedAt, blocks: p.blocks };
         if (!prev || prev.title !== p.t.title || prev.lead !== p.t.lead || JSON.stringify(prev.body) !== JSON.stringify(body)) changed.push(locale);
-        const data = { title: p.t.title, lead: p.t.lead, body, bodyText: blocksText(p.blocks), translationStatus: 'reviewed' as const };
+        const data = { title: p.t.title, lead: p.t.lead, body, bodyText: blocksPlainText(p.blocks), translationStatus: 'reviewed' as const };
         await tx.pageTranslation.upsert({ where: { pageId_locale: { pageId: target.id, locale } }, update: data, create: { ...data, pageId: target.id, locale } });
       }
       // Время изменения страницы — после записи переводов: по нему следующая правка проверяет If-Match.

@@ -135,7 +135,7 @@ async function main() {
     }
 
     for (const width of WIDTHS) {
-      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC, '/ru/branches', '/ru/branches/main']) {
+      for (const path of ['/kk', '/ru/accessibility', '/ru/catalog?q=маслозавод&type=photo', OPEN_DOC, RESTRICTED_DOC, '/ru/branches', '/ru/branches/main', '/ru/services/paid', '/kk/services/paid']) {
         const page = await browser.newPage({ viewport: { width, height: 800 } });
         await openWithPrefs(page, path, {});
         const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -154,6 +154,11 @@ async function main() {
       await openWithPrefs(page, '/kk', { fontScale: 200, lineHeight: '2', letterSpacing: '0.16' });
       const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(scroll <= client, `текст 200 % и интервалы 1.4.12 на 320px: прокрутка ${scroll} > ${client}`);
+      // Прейскурант: 218 строк в таблицах — тоже без горизонтальной прокрутки при увеличенном тексте.
+      await openWithPrefs(page, '/kk/services/paid', { fontScale: 200 });
+      check((await page.locator('main table').count()) === 8, 'платные услуги: 8 таблиц прейскуранта');
+      const [ps, pc] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      check(ps <= pc, `прейскурант, текст 200 % на 320px: прокрутка ${ps} > ${pc}`);
       await page.close();
     }
 
@@ -935,6 +940,10 @@ async function seoScenario(browser: Browser) {
   const api = await fetch(`${BASE}/api/v1/branches`);
   check(api.headers.get('x-frame-options') === 'DENY' && (api.headers.get('content-security-policy') ?? '').includes("default-src 'none'"), 'безопасность: заголовки у ответов API');
   const docs = (await (await fetch(`${BASE}/api/v1/anticorruption?lang=ru`)).json()) as { documents: Array<{ files: Array<{ url: string; sizeBytes: number }> }> };
+  for (const lang of ['ru', 'kk']) {
+    const price = await fetch(`${BASE}/files/documents/preyskurant-289-2023-${lang}.pdf`);
+    check(price.ok && price.headers.get('content-type') === 'application/pdf', `платные услуги: прейскурант (${lang}) отдаётся как PDF`);
+  }
   const resolution = await fetch(`${BASE}/files/documents/postanovlenie-142-2026.pdf`);
   check(resolution.ok && resolution.headers.get('content-type') === 'application/pdf', 'филиалы: постановление № 142 отдаётся как PDF');
   for (const f of docs.documents.flatMap((d) => d.files)) {

@@ -1,4 +1,5 @@
 import type { Tri } from './lib.ts';
+import { PRICE_LIST_KK, PRICE_LIST_RU, PRICE_NOTES_KK, PRICE_NOTES_RU, type PriceSection } from './price-list.ts';
 
 /**
  * Справочные разделы из дополнения к ТЗ от 10.11.2026 (§2, §8, §9): государственная и платные услуги,
@@ -13,7 +14,14 @@ import type { Tri } from './lib.ts';
 export type InfoBlock =
   | { type: 'p' | 'h' | 'pending'; text: string }
   | { type: 'ul' | 'ol'; items: string[] }
-  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> };
+  | { type: 'links'; items: Array<{ label: string; url: string; note?: string }> }
+  | { type: 'table'; head: string[]; rows: string[][] };
+
+/** Прейскурант целиком: раздел — заголовок и таблица, затем сноски документа. */
+const priceBlocks = (sections: readonly PriceSection[], notes: readonly string[], head: string[]): InfoBlock[] => [
+  ...sections.flatMap((s): InfoBlock[] => [{ type: 'h', text: s.title }, { type: 'table', head, rows: s.rows.map((r) => [...r]) }]),
+  ...notes.map((text): InfoBlock => ({ type: 'p', text })),
+];
 
 export type InfoPage = {
   key: string;
@@ -91,28 +99,86 @@ export const INFO_PAGES: InfoPage[] = [
     },
   },
   {
+    // Прейскурант — постановление акимата ВКО от 15.12.2023 № 289, сканы на русском и казахском переданы архивом 11.11.2026.
+    // RU и KK: прейскурант целиком (seeds/price-list.ts), EN — выдержка; валюта в документе не указана, архив подтвердил тенге 11.11.2026.
     key: 'services/paid',
-    actualizedAt: DATE,
+    actualizedAt: '2026-11-11',
     title: { ru: 'Платные услуги', kk: 'Ақылы қызметтер', en: 'Paid services' },
     lead: {
-      ru: 'Справочные сведения о платных услугах государственных архивов области. Сайт не оформляет заказы, не рассчитывает стоимость и не принимает оплату.',
-      kk: 'Облыстың мемлекеттік мұрағаттарының ақылы қызметтері туралы анықтамалық мәліметтер. Сайт тапсырыс ресімдемейді, құнын есептемейді және төлем қабылдамайды.',
-      en: 'Reference information about paid services of the region’s state archives. This website does not take orders, calculate fees or accept payments.',
+      ru: 'Платные услуги государственных архивов области оказываются по прейскуранту, утверждённому областным акиматом. Сайт не оформляет заказы, не рассчитывает стоимость и не принимает оплату.',
+      kk: 'Облыстың мемлекеттік мұрағаттарының ақылы қызметтері облыс әкімдігі бекіткен прейскурант бойынша көрсетіледі. Сайт тапсырыс ресімдемейді, құнын есептемейді және төлем қабылдамайды.',
+      en: 'Paid services of the region’s state archives are provided under the price list approved by the regional akimat. This website does not take orders, calculate fees or accept payments.',
     },
     blocks: {
       ru: [
         { type: 'h', text: 'Прейскурант' },
-        { type: 'pending', text: 'Постановление «Об утверждении прейскуранта цен на товары (работы, услуги), реализуемые государственными архивами управления цифровизации и архивов Восточно-Казахстанской области» и действующий прейскурант будут опубликованы после того, как архив их передаст.' },
-        { type: 'p', text: 'Уточнить порядок оказания платных услуг можно в канцелярии архива: контакты на странице «Об архиве».' },
+        { type: 'p', text: 'Прейскурант утверждён постановлением Восточно-Казахстанского областного акимата от 15 декабря 2023 года № 289 «Об утверждении прейскуранта цен на товары (работы, услуги), реализуемые государственными архивами управления цифровизации и архивов Восточно-Казахстанской области».' },
+        { type: 'links', items: [
+          { label: 'Постановление № 289 с прейскурантом (на русском языке)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 страниц, 1,6 МБ' },
+          { label: '№ 289 қаулы және прейскурант (на казахском языке)', url: '/files/documents/preyskurant-289-2023-kk.pdf', note: 'скан, 15 страниц, 1,6 МБ' },
+        ] },
+        { type: 'h', text: 'Полный текст прейскуранта' },
+        { type: 'p', text: 'Таблицы ниже переписаны с официального текста на русском языке без изменений, номера пунктов — как в документе. Цены в тенге, как они указаны в столбце «Прейскурант». При расхождении верным считается документ.' },
+        ...priceBlocks(PRICE_LIST_RU, PRICE_NOTES_RU, ['Индекс', 'Наименование', 'Единица измерения', 'Цена, тенге']),
+        { type: 'h', text: 'Льготы и бесплатные запросы' },
+        { type: 'ul', items: [
+          'Участникам Великой Отечественной войны предоставляются льготы в размере 50% по оплате работ, связанных с использованием архивных документов и информационных услуг, не имеющих социально-правового характера (за исключением запросов генеалогического характера).',
+          'Бесплатно исполняются тематические запросы местного исполнительного органа, государственных органов, судебных органов, прокуратур, связанных с исполнением ими своих функций.',
+        ] },
+        { type: 'p', text: 'Порядок оказания платных услуг можно уточнить в канцелярии архива: контакты на странице «Об архиве».' },
       ],
       kk: [
         { type: 'h', text: 'Баға прейскуранты' },
-        { type: 'pending', text: '«Шығыс Қазақстан облысының цифрландыру және архивтер басқармасының мемлекеттік архивтері өткізетін тауарларға (жұмыстарға, қызметтерге) баға прейскурантын бекіту туралы» қаулы және қолданыстағы прейскурант мұрағат оларды бергеннен кейін жарияланады.' },
+        { type: 'p', text: 'Прейскурант Шығыс Қазақстан облысы әкімдігінің 2023 жылғы 15 желтоқсандағы № 289 «Шығыс Қазақстан облысы цифрландыру және архивтер басқармасының мемлекеттік архивтері өткізетін тауарларға (жұмыстарға, көрсетілетін қызметтерге) баға прейскурантын бекіту туралы» қаулысымен бекітілген.' },
+        { type: 'links', items: [
+          { label: '№ 289 қаулы және прейскурант (қазақ тілінде)', url: '/files/documents/preyskurant-289-2023-kk.pdf', note: 'скан, 15 бет, 1,6 МБ' },
+          { label: 'Постановление № 289 с прейскурантом (орыс тілінде)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'скан, 15 бет, 1,6 МБ' },
+        ] },
+        { type: 'h', text: 'Прейскуранттың толық мәтіні' },
+        { type: 'p', text: 'Төмендегі кестелер қазақ тіліндегі ресми мәтіннен өзгеріссіз көшірілді, тармақ нөмірлері құжаттағыдай. Бағалар теңгемен, «Прейскурант» бағанында көрсетілгендей берілген. Сәйкессіздік болса, құжат дұрыс деп саналады.' },
+        ...priceBlocks(PRICE_LIST_KK, PRICE_NOTES_KK, ['Индексі', 'Атауы', 'Өлшем бірлігі', 'Бағасы, теңге']),
+        { type: 'h', text: 'Жеңілдіктер және тегін сұраулар' },
+        { type: 'ul', items: [
+          'Ұлы Отан соғысының қатысушыларына әлеуметтік-құқықтық сипаттағы емес (генеалогиялық сипаттағы сұрауларды қоспағанда) архивтік құжаттарын және ақпараттық қызметтерді пайдаланумен байланысты жұмыстардың ақысы 50% көлеміндей жеңілдік беріледі.',
+          'Жергілікті атқарушы органдарының, мемлекеттік органдарының, сот органдарының, прокуратуралардың өздерінің міндеттерін орындаумен байланысты тақырыптық сұраулар тегін жасалады.',
+        ] },
         { type: 'p', text: 'Ақылы қызметтерді көрсету тәртібін мұрағат кеңсесінен нақтылауға болады: байланыс деректері «Мұрағат туралы» бетінде.' },
       ],
       en: [
         { type: 'h', text: 'Price list' },
-        { type: 'pending', text: 'The resolution approving the price list for goods (works, services) sold by the state archives of the Department of Digitalization and Archives of East Kazakhstan Region, and the current price list, will be published once the archive provides them.' },
+        { type: 'p', text: 'The price list was approved by Resolution No. 289 of the East Kazakhstan Regional Akimat of 15 December 2023 “On approval of the price list for goods (works, services) sold by the state archives of the Department of Digitalization and Archives of East Kazakhstan Region”. The official text is available in Russian and Kazakh.' },
+        { type: 'links', items: [
+          { label: 'Resolution No. 289 with the price list (in Russian)', url: '/files/documents/preyskurant-289-2023-ru.pdf', note: 'scan, 15 pages, 1.6 MB' },
+          { label: 'Resolution No. 289 with the price list (in Kazakh)', url: '/files/documents/preyskurant-289-2023-kk.pdf', note: 'scan, 15 pages, 1.6 MB' },
+        ] },
+        { type: 'h', text: 'Sections of the price list' },
+        { type: 'ol', items: [
+          'Courses and seminars for legal entities on records management, development of file nomenclatures and record-keeping instructions',
+          'Arrangement of archival documents',
+          'Restoration and repair of documents, making envelopes',
+          'Depository storage of archival documents',
+          'Documentary exhibitions organized on request of individuals and legal entities',
+          'Genealogical and thematic research on request of individuals and legal entities',
+          'Publication of methodological literature, collections of archival documents, educational and other publications',
+          'Copies of archival documents',
+        ] },
+        { type: 'h', text: 'Requests and copies: excerpt' },
+        { type: 'p', text: 'Excerpt from sections 6 and 8. Prices are in tenge, as given in the “Price” column. The full price list with units is published as tables on the Russian and Kazakh versions of this page and in the documents above.' },
+        { type: 'ul', items: [
+          'Research consultation on a topic of interest (history of the question, historical period, persons, genealogical research) — 3331.0 per hour (item 6.1).',
+          'Thematic and genealogical requests, review of files — 2,030.4 per file (item 6.2.1).',
+          'Additional copies of an archival certificate at the applicant’s request — 833.0 per copy (item 6.6).',
+          'Duplicate or reissue of an archival certificate — 833.0 per copy (item 6.7).',
+          'Photocopy of an archival document, one side, A4 sheet: before 1900 — 455.0; 1901–1917 — 379.0; 1918–1945 — 316.0; 1946–1990 — 263.0; from 1991 to date — 219.0 (items 8.1.1.1.1–8.1.1.1.5).',
+          'Digital copy of an A4 document, one side (colour JPEG and PDF, 300 dpi): 19th century – 1930 — 507.0; 1931 – 21st century — 452.0 per image (items 8.3.1–8.3.2).',
+          'Copying by the user with their own phone, camera or tablet, without a tripod and with the flash off, in the presence of an archive employee, A4 document: 17th–18th centuries — 318.0; 19th century – 1945 — 265.0; 1946 – 21st century — 221.0 per frame (items 8.5.1–8.5.3).',
+        ] },
+        { type: 'p', text: 'Prices are for A4 copies; other formats cost more: A3 twice as much, A2 three times as much.' },
+        { type: 'h', text: 'Discounts and free requests' },
+        { type: 'ul', items: [
+          'Participants of the Great Patriotic War receive a 50% discount on works related to the use of archival documents and information services that are not of a social and legal nature (except genealogical requests).',
+          'Thematic requests of the local executive body, government bodies, courts and prosecutors related to their functions are fulfilled free of charge.',
+        ] },
         { type: 'p', text: 'You can ask about paid services at the archive office: contacts on the “About the archive” page.' },
       ],
     },

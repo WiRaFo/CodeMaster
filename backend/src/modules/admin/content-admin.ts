@@ -6,7 +6,7 @@ import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission } from '../../http/staff.ts';
 import { writeAudit } from '../audit/audit.ts';
 import { INFO_PAGE_KEYS } from '../content/site.routes.ts';
-import { parseMarkup, toMarkup, type InfoBlock } from './page-markup.ts';
+import { blocksPlainText, parseMarkup, toMarkup, type InfoBlock } from './page-markup.ts';
 
 /**
  * Справочные страницы и вопросы-ответы в панели (F-052; дополнение к ТЗ §2 и §3.5).
@@ -90,7 +90,7 @@ export async function contentAdminRoutes(app: FastifyInstance, { db }: { db: Pri
         const prev = page.translations.find((x) => x.locale === p.locale);
         const body = { actualizedAt: input.actualizedAt, blocks: p.blocks };
         if (!prev || prev.title !== p.t.title || prev.lead !== p.t.lead || JSON.stringify(prev.body) !== JSON.stringify(body)) changed.push(p.locale);
-        const bodyText = p.blocks.map((b) => ('items' in b ? b.items.map((i) => (typeof i === 'string' ? i : i.label)).join('\n') : b.text)).join('\n\n');
+        const bodyText = blocksPlainText(p.blocks);
         const data = { title: p.t.title, lead: p.t.lead, body, bodyText, translationStatus: 'reviewed' as const };
         await tx.pageTranslation.upsert({ where: { pageId_locale: { pageId: page.id, locale: p.locale } }, update: data, create: { ...data, pageId: page.id, locale: p.locale } });
       }
