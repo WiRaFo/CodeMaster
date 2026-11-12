@@ -52,7 +52,7 @@ describe('каталог: фильтры и фасеты (ЭТАП 5)', () => {
     const { router } = renderAt('/ru/catalog');
     const aside = screen.getByRole('complementary', { name: 'Фильтры' });
     const from = within(aside).getByRole('textbox', { name: 'С года' });
-    const to = within(aside).getByRole('textbox', { name: 'По год' });
+    const to = within(aside).getByRole('textbox', { name: 'До года (включительно)' });
     await user.type(from, '1990');
     await user.type(to, '1950');
     await user.click(within(aside).getByRole('button', { name: 'Применить' }));
