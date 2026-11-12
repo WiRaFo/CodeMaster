@@ -3,6 +3,7 @@ import { Suspense, lazy, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { MapPoint } from '../components/branches/BranchMap.tsx';
+import { SchemeMap } from '../components/branches/SchemeMap.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -97,8 +98,12 @@ export function BranchesPage() {
             <BranchMap points={points} label={t('branches.mapTitle')} />
           </Suspense>
         </div>
-      ) : items ? (
-        <p className="asst-note" data-testid="map-pending"><MapPin aria-hidden="true" className="size-5 shrink-0" />{t('branches.mapPending')}</p>
+      ) : all.status === 'ready' ? (
+        <section aria-labelledby="br-scheme" className="mb-8">
+          <h2 id="br-scheme" className="h3 mb-1">{t('branchMap.title')}</h2>
+          <p className="muted mb-4">{t('branchMap.lead')}</p>
+          <SchemeMap branches={all.data.items} lang={lang} />
+        </section>
       ) : null}
 
       {items === null ? (

@@ -9,6 +9,7 @@ import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { formatDate, formatYears } from '../lib/format.ts';
 import { telHref, useMainBranch } from '../lib/main-branch.ts';
+import { SchemeMap } from '../components/branches/SchemeMap.tsx';
 import type { BranchSummary, HomeData } from '../lib/types.ts';
 import { useApi } from '../lib/useApi.ts';
 
@@ -50,6 +51,7 @@ export function HomePage() {
         <AssistantCard />
         <ContactsCard />
       </section>
+      <HomeMap />
       <p className="sr-only"><Link to={href('exhibitions')}>{t('home.toExhibitions')}</Link></p>
     </>
   );
@@ -656,6 +658,21 @@ function AssistantCard() {
         {examples.map((x) => <li key={x}><Link to={ask(x)} className="lift ask-example">{x}</Link></li>)}
       </ul>
     </div>
+  );
+}
+
+/** Схема области с метками архива и филиалов (12.11.2026): окно метки с адресом, контактами и 2ГИС. */
+function HomeMap() {
+  const { t } = useTranslation();
+  const { lang = 'kk' } = useParams();
+  const branches = useApi<{ items: BranchSummary[] }>(`/branches?lang=${lang}`);
+  if (branches.status !== 'ready' || branches.data.items.length === 0) return null;
+  return (
+    <section className="wrap sec" aria-labelledby="home-map">
+      <h2 id="home-map" className="h2 mb-2">{t('branchMap.title')}</h2>
+      <p className="lead mb-6">{t('branchMap.lead')}</p>
+      <SchemeMap branches={branches.data.items} lang={lang} />
+    </section>
   );
 }
 

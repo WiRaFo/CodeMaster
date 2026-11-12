@@ -62,7 +62,13 @@ describe('список подразделений (F-061, F-066)', () => {
     const card = (await screen.findByRole('link', { name: 'Государственный архив ВКО' })).closest('article') as HTMLElement;
     expect(within(card).queryByText('Сведения уточняются')).toBeNull();
     expect(within(card).getByRole('link', { name: '8 (7232) 25-59-76' })).toHaveAttribute('href', 'tel:87232255976');
-    expect(screen.getByTestId('map-pending')).toHaveTextContent('Карта появится, когда архив сверит координаты');
+    const scheme = await screen.findByTestId('scheme-map');
+    await userEvent.click(within(scheme).getByRole('button', { name: 'ГА ВКО' }));
+    const pop = within(scheme).getByRole('dialog');
+    expect(within(pop).getByRole('link', { name: '8 (7232) 25-59-76' })).toHaveAttribute('href', 'tel:87232255976');
+    expect(within(pop).getByRole('link', { name: /Открыть в 2ГИС/ }).getAttribute('href')).toMatch(/^https:\/\/2gis\.kz\/search\//);
+    await userEvent.keyboard('{Escape}');
+    expect(within(scheme).queryByRole('dialog')).toBeNull();
     expect(screen.queryByTestId('branch-map')).toBeNull();
     expect(screen.getByText('Найдено подразделений: 2')).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
@@ -86,7 +92,7 @@ describe('карта (F-060)', () => {
     expect(marker).toHaveAttribute('title', 'ГА ВКО');
     await userEvent.click(marker);
     expect(within(map).getByRole('link', { name: 'Подробнее' })).toHaveAttribute('href', '/ru/branches/main');
-    expect(screen.queryByTestId('map-pending')).toBeNull();
+    expect(screen.queryByTestId('scheme-map')).toBeNull();
     // Подразделение без координат по-прежнему в списке.
     expect(screen.getByRole('link', { name: 'Риддерский филиал' })).toBeInTheDocument();
   });
