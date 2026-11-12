@@ -820,7 +820,7 @@
     "found_one": "{{count}} event",
     "found_other": "{{count}} events",
     "axis": "Timeline: event marks",
-    "axisHint": "Click a mark on the scale or pick an event in the list. Arrow keys ← → work on the scale.",
+    "axisHint": "Click anywhere on the scale or drag the slider, like a video progress bar. You can also pick a mark or an event in the list; arrow keys ← → work on the scale.",
     "nothing": "No events in this period. Choose another period or clear the search.",
     "listLabel": "Events of the selected period",
     "related": "Related materials",

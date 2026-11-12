@@ -345,6 +345,18 @@ html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
 .tl-dot.on{background:var(--gold);transform:scale(1.5);box-shadow:0 0 0 4px rgba(234,217,76,.35)}
 .tl-dot.out{opacity:.3;cursor:default}
 .tl-dot:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.tl-axis{cursor:pointer;touch-action:pan-y;user-select:none}
+.tl-axis.drag{cursor:grabbing}
+.tl-line{transition:height .15s,bottom .15s}
+.tl-axis:hover .tl-line,.tl-axis.drag .tl-line{height:8px;bottom:28px;border-radius:4px}
+.tl-played{position:absolute;left:0;bottom:30px;height:4px;border-radius:2px;background:var(--gold);pointer-events:none;transition:width .25s,height .15s,bottom .15s}
+.tl-axis:hover .tl-played,.tl-axis.drag .tl-played{height:8px;bottom:28px;border-radius:4px}
+.tl-axis.drag .tl-played,.tl-axis.drag .tl-thumb{transition:none}
+.tl-hover{position:absolute;bottom:24px;width:2px;height:20px;margin-left:-1px;background:rgba(255,255,255,.7);pointer-events:none}
+.tl-thumb{position:absolute;bottom:32px;width:16px;height:16px;margin:0 0 -8px -8px;border-radius:50%;background:var(--gold);pointer-events:none;transform:scale(0);transition:transform .15s,left .25s}
+.tl-axis:hover .tl-thumb,.tl-axis.drag .tl-thumb{transform:scale(1)}
+.tl-preview{position:absolute;bottom:62px;transform:translateX(-50%);max-width:260px;padding:6px 10px;border-radius:10px;background:#fff;color:var(--ink);font-size:calc(14px * var(--fs,1));line-height:1.3;white-space:normal;text-align:center;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:2}
+.tl-dot{z-index:1}
 .tl-tick{position:absolute;bottom:0;transform:translateX(-50%);font-size:calc(14px * var(--fs,1));font-weight:700;color:var(--odm);white-space:nowrap}
 .tl-layout{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;align-items:start}
 @media (max-width:900px){.tl-layout{grid-template-columns:minmax(0,1fr)}.tl-list{max-height:none}}
@@ -361,4 +373,4 @@ html.a11y .ref-link{border:2px solid #000}html.a11y .ref-sheet{display:none}
 .tl-rel-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 .tl-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 html.a11y .tl-axis-wrap{background:#000}html.a11y .tl-item,html.a11y .tl-chip{border:2px solid #000}
-html[data-motion="reduce"] .tl-band,html[data-motion="reduce"] .tl-dot{transition:none}
+html[data-motion="reduce"] .tl-band,html[data-motion="reduce"] .tl-dot,html[data-motion="reduce"] .tl-played,html[data-motion="reduce"] .tl-thumb,html[data-motion="reduce"] .tl-line{transition:none}

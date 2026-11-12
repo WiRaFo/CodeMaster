@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
@@ -87,6 +87,50 @@ export function TimelinePage() {
 
   const span = Math.max(1, maxYear - minYear);
   const pos = (year: number) => `${((year - minYear) / span) * 100}%`;
+
+  // Шкала как полоса прокрутки видео: щелчок в любое место или перетаскивание выбирает ближайшее событие,
+  // при наведении видна подсказка. Это дополнение: те же события выбираются кнопками-отметками и клавишами (A-012).
+  const [hover, setHover] = useState<{ x: number; event: TimelineEvent } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const nearestAt = (clientX: number) => {
+    const rect = axis.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || filtered.length === 0) return null;
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const year = minYear + (x / rect.width) * span;
+    let best = filtered[0]!;
+    for (const e of filtered) if (Math.abs(e.year - year) < Math.abs(best.year - year)) best = e;
+    return { x: (x / rect.width) * 100, event: best };
+  };
+  const scrubTo = (clientX: number) => {
+    const hit = nearestAt(clientX);
+    if (hit && hit.event.slug !== selected?.slug) choose(hit.event);
+    return hit;
+  };
+  const onScrubDown = (ev: ReactPointerEvent<HTMLDivElement>) => {
+    if (ev.button !== 0) return;
+    const onDot = (ev.target as HTMLElement).closest('.tl-dot');
+    const startX = ev.clientX;
+    let moved = !onDot;
+    if (!onDot) scrubTo(ev.clientX);
+    setDragging(true);
+    const move = (e: PointerEvent) => {
+      if (!moved && Math.abs(e.clientX - startX) < 4) return;
+      moved = true;
+      e.preventDefault();
+      const hit = scrubTo(e.clientX);
+      if (hit) setHover(hit);
+    };
+    const up = () => {
+      setDragging(false);
+      setHover(null);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
   // Несколько событий одного года — отметки друг над другом.
   const stackOf = new Map<string, number>();
   const perYear = new Map<number, number>();
@@ -145,9 +189,20 @@ export function TimelinePage() {
 
           {/* Шкала: отметки событий по годам; выбранный период подсвечен. */}
           <div className="tl-axis-wrap">
-            <div ref={axis} className="tl-axis" role="group" aria-label={t('timeline.axis')} onKeyDown={onAxisKey}>
+            <div ref={axis} className={`tl-axis${dragging ? ' drag' : ''}`} role="group" aria-label={t('timeline.axis')} onKeyDown={onAxisKey}
+              onPointerDown={onScrubDown}
+              onPointerMove={(e) => { if (!dragging && e.pointerType === 'mouse') setHover(nearestAt(e.clientX)); }}
+              onPointerLeave={() => { if (!dragging) setHover(null); }}>
               <span className="tl-band" style={{ left: pos(from), width: `calc(${pos(Math.min(to + 1, maxYear))} - ${pos(from)})` }} aria-hidden="true" />
               <span className="tl-line" aria-hidden="true" />
+              {selected ? <span className="tl-played" style={{ width: pos(selected.year) }} aria-hidden="true" /> : null}
+              {hover ? <span className="tl-hover" style={{ left: `${hover.x}%` }} aria-hidden="true" /> : null}
+              {selected ? <span className="tl-thumb" style={{ left: pos(selected.year) }} aria-hidden="true" /> : null}
+              {hover ? (
+                <span className="tl-preview" style={{ left: pos(hover.event.year) }} aria-hidden="true">
+                  <b>{hover.event.year}</b> {hover.event.title}
+                </span>
+              ) : null}
               {all.map((e) => {
                 const inRange = filtered.includes(e);
                 const isSel = selected?.slug === e.slug;
