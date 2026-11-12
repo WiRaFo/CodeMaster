@@ -24,6 +24,7 @@ const TRANSLATION_TABLES = {
   collection: ['collection_translations', 'collection_id'],
   exhibition: ['exhibition_translations', 'exhibition_id'],
   exhibitionItem: ['exhibition_item_translations', 'item_id'],
+  asset: ['asset_translations', 'asset_id'],
 } as const;
 export type TranslationTable = keyof typeof TRANSLATION_TABLES;
 

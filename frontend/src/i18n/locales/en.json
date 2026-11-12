@@ -482,7 +482,9 @@
     "related": "More on this theme",
     "settlement": "Place",
     "persons": "People",
-    "events": "Timeline events"
+    "events": "Timeline events",
+    "photos_one": "Photo ({{count}})",
+    "photos_other": "Photos ({{count}})"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",

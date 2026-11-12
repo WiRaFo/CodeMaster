@@ -15,6 +15,7 @@ let moderator: Client;
 const SLUG = 'test-publication-admin';
 const ROLE = 'test-publication-writer';
 const COVER = 'test-publication-cover';
+const GALLERY = 'test-publication-gallery';
 
 beforeAll(async () => {
   t = await testApp();
@@ -26,7 +27,7 @@ beforeAll(async () => {
   moderator = await login(t.app, (await createStaff(t.db, 'moderator')).email, undefined, '10.0.12.3');
 });
 afterAll(async () => {
-  await t.db.publication.deleteMany({ where: { slug: { in: [SLUG, COVER] } } });
+  await t.db.publication.deleteMany({ where: { slug: { in: [SLUG, COVER, GALLERY] } } });
   await cleanupStaff(t.db);
   await t.db.role.deleteMany({ where: { code: ROLE } });
   await t.close();
@@ -169,5 +170,60 @@ describe('обложка публикации', () => {
     expect(removed.body['cover']).toBeNull();
     expect((await site(`/api/v1/history/${COVER}/cover`)).statusCode).toBe(404);
     expect(await t.db.auditLog.count({ where: { entityType: 'publication', entityId: id, action: { in: ['upload', 'delete'] } } })).toBe(2);
+  });
+});
+
+describe('фото внутри публикации', () => {
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
+  const upload = (client: Client, id: string, name: string) =>
+    t.app.inject({ method: 'POST', url: `/api/v1/admin/memory/publications/${id}/images`, headers: { cookie: client.cookie, 'x-csrf-token': client.csrf, 'content-type': 'image/png', 'x-filename': name }, payload: png });
+  const input = (published: boolean) => ({
+    slug: GALLERY, kind: 'photo_story', published, featured: false, dataOrigin: 'demo', sourceNote: '[Демо] Проверочный источник',
+    topics: [], settlements: [], personIds: [], eventIds: [], translations: { ru: { title: '[Демо] Фотоистория', bodyText: 'Текст фотоистории.' } },
+  });
+  type Img = { id: string; filename: string; antivirusStatus: string };
+  const sitePage = async () => (await site(`/api/v1/history/${GALLERY}?lang=en`)).json() as { images: Array<{ url: string; alt: string; caption: string | null; contentLang: string }> };
+
+  it('фото добавляются в конец, без описания не публикуются, на сайте — после антивируса и по порядку', async () => {
+    const created = await editor.request('POST', '/api/v1/admin/memory/publications', input(false));
+    const id = String(created.body['id']);
+    expect((await upload(writer, id, 'a.png')).statusCode).toBe(403);
+    await upload(editor, id, 'first.png');
+    const second = (await upload(editor, id, 'second.png')).json() as { images: Img[]; updatedAt: string };
+    expect(second.images.map((i) => [i.filename, i.antivirusStatus])).toEqual([['first.png', 'pending'], ['second.png', 'pending']]);
+    const [first, last] = second.images as [Img, Img];
+
+    const noPublish = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}`, input(true), { 'if-match': second.updatedAt });
+    expect(paths(noPublish.body)).toEqual(['images.0.altText']);
+    const badText = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}/images/${first.id}`, { translations: { kk: { altText: 'Сурет' } } });
+    expect(paths(badText.body)).toEqual(['translations.ru.altText']);
+    await editor.request('PUT', `/api/v1/admin/memory/publications/${id}/images/${first.id}`, { translations: { ru: { altText: 'Первое фото', caption: 'Подпись первого' } } });
+    const described = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}/images/${last.id}`, { translations: { ru: { altText: 'Второе фото', caption: '' } } });
+    const published = await editor.request('PUT', `/api/v1/admin/memory/publications/${id}`, input(true), { 'if-match': String(described.body['updatedAt']) });
+    expect(published.status).toBe(200);
+    expect((await sitePage()).images).toEqual([]);
+    expect((await site(`/api/v1/history/${GALLERY}/images/1`)).statusCode).toBe(404);
+
+    // Имитация проверки антивирусом.
+    const assets = await t.db.publicationImage.findMany({ where: { publicationId: id }, select: { assetId: true } });
+    await t.db.digitalAsset.updateMany({ where: { id: { in: assets.map((a) => a.assetId) } }, data: { antivirusStatus: 'clean' } });
+    expect((await sitePage()).images).toEqual([
+      { url: `/api/v1/history/${GALLERY}/images/1`, alt: 'Первое фото', caption: 'Подпись первого', contentLang: 'ru' },
+      { url: `/api/v1/history/${GALLERY}/images/2`, alt: 'Второе фото', caption: null, contentLang: 'ru' },
+    ]);
+    const image = await site(`/api/v1/history/${GALLERY}/images/2`);
+    expect(image.statusCode).toBe(200);
+    expect(image.headers['content-type']).toBe('image/png');
+    expect((await site(`/api/v1/history/${GALLERY}/images/3`)).statusCode).toBe(404);
+
+    expect((await editor.request('POST', `/api/v1/admin/memory/publications/${id}/images/${first.id}/move`, { direction: 'up' })).status).toBe(409);
+    expect((await editor.request('POST', `/api/v1/admin/memory/publications/${id}/images/${last.id}/move`, { direction: 'up' })).status).toBe(200);
+    expect((await sitePage()).images.map((i) => i.alt)).toEqual(['Второе фото', 'Первое фото']);
+
+    expect((await editor.request('DELETE', `/api/v1/admin/memory/publications/${id}/images/${last.id}`, {})).status).toBe(400);
+    const removed = await editor.request('DELETE', `/api/v1/admin/memory/publications/${id}/images/${last.id}`, { confirm: true });
+    expect((removed.body['images'] as Img[]).map((i) => i.filename)).toEqual(['first.png']);
+    expect((await sitePage()).images.map((i) => i.alt)).toEqual(['Первое фото']);
+    expect(await t.db.auditLog.count({ where: { entityType: 'publication', entityId: id, action: 'upload' } })).toBe(2);
   });
 });

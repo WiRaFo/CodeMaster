@@ -339,6 +339,8 @@ export interface PublicationDetail extends PublicationSummary {
   related: PublicationSummary[];
   persons: Array<{ slug: string; fullName: string; lifeYears: string | null }>;
   events: Array<{ slug: string; year: number; title: string }>;
+  /** Фото внутри публикации: только проверенные файлы. Старый API поле не отдаёт. */
+  images?: Array<{ url: string; alt: string; caption: string | null; contentLang: string | null }>;
 }
 
 export interface CalendarItem {

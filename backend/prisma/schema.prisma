@@ -944,12 +944,13 @@ model DigitalAsset {
   createdById      String?          @map("created_by_id") @db.Uuid
   deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
-  translations    AssetTranslation[]
-  derivatives     AssetDerivative[]
-  documentPages   DocumentAsset[]
-  branchPhotos    Branch[]           @relation("BranchPhoto")
-  exhibitionItems ExhibitionItem[]
-  galleryItems    GalleryItem[]
+  translations      AssetTranslation[]
+  derivatives       AssetDerivative[]
+  documentPages     DocumentAsset[]
+  branchPhotos      Branch[]           @relation("BranchPhoto")
+  exhibitionItems   ExhibitionItem[]
+  galleryItems      GalleryItem[]
+  publicationImages PublicationImage[]
 
   @@unique([storageBucket, storageKey])
   @@index([sha256])
@@ -1112,6 +1113,7 @@ model Publication {
   persons      PublicationPerson[]
   events       PublicationEvent[]
   settlements  PublicationSettlement[]
+  images       PublicationImage[]
 
   @@index([publicationStatus, publishedAt])
   @@map("publications")
@@ -1136,6 +1138,21 @@ model PublicationTranslation {
   @@id([publicationId, locale])
   @@index([searchVector], type: Gin)
   @@map("publication_translations")
+}
+
+/// Фото внутри публикации (фотоистория, F-149). Подпись и описание для незрячих — в asset_translations.
+model PublicationImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicationId String   @map("publication_id") @db.Uuid
+  assetId       String   @map("asset_id") @db.Uuid
+  sortOrder     Int      @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  publication Publication  @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  asset       DigitalAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([publicationId, sortOrder])
+  @@map("publication_images")
 }
 
 model PublicationCategory {

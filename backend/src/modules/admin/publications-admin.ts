@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient, PublicationStatus } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { PUBLICATION_KINDS, publicationInputSchema, type PublicationInput } from '@archive-vko/shared';
+import { PUBLICATION_KINDS, publicationImageInputSchema, publicationInputSchema, type PublicationInput } from '@archive-vko/shared';
 import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission, type Staff } from '../../http/staff.ts';
 import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
@@ -27,6 +27,10 @@ const select = {
   id: true, slug: true, kind: true, periodText: true, yearFrom: true, yearTo: true, sourceNote: true, authorship: true,
   documentId: true, isFeatured: true, publishedAt: true, publicationStatus: true, dataOrigin: true, sourceUrl: true, updatedAt: true,
   coverAssetId: true,
+  images: {
+    orderBy: { sortOrder: 'asc' },
+    select: { id: true, asset: { select: { id: true, originalFilename: true, mimeType: true, antivirusStatus: true, translations: { select: { locale: true, altText: true, caption: true } } } } },
+  },
   translations: { select: { locale: true, title: true, lead: true, bodyText: true, coverAlt: true } },
   categories: { select: { category: { select: { slug: true, kind: true } } } },
   settlements: { select: { settlement: { select: { slug: true } } } },
@@ -68,6 +72,10 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db, storag
       document: p.documentId ? { id: p.documentId, title: doc ? (ruFirst(doc.translations)?.title ?? null) : null, visible: publicDoc.length > 0 } : null,
       // Обложка видна на сайте только после проверки антивирусом (public_publication_covers_v).
       cover: cover ? { filename: cover.originalFilename, mimeType: cover.mimeType, antivirusStatus: cover.antivirusStatus } : null,
+      images: p.images.map((i) => ({
+        id: i.id, filename: i.asset.originalFilename, mimeType: i.asset.mimeType, antivirusStatus: i.asset.antivirusStatus,
+        translations: Object.fromEntries(i.asset.translations.map((t) => [t.locale, { altText: t.altText ?? '', caption: t.caption ?? '' }])),
+      })),
       topics: p.categories.filter((c) => c.category.kind === 'history_topic').map((c) => c.category.slug),
       settlements: p.settlements.map((s) => s.settlement.slug),
       personIds: p.persons.map((x) => x.personId),
@@ -205,6 +213,11 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db, storag
     requireWrite(staff, before.publicationStatus, input);
     // Опубликованная обложка должна быть описана для незрячих хотя бы по-русски.
     if (input.published && before.coverAssetId && !input.translations.ru?.coverAlt) throw invalid(['translations', 'ru', 'coverAlt'], 'Cover description is required');
+    // Каждое фото опубликованной публикации тоже должно быть описано по-русски.
+    if (input.published) {
+      const undescribed = before.images.findIndex((i) => !i.asset.translations.some((t) => t.locale === 'ru' && t.altText));
+      if (undescribed >= 0) throw invalid(['images', undescribed, 'altText'], 'Image description is required');
+    }
     const refs = await resolveRefs(input);
     if (await slugTaken(input.slug, id)) throw new ApiError(409, 'CONFLICT', 'Slug is already used');
     return out(await db.$transaction((tx) => save(tx, before, input, refs, staff.session.userId, request)));
@@ -222,41 +235,58 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db, storag
     return reply.status(204).send();
   });
 
+  /** Файл из тела запроса: проверка сигнатуры, безопасное имя, запись в закрытый бакет мастер-копий. */
+  async function storeUpload(request: FastifyRequest, publicationId: string) {
+    const data = request.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new ApiError(400, 'VALIDATION_FAILED', 'File is required', [{ path: ['file'], code: 'required' }]);
+    const mime = sniffImage(data);
+    if (!mime) throw new ApiError(415, 'VALIDATION_FAILED', 'Only JPEG, PNG and WebP images are accepted', [{ path: ['file'], code: 'unsupported_type' }]);
+    const rawName = request.headers['x-filename'];
+    const filename = (typeof rawName === 'string' ? decodeURIComponent(rawName) : 'image').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(0, 200) || 'image';
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mime];
+    const key = `publications/${publicationId}/${randomUUID()}.${ext}`;
+    await storage.write(MASTER_BUCKET, key, data);
+    return { data, mime, filename, key };
+  }
+
+  /** Файл ждёт антивируса (pending): до проверки сайт его не показывает. */
+  const createAsset = (tx: Tx, file: Awaited<ReturnType<typeof storeUpload>>, owner: Row, userId: string) =>
+    tx.digitalAsset.create({
+      data: {
+        kind: 'image', storageBucket: MASTER_BUCKET, storageKey: file.key, originalFilename: file.filename, mimeType: file.mime,
+        sizeBytes: BigInt(file.data.length), sha256: createHash('sha256').update(file.data).digest('hex'), sourceNote: owner.sourceNote,
+        accessLevel: 'open', dataOrigin: owner.dataOrigin, processingStatus: 'ready', antivirusStatus: 'pending', createdById: userId,
+      },
+    });
+
+  /** Права на файлы публикации: правка и загрузка; у опубликованной — ещё публикация (изменение сразу на сайте). */
+  function requireFileWrite(request: FastifyRequest, before: Row, upload: boolean) {
+    const staff = requirePermission(request, READ);
+    if (upload && !hasGrant(staff.grants, 'assets:upload')) throw new ApiError(403, 'FORBIDDEN', 'Permission assets:upload required');
+    if (before.publicationStatus === 'published' && !staff.grants.global.has(PUBLISH)) throw new ApiError(403, 'FORBIDDEN', `Permission ${PUBLISH} required`);
+    return staff;
+  }
+
   /**
    * Обложка публикации: тело запроса — сам файл (JPEG, PNG, WebP), тип проверяется по сигнатуре.
    * Нужны права правки и загрузки файлов; у опубликованной публикации — ещё право публикации.
    * Файл ложится в закрытый бакет со статусом «ожидает проверки антивирусом» и на сайте не виден до проверки.
    */
   app.post('/admin/memory/publications/:id/cover', async (request, reply) => {
-    const staff = requirePermission(request, READ);
-    if (!hasGrant(staff.grants, 'assets:upload')) throw new ApiError(403, 'FORBIDDEN', 'Permission assets:upload required');
+    requirePermission(request, READ); // до разбора адреса: без прав — сразу 403
     const { id } = ids.parse(request.params);
     const before = await load(id);
-    if (before.publicationStatus === 'published' && !staff.grants.global.has(PUBLISH)) throw new ApiError(403, 'FORBIDDEN', `Permission ${PUBLISH} required`);
-    const data = request.body;
-    if (!Buffer.isBuffer(data) || data.length === 0) throw new ApiError(400, 'VALIDATION_FAILED', 'File is required', [{ path: ['file'], code: 'required' }]);
-    const mime = sniffImage(data);
-    if (!mime) throw new ApiError(415, 'VALIDATION_FAILED', 'Only JPEG, PNG and WebP images are accepted', [{ path: ['file'], code: 'unsupported_type' }]);
-    const rawName = request.headers['x-filename'];
-    const filename = (typeof rawName === 'string' ? decodeURIComponent(rawName) : 'cover').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(0, 200) || 'cover';
-    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mime];
-    const key = `publications/${id}/${randomUUID()}.${ext}`;
-    await storage.write(MASTER_BUCKET, key, data);
+    const staff = requireFileWrite(request, before, true);
+    const file = await storeUpload(request, id);
     const row = await db.$transaction(async (tx) => {
-      const asset = await tx.digitalAsset.create({
-        data: {
-          kind: 'image', storageBucket: MASTER_BUCKET, storageKey: key, originalFilename: filename, mimeType: mime,
-          sizeBytes: BigInt(data.length), sha256: createHash('sha256').update(data).digest('hex'), sourceNote: before.sourceNote,
-          accessLevel: 'open', dataOrigin: before.dataOrigin, processingStatus: 'ready', antivirusStatus: 'pending', createdById: staff.session.userId,
-        },
-      });
+      const asset = await createAsset(tx, file, before, staff.session.userId);
       // Прежняя обложка больше не нужна: мягкое удаление файла.
       if (before.coverAssetId) await tx.digitalAsset.update({ where: { id: before.coverAssetId }, data: { deletedAt: new Date() } });
       await tx.publication.update({ where: { id }, data: { coverAssetId: asset.id, updatedById: staff.session.userId } });
       await writeAudit(tx, request, {
         userId: staff.session.userId, action: 'upload', entityType: 'publication', entityId: id,
-        summary: `Загружена обложка публикации «${titleOf(before)}» («${filename}», ${mime})`,
-        changes: { assetId: asset.id, replaced: before.coverAssetId, sizeBytes: data.length },
+        summary: `Загружена обложка публикации «${titleOf(before)}» («${file.filename}», ${file.mime})`,
+        changes: { assetId: asset.id, replaced: before.coverAssetId, sizeBytes: file.data.length },
       });
       return tx.publication.findUniqueOrThrow({ where: { id }, select });
     });
@@ -264,10 +294,10 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db, storag
   });
 
   app.delete('/admin/memory/publications/:id/cover', async (request) => {
-    const staff = requirePermission(request, READ);
+    requirePermission(request, READ);
     const { id } = ids.parse(request.params);
     const before = await load(id);
-    if (before.publicationStatus === 'published' && !staff.grants.global.has(PUBLISH)) throw new ApiError(403, 'FORBIDDEN', `Permission ${PUBLISH} required`);
+    const staff = requireFileWrite(request, before, false);
     if (!before.coverAssetId) throw notFound();
     if (!confirmSchema.parse(request.body ?? {}).confirm) throw new ApiError(400, 'CONFIRMATION_REQUIRED', 'Deletion must be confirmed');
     const coverId = before.coverAssetId;
@@ -286,6 +316,120 @@ export async function publicationsAdminRoutes(app: FastifyInstance, { db, storag
     const { id } = ids.parse(request.params);
     const { coverAssetId } = await load(id);
     const asset = coverAssetId ? await db.digitalAsset.findFirst({ where: { id: coverAssetId, deletedAt: null }, select: { storageBucket: true, storageKey: true, mimeType: true } }) : null;
+    const body = asset ? await storage.read(asset.storageBucket, asset.storageKey) : null;
+    if (!asset || !body) throw notFound();
+    return reply
+      .header('Content-Type', asset.mimeType)
+      .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox")
+      .header('Cache-Control', 'no-store')
+      .send(body);
+  });
+
+  /* ---------- Фото внутри публикации (фотоистория) ---------- */
+  const imageIds = z.object({ id: z.uuid(), imageId: z.uuid() });
+  async function loadImage(request: FastifyRequest) {
+    const { id, imageId } = imageIds.parse(request.params);
+    const before = await load(id);
+    const image = before.images.find((i) => i.id === imageId);
+    if (!image) throw notFound();
+    return { id, before, image };
+  }
+  const imageLabel = (image: Row['images'][number]) => image.asset.originalFilename;
+
+  /** Новое фото встаёт в конец. Подпись и описание задаются отдельно; без описания опубликовать нельзя. */
+  app.post('/admin/memory/publications/:id/images', async (request, reply) => {
+    requirePermission(request, READ);
+    const { id } = ids.parse(request.params);
+    const before = await load(id);
+    const staff = requireFileWrite(request, before, true);
+    if (before.images.length >= 50) throw new ApiError(400, 'VALIDATION_FAILED', 'Too many images', [{ path: ['images'], code: 'too_big' }]);
+    const file = await storeUpload(request, id);
+    const row = await db.$transaction(async (tx) => {
+      const asset = await createAsset(tx, file, before, staff.session.userId);
+      const last = await tx.publicationImage.aggregate({ where: { publicationId: id }, _max: { sortOrder: true } });
+      await tx.publicationImage.create({ data: { publicationId: id, assetId: asset.id, sortOrder: (last._max.sortOrder ?? 0) + 1 } });
+      await tx.publication.update({ where: { id }, data: { updatedById: staff.session.userId } });
+      await writeAudit(tx, request, {
+        userId: staff.session.userId, action: 'upload', entityType: 'publication', entityId: id,
+        summary: `Добавлено фото в публикацию «${titleOf(before)}» («${file.filename}», ${file.mime})`,
+        changes: { assetId: asset.id, sizeBytes: file.data.length },
+      });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return reply.status(201).send(await out(row));
+  });
+
+  app.put('/admin/memory/publications/:id/images/:imageId', async (request) => {
+    requirePermission(request, READ);
+    const { id, before, image } = await loadImage(request);
+    const staff = requireFileWrite(request, before, false);
+    const input = publicationImageInputSchema.parse(request.body);
+    const row = await db.$transaction(async (tx) => {
+      const assetId = image.asset.id;
+      await syncTranslations(
+        input.translations,
+        (locale, t) => tx.assetTranslation.upsert({
+          where: { assetId_locale: { assetId, locale } },
+          update: { altText: t.altText, caption: t.caption, translationStatus: 'reviewed' },
+          create: { assetId, locale, altText: t.altText, caption: t.caption, translationStatus: 'reviewed' },
+        }),
+        (locale) => tx.assetTranslation.deleteMany({ where: { assetId, locale } }),
+      );
+      await tx.publication.update({ where: { id }, data: { updatedById: staff.session.userId } });
+      await writeAudit(tx, request, {
+        userId: staff.session.userId, action: 'update', entityType: 'publication', entityId: id,
+        summary: `Изменена подпись фото «${imageLabel(image)}» в публикации «${titleOf(before)}»`,
+        changes: { assetId, languages: Object.keys(input.translations) },
+      });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return out(row);
+  });
+
+  /** Перестановка с соседом. Уникальный порядок в базе: через временное значение. */
+  app.post('/admin/memory/publications/:id/images/:imageId/move', async (request) => {
+    requirePermission(request, READ);
+    const { id, before, image } = await loadImage(request);
+    const staff = requireFileWrite(request, before, false);
+    const { direction } = z.object({ direction: z.enum(['up', 'down']) }).parse(request.body);
+    const index = before.images.findIndex((i) => i.id === image.id);
+    const neighbour = before.images[direction === 'up' ? index - 1 : index + 1];
+    if (!neighbour) throw new ApiError(409, 'CONFLICT', 'Image is already at the edge');
+    const row = await db.$transaction(async (tx) => {
+      const [a, b] = await Promise.all([
+        tx.publicationImage.findUniqueOrThrow({ where: { id: image.id }, select: { sortOrder: true } }),
+        tx.publicationImage.findUniqueOrThrow({ where: { id: neighbour.id }, select: { sortOrder: true } }),
+      ]);
+      await tx.publicationImage.update({ where: { id: image.id }, data: { sortOrder: -1 } });
+      await tx.publicationImage.update({ where: { id: neighbour.id }, data: { sortOrder: a.sortOrder } });
+      await tx.publicationImage.update({ where: { id: image.id }, data: { sortOrder: b.sortOrder } });
+      await tx.publication.update({ where: { id }, data: { updatedById: staff.session.userId } });
+      await writeAudit(tx, request, { userId: staff.session.userId, action: 'update', entityType: 'publication', entityId: id, summary: `Изменён порядок фото в публикации «${titleOf(before)}»` });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return out(row);
+  });
+
+  app.delete('/admin/memory/publications/:id/images/:imageId', async (request) => {
+    requirePermission(request, READ);
+    const { id, before, image } = await loadImage(request);
+    const staff = requireFileWrite(request, before, false);
+    if (!confirmSchema.parse(request.body ?? {}).confirm) throw new ApiError(400, 'CONFIRMATION_REQUIRED', 'Deletion must be confirmed');
+    const row = await db.$transaction(async (tx) => {
+      await tx.publicationImage.delete({ where: { id: image.id } });
+      await tx.digitalAsset.update({ where: { id: image.asset.id }, data: { deletedAt: new Date() } });
+      await tx.publication.update({ where: { id }, data: { updatedById: staff.session.userId } });
+      await writeAudit(tx, request, { userId: staff.session.userId, action: 'delete', entityType: 'publication', entityId: id, summary: `Удалено фото «${imageLabel(image)}» из публикации «${titleOf(before)}»`, changes: { assetId: image.asset.id } });
+      return tx.publication.findUniqueOrThrow({ where: { id }, select });
+    });
+    return out(row);
+  });
+
+  /** Предпросмотр фото для сотрудников, в том числе до проверки антивирусом. */
+  app.get('/admin/memory/publications/:id/images/:imageId', async (request, reply) => {
+    requirePermission(request, READ);
+    const { image } = await loadImage(request);
+    const asset = await db.digitalAsset.findFirst({ where: { id: image.asset.id, deletedAt: null }, select: { storageBucket: true, storageKey: true, mimeType: true } });
     const body = asset ? await storage.read(asset.storageBucket, asset.storageKey) : null;
     if (!asset || !body) throw notFound();
     return reply

@@ -155,6 +155,21 @@ export function PublicationPage() {
         {p.lead ? <p className="mb-4 text-lg">{p.lead}</p> : null}
         {(p.bodyText ?? '').split(/\n{2,}/).filter(Boolean).map((para, i) => <p key={i} className="mb-4 whitespace-pre-line">{para}</p>)}
       </article>
+      {p.images && p.images.length > 0 ? (
+        <section aria-labelledby="photos-h" className="mb-8">
+          <h2 id="photos-h" className="mb-3 text-xl font-semibold">{t('history.photos', { count: p.images.length })}</h2>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {p.images.map((img) => (
+              <li key={img.url}>
+                <figure lang={img.contentLang ?? undefined}>
+                  <img src={img.url} alt={img.alt} loading="lazy" className="w-full rounded-md border border-border" />
+                  {img.caption ? <figcaption className="mt-1 text-sm">{img.caption}</figcaption> : null}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <dl className="mb-8 max-w-[75ch]">
         {p.topics.length > 0 ? (
           <div className="border-b border-border py-2"><dt className="font-semibold">{t('history.topic')}</dt>

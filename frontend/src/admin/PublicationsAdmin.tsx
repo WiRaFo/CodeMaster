@@ -23,11 +23,16 @@ const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 interface PubText { title: string; lead: string; bodyText: string; coverAlt: string }
 interface Option { slug: string; name: string }
+interface ImageText { altText: string; caption: string }
+interface ImageRow { id: string; filename: string; mimeType: string; antivirusStatus: string; translations: Partial<Record<AdminLocale, ImageText>> }
+const emptyImageText = (): ImageText => ({ altText: '', caption: '' });
+
 interface PubRow {
   id: string; slug: string; kind: string; periodText: string | null; yearFrom: number | null; yearTo: number | null;
   published: boolean; featured: boolean; publishedAt: string | null; dataOrigin: string; sourceNote: string | null; authorship: string | null; sourceUrl: string | null;
   document: { id: string; title: string | null; visible: boolean } | null;
   cover: { filename: string; mimeType: string; antivirusStatus: string } | null;
+  images: ImageRow[];
   topics: string[]; settlements: string[]; personIds: string[]; eventIds: string[];
   updatedAt: string; title: string; translations: Partial<Record<AdminLocale, PubText>>;
 }
@@ -87,8 +92,11 @@ export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: bool
   const [coverError, setCoverError] = useState<string | null>(null);
   const [confirmCover, setConfirmCover] = useState(false);
   /** Загрузка и удаление обложки меняют запись: дальше правка идёт с новой версией (If-Match). */
+  const [imageTexts, setImageTexts] = useState<Record<string, Texts<ImageText>>>({});
+  const [deletingImage, setDeletingImage] = useState<ImageRow | null>(null);
   const coverChanged = (row: PubRow, message: string) => {
     if (editing) setEditing({ ...editing, updatedAt: row.updatedAt, current: row });
+    setImageTexts((prev) => Object.fromEntries(row.images.map((i) => [i.id, prev[i.id] ?? byLocale(emptyImageText, i.translations)])));
     page.setStatus(message);
     list.reload();
   };
@@ -119,6 +127,7 @@ export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: bool
     page.setStatus(null);
     page.setError(null);
     setCoverError(null);
+    setImageTexts(Object.fromEntries((row?.images ?? []).map((i) => [i.id, byLocale(emptyImageText, i.translations)])));
     setEditing({ id: row?.id ?? null, updatedAt: row?.updatedAt ?? null, current: row, form: formOf(row) });
   };
   const submit = async (event: FormEvent) => {
@@ -133,6 +142,31 @@ export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: bool
     };
     if (await page.save(editing.id, editing.updatedAt, body, f.published ? 'Публикация сохранена и видна на сайте.' : 'Публикация сохранена как черновик.')) setEditing(null);
   };
+  const imageCall = async (call: () => Promise<PubRow>, message: string) => {
+    setCoverError(null);
+    setCoverBusy(true);
+    try {
+      coverChanged(await call(), message);
+    } catch (e) {
+      setCoverError(errorText(e));
+    } finally {
+      setCoverBusy(false);
+    }
+  };
+  const base = editing?.id ? `/admin/memory/publications/${editing.id}/images` : '';
+  const uploadImages = async (files: File[]) => {
+    for (const file of files) await imageCall(() => adminUpload<PubRow>(base, file), `Фото «${file.name}» добавлено.`);
+  };
+  const saveImageText = (img: ImageRow) => {
+    const texts = imageTexts[img.id];
+    if (!texts) return;
+    void imageCall(() => adminRequest<PubRow>('PUT', `${base}/${img.id}`, { translations: filled(texts, 'altText') }), `Подпись фото «${img.filename}» сохранена.`);
+  };
+  const setImageText = (id: string, l: AdminLocale, k: keyof ImageText, v: string) =>
+    setImageTexts((prev) => {
+      const cur = prev[id] ?? byLocale(emptyImageText);
+      return { ...prev, [id]: { ...cur, [l]: { ...cur[l], [k]: v } } };
+    });
   // Опубликованное правит только сотрудник с правом публикации.
   const canEdit = (row: PubRow) => canWrite && (canPublish || !row.published);
   const doc = editing?.current?.document;
@@ -190,10 +224,51 @@ export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: bool
                     {cover ? <button type="button" className="btn-secondary" onClick={() => setConfirmCover(true)}>Удалить обложку</button> : null}
                   </div>
                 ) : <p>Загружать файлы может сотрудник с правом загрузки.</p>}
-                {coverError ? <p role="alert" className="text-danger">{coverError}</p> : null}
               </>
             )}
           </fieldset>
+          <fieldset className="flex flex-col gap-3">
+            <legend className="font-semibold">{`Фото публикации (${editing.current?.images.length ?? 0})`}</legend>
+            {!editing.id ? <p>Фото можно добавить после первого сохранения.</p> : (
+              <>
+                <p>Фото показываются на сайте по порядку после проверки антивирусом. Описание для незрячих на русском обязательно.</p>
+                {(editing.current?.images ?? []).length > 0 ? (
+                  <ol className="flex flex-col gap-4">
+                    {(editing.current?.images ?? []).map((img, n, all) => (
+                      <li key={img.id} className="flex flex-col gap-2 border-b border-border pb-3">
+                        <div className="flex flex-wrap items-start gap-3">
+                          <img src={`/api/v1${base}/${img.id}`} alt={`Предпросмотр фото: ${img.filename}`} className="max-h-32 w-fit rounded border border-border" />
+                          <p className="min-w-0 grow">{`${n + 1}. «${img.filename}»: ${ANTIVIRUS[img.antivirusStatus] ?? img.antivirusStatus}.`}</p>
+                        </div>
+                        {ADMIN_LOCALES.map((l) => (
+                          <div key={l.code} className="grid gap-2 sm:grid-cols-2">
+                            <Field id={`img-${img.id}-${l.code}-alt`} label={`Описание для незрячих (${l.label})`}>
+                              <input id={`img-${img.id}-${l.code}-alt`} className="input" lang={l.code} value={imageTexts[img.id]?.[l.code].altText ?? ''} onChange={(e) => setImageText(img.id, l.code, 'altText', e.target.value)} />
+                            </Field>
+                            <Field id={`img-${img.id}-${l.code}-cap`} label={`Подпись (${l.label})`}>
+                              <input id={`img-${img.id}-${l.code}-cap`} className="input" lang={l.code} value={imageTexts[img.id]?.[l.code].caption ?? ''} onChange={(e) => setImageText(img.id, l.code, 'caption', e.target.value)} />
+                            </Field>
+                          </div>
+                        ))}
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" className="btn-secondary" disabled={coverBusy} onClick={() => saveImageText(img)}>{`Сохранить подпись фото ${n + 1}`}</button>
+                          <button type="button" className="btn-secondary" disabled={coverBusy || n === 0} aria-label={`Выше: фото ${n + 1}`} onClick={() => void imageCall(() => adminRequest<PubRow>('POST', `${base}/${img.id}/move`, { direction: 'up' }), 'Порядок фото изменён.')}>Выше</button>
+                          <button type="button" className="btn-secondary" disabled={coverBusy || n === all.length - 1} aria-label={`Ниже: фото ${n + 1}`} onClick={() => void imageCall(() => adminRequest<PubRow>('POST', `${base}/${img.id}/move`, { direction: 'down' }), 'Порядок фото изменён.')}>Ниже</button>
+                          <button type="button" className="btn-secondary" disabled={coverBusy} aria-label={`Удалить: фото ${n + 1}`} onClick={() => setDeletingImage(img)}>Удалить</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : <p>Фото пока нет.</p>}
+                {canUpload ? (
+                  <Field id="pu-images" label="Добавить фото" hint="Можно выбрать несколько файлов JPEG, PNG или WebP.">
+                    <input id="pu-images" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-describedby="pu-images-hint" disabled={coverBusy} onChange={(e) => { void uploadImages([...(e.target.files ?? [])]); e.target.value = ''; }} />
+                  </Field>
+                ) : null}
+              </>
+            )}
+          </fieldset>
+          {coverError ? <p role="alert" className="text-danger">{coverError}</p> : null}
           <Checklist legend="Тематики" options={list.data.topics.map((x) => ({ value: x.slug, label: x.name }))} value={editing.form.topics} onChange={(topics) => set({ topics })} />
           <Checklist legend="Населённые пункты" options={list.data.settlements.map((x) => ({ value: x.slug, label: x.name }))} value={editing.form.settlements} onChange={(settlements) => set({ settlements })} />
           <Checklist
@@ -247,6 +322,19 @@ export function MemoryPublicationsPage({ canWrite, canUpload }: { canWrite: bool
         </div>
       ) : null}
       {page.dialog}
+      <ConfirmDialog
+        open={deletingImage !== null}
+        title="Удалить фото?"
+        description={`Фото «${deletingImage?.filename ?? ''}» исчезнет из публикации и с сайта.`}
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => {
+          const img = deletingImage;
+          setDeletingImage(null);
+          if (img) void imageCall(() => adminRequest<PubRow>('DELETE', `${base}/${img.id}`, { confirm: true }), 'Фото удалено.');
+        }}
+        onCancel={() => setDeletingImage(null)}
+      />
       <ConfirmDialog
         open={confirmCover}
         title="Удалить обложку?"

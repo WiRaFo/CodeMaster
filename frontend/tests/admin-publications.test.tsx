@@ -14,10 +14,12 @@ const PERSON = { id: PERSON_ID, slug: 'burov-pavel', birthYear: 1902, deathYear:
 const PUB = {
   id: 'p1', slug: 'demo-reading-room-visit', kind: 'article', periodText: null, yearFrom: null, yearTo: null, published: true, featured: false,
   publishedAt: '2026-11-09T00:00:00.000Z', dataOrigin: 'demo', sourceNote: '[Демо] Источник', authorship: null, sourceUrl: null,
-  document: { id: DOC_ID, title: 'Закрытый протокол', visible: false }, cover: null, topics: [], settlements: ['ust-kamenogorsk'], personIds: [], eventIds: [],
+  document: { id: DOC_ID, title: 'Закрытый протокол', visible: false }, cover: null, images: [], topics: [], settlements: ['ust-kamenogorsk'], personIds: [], eventIds: [],
   updatedAt: '2026-11-10T10:00:00.000Z', title: '[Демо] Визит в читальный зал',
   translations: { ru: { title: '[Демо] Визит в читальный зал', lead: '', bodyText: 'Первый абзац текста.' } },
 };
+
+const IMG = { id: 'i1', filename: 'zal.png', mimeType: 'image/png', antivirusStatus: 'pending', translations: {} };
 
 type Call = { key: string; body: unknown; headers: Record<string, string> };
 let calls: Call[];
@@ -43,6 +45,8 @@ beforeEach(() => {
     if (key === 'GET /api/v1/admin/memory/events') return ok({ items: [EVENT] });
     if (key === 'GET /api/v1/admin/memory/persons') return ok({ items: [PERSON] });
     if (key === 'PUT /api/v1/admin/memory/publications/p1') return ok(PUB);
+    if (key === 'POST /api/v1/admin/memory/publications/p1/images') return ok({ ...PUB, updatedAt: '2026-11-10T12:00:00.000Z', images: [IMG] }, 201);
+    if (key === 'PUT /api/v1/admin/memory/publications/p1/images/i1') return ok({ ...PUB, updatedAt: '2026-11-10T12:30:00.000Z', images: [{ ...IMG, translations: { ru: { altText: 'Читатели в зале', caption: '' } } }] });
     if (key === 'POST /api/v1/admin/memory/publications/p1/cover') return ok({ ...PUB, updatedAt: '2026-11-10T11:00:00.000Z', cover: { filename: 'cover.png', mimeType: 'image/png', antivirusStatus: 'pending' } }, 201);
     if (key === 'POST /api/v1/admin/memory/publications') return ok(PUB, 201);
     return ok({ error: { code: 'NOT_FOUND' } }, 404);
@@ -100,5 +104,23 @@ describe('публикации «Цифровой истории» в панел
     const put = calls.find((c) => c.key === 'PUT /api/v1/admin/memory/publications/p1');
     expect(put?.headers['if-match']).toBe('2026-11-10T11:00:00.000Z');
     expect(put?.body).toMatchObject({ translations: { ru: { coverAlt: 'Читальный зал' } } });
+  });
+
+  it('фото публикации: добавление, описание по-русски отправляется только заполненными языками', async () => {
+    const user = userEvent.setup();
+    renderAt('/admin/memory/publications');
+    await user.click(await screen.findByRole('button', { name: 'Изменить: [Демо] Визит в читальный зал' }));
+    const form = screen.getByRole('form', { name: 'Правка публикации' });
+    await user.upload(within(form).getByLabelText('Добавить фото'), new File([new Uint8Array([137, 80, 78, 71])], 'zal.png', { type: 'image/png' }));
+    expect(await within(form).findByRole('img', { name: 'Предпросмотр фото: zal.png' })).toBeInTheDocument();
+    expect(within(form).getByText(/1\. «zal\.png»: ожидает проверки антивирусом/)).toBeInTheDocument();
+    await user.type(within(form).getByLabelText('Описание для незрячих (Русский)'), 'Читатели в зале');
+    await user.click(within(form).getByRole('button', { name: 'Сохранить подпись фото 1' }));
+    expect(await screen.findByText('Подпись фото «zal.png» сохранена.')).toBeInTheDocument();
+    const put = calls.find((c) => c.key === 'PUT /api/v1/admin/memory/publications/p1/images/i1');
+    expect(put?.body).toEqual({ translations: { ru: { altText: 'Читатели в зале', caption: '' } } });
+    await user.click(within(form).getByRole('button', { name: 'Сохранить' }));
+    await screen.findByText('Публикация сохранена и видна на сайте.');
+    expect(calls.find((c) => c.key === 'PUT /api/v1/admin/memory/publications/p1')?.headers['if-match']).toBe('2026-11-10T12:30:00.000Z');
   });
 });
