@@ -202,7 +202,7 @@ function CatalogBlock() {
                   <div className="drawer-top" aria-hidden="true">
                     <span className="bg-white" /><span className="bg-[var(--tint)]" /><span className="bg-[var(--gold)]" /><span className="bg-white" /><span className="bg-[var(--sky)]" />
                   </div>
-                  <div className="drawer-side bg-[var(--line2)]" aria-hidden="true" />
+                  <div className="drawer-side" aria-hidden="true" />
                   <div className="drawer-face">
                     <span className="mono drawer-code">{t(`home.cipher.${key}.code`)}</span>
                     <span className="flex min-w-0 flex-1 flex-col">

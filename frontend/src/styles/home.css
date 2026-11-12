@@ -18,7 +18,7 @@
 .drawer{position:relative;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
 .drawer:hover,.drawer:focus-visible{transform:translateZ(100px)}
 .drawer-top{position:absolute;left:10px;right:10px;top:0;height:100px;transform-origin:top center;transform:rotateX(-90deg)}
-.drawer-side{position:absolute;top:0;bottom:0;right:0;width:100px;transform-origin:right center;transform:rotateY(-90deg)}
+.drawer-side{position:absolute;top:8px;bottom:8px;right:0;width:100px;transform-origin:right center;transform:rotateY(-90deg);background:linear-gradient(90deg,#4a6596,#9fb6dd)}
 .cab-auto .drawer:nth-of-type(2){animation:peek 9s 1s ease-in-out infinite}
 .cab-auto .drawer:nth-of-type(4){animation:peek 9s 5s ease-in-out infinite}
 .cab-scene:hover .drawer,.cab-scene:focus-within .drawer{animation:none}
