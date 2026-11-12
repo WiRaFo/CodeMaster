@@ -39,6 +39,7 @@ export function HomePage() {
     <>
       <Hero />
       <QuickLinks />
+      {home.status === 'ready' && home.data.news.length > 0 ? <NewsBlock data={home.data} lang={lang} /> : null}
       <CatalogBlock />
       <UsefulLinks />
       <Manuscript />
@@ -441,7 +442,6 @@ function HomeBlocks({ data, lang }: { data: HomeData; lang: string }) {
       <div className="orn-band drift h-10 opacity-90" aria-hidden="true" />
       <div className="wrap home-dates pt-12"><MonthDates /></div>
       {data.exhibitions.length > 0 ? <ExhibitionsBlock data={data} lang={lang} /> : null}
-      {data.news.length > 0 ? <NewsBlock data={data} lang={lang} /> : null}
     </>
   );
 }
