@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate deploy",
+    "db:migrate": "prisma migrate deploy && prisma generate",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seeds/index.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && npm run db:seed",

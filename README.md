@@ -14,13 +14,14 @@
 | [docs/api-design.md](docs/api-design.md) | Карта REST API |
 | [docs/accessibility.md](docs/accessibility.md) | Архитектура доступности (WCAG 2.2 AA) |
 | [docs/development-roadmap.md](docs/development-roadmap.md) | План этапов |
+| [docs/handoff.md](docs/handoff.md) | Состояние проекта и инструкции для следующего разработчика или агента |
 
 ## Структура
 
 ```
 packages/shared   общие типы, статусы согласования, разбор архивного шифра
 backend           Fastify + Prisma: схема БД, миграции, сиды (ЭТАП 1), публичный API каталога и филиалов (ЭТАП 2)
-frontend          React + Vite: каркас, KZ/RU/EN, темы, панель доступности (ЭТАП 3)
+frontend          React + Vite: каркас, KZ/RU/EN, темы, панель доступности (ЭТАП 3), главная, выдача каталога, новости (ЭТАП 4)
 infrastructure    Docker, Nginx, скрипты
 docs              проектная документация
 ```
@@ -33,10 +34,12 @@ docs              проектная документация
 cp .env.example backend/.env      # задайте свой SEED_ADMIN_PASSWORD (не короче 12 символов)
 docker compose up -d db           # PostgreSQL 16 + pg_trgm, citext, unaccent, vector
 npm install
-npm run db:migrate                # prisma migrate deploy
+npm run db:migrate                # prisma migrate deploy + prisma generate
 npm run db:seed                   # справочники + наборы из SEED_SETS
 npm run check                     # typecheck + тесты
 ```
+
+Если npm 11 предупреждает про `install-scripts` (скрипты пакетов не запущены), разрешите их: `npm install-scripts approve @prisma/client @prisma/engines prisma @tailwindcss/oxide argon2 esbuild fsevents && npm rebuild`. На macOS перед `docker compose` должен быть запущен Docker Desktop.
 
 Тесты backend создают отдельную временную базу на сервере из `TEST_DATABASE_URL` и удаляют её после прогона.
 

@@ -2,14 +2,10 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAIN_BRANCH, renderAt } from './render.tsx';
+import { MAIN_BRANCH, apiMock, renderAt } from './render.tsx';
 
 beforeEach(() => {
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-    const url = String(input);
-    if (url.startsWith('/api/v1/branches/main')) return new Response(JSON.stringify(MAIN_BRANCH), { status: 200 });
-    return new Response('{}', { status: 404 });
-  });
+  vi.spyOn(globalThis, 'fetch').mockImplementation(apiMock());
 });
 
 async function axeViolations(container: HTMLElement) {
@@ -26,7 +22,7 @@ describe('каркас страницы', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
-    expect(screen.getByRole('search')).toBeInTheDocument();
+    expect(screen.getByRole('search', { name: 'Поиск по сайту' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Основные разделы' })).toBeInTheDocument();
     await waitFor(() => expect(document.documentElement.lang).toBe('ru'));
     expect(document.title).toBe('Государственный архив Восточно-Казахстанской области — Госархив ВКО');
@@ -104,7 +100,8 @@ describe('каркас страницы', () => {
   it.each(['/kk', '/ru/accessibility', '/en/catalog', '/ru/nonexistent'])('axe без нарушений: %s', async (path) => {
     const { container } = renderAt(path);
     await screen.findByRole('heading', { level: 1 });
-    await screen.findByText(MAIN_BRANCH.address);
+    await within(screen.getByRole('contentinfo')).findByText(MAIN_BRANCH.address);
+    await waitFor(() => expect(container.querySelectorAll('[data-load-state="loading"]')).toHaveLength(0));
     expect(await axeViolations(container)).toEqual([]);
   });
 });

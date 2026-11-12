@@ -5,7 +5,9 @@
     "tagline": "The digital memory of East Kazakhstan",
     "homeLink": "State Archive of EKR — home page"
   },
-  "skip": { "toMain": "Skip to main content" },
+  "skip": {
+    "toMain": "Skip to main content"
+  },
   "nav": {
     "label": "Main sections",
     "home": "Home",
@@ -88,14 +90,40 @@
   },
   "home": {
     "intro": "Documents, fonds and history of East Kazakhstan Region: e-catalogue search, online exhibitions and information for visitors.",
-    "sectionsTitle": "Site sections"
+    "quickTitle": "Quick links",
+    "quick": {
+      "findDocument": "Find an archival document",
+      "certificate": "How to get an archival certificate",
+      "readingRoom": "Visit the reading room",
+      "findBranch": "Find a branch"
+    },
+    "toExhibitions": "View online exhibitions",
+    "catalogTitle": "Electronic catalogue",
+    "catalogText": "Search documents by words from the title and description or by archival reference code. Results include only open and restricted-access documents; for restricted ones the access conditions are shown.",
+    "advancedSearch": "Advanced search with filters",
+    "historyTitle": "History in documents",
+    "allHistory": "All digital history",
+    "documentsTitle": "Documents from the catalogue",
+    "publicationsTitle": "Publications",
+    "topicsTitle": "Topics",
+    "digitalCopy": "digital copy available",
+    "exhibitionsTitle": "Online exhibitions",
+    "allExhibitions": "All exhibitions",
+    "branchesTitle": "Our branches",
+    "allBranches": "All branches, map and contacts",
+    "branchesNote": "Addresses and phone numbers were transferred from the current archive website and are being verified.",
+    "newsTitle": "News and events",
+    "allNews": "All news"
   },
   "notFound": {
     "title": "Page not found",
     "text": "Check the address or use the search and menu.",
     "toHome": "Home page"
   },
-  "search": { "title": "Site search", "query": "Query: “{{q}}”" },
+  "search": {
+    "title": "Site search",
+    "query": "Query: “{{q}}”"
+  },
   "accessibilityPage": {
     "lead": "We want everyone to be able to use this website, including people with visual, hearing, motor and cognitive impairments. Our target is WCAG 2.2 level AA.",
     "panelTitle": "Settings panel",
@@ -115,5 +143,42 @@
     ],
     "feedbackTitle": "Report a problem",
     "feedbackText": "If something on the site is inconvenient or inaccessible, write to us via the feedback and suggestions form. This is not an official appeal: a reply is not guaranteed, but every message is taken into account when improving the site."
+  },
+  "catalogSearch": {
+    "label": "Search the electronic catalogue",
+    "submit": "Search",
+    "hint": "For example: “board meeting minutes” or the code “F. 12. Inv. 3. File 45”."
+  },
+  "catalog": {
+    "results": "Search results",
+    "found_one": "{{count}} document found",
+    "found_other": "{{count}} documents found",
+    "foundFor_one": "{{count}} document found for “{{q}}”",
+    "foundFor_other": "{{count}} documents found for “{{q}}”",
+    "interpretedCode": "The query was recognised as a reference code: {{code}}",
+    "nothingFound": "Nothing found. Check the spelling or shorten the query.",
+    "restricted": "Restricted access",
+    "filtersLater": "Filters by branch, period, document type and settlement will be added at the next stage.",
+    "pagination": "Result pages",
+    "prev": "Previous page",
+    "next": "Next page",
+    "pageOf": "Page {{page}} of {{total}}"
+  },
+  "news": {
+    "empty": "No news yet.",
+    "back": "All news"
+  },
+  "origin": {
+    "demo": "Demo",
+    "synthetic": "Test data",
+    "demoNote": "Prototype demo material; it will be replaced with archive content."
+  },
+  "content": {
+    "otherLanguage": "This text is available only in: {{lang}}",
+    "machineTranslation": "Machine translation, pending review"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadError": "Could not load data. Refresh the page or try again later."
   }
 }

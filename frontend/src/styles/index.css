@@ -96,6 +96,12 @@ a:hover {
 :root[data-simplified='on'] main a {
   font-size: 1.125em;
 }
+:root[data-simplified='on'] main .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-simplified='on'] .home-banner {
+  background-image: none;
+}
 
 /* Базовые компоненты дизайн-системы. Цели касания не меньше 44×44 px (docs/accessibility.md §1). */
 @layer components {
@@ -229,5 +235,48 @@ a:hover {
   .prose-page ul {
     list-style: disc;
     padding-left: 1.5rem;
+  }
+
+  /* Баннер главной: фон — только CSS-узор, без изображений, которые можно принять за архивные (F-010, Q-29). */
+  .home-banner {
+    background-color: var(--color-surface);
+    background-image:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--color-border) 18%, transparent) 31px 32px);
+  }
+  .quick-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4rem;
+    height: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-primary);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .quick-link:hover {
+    background: var(--color-surface-2);
+    text-decoration: underline;
+  }
+  .quick-link svg {
+    color: var(--color-primary);
+  }
+  .topic-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.875rem;
+    border: 2px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .topic-link:hover {
+    border-color: var(--color-primary);
+    text-decoration: underline;
   }
 }

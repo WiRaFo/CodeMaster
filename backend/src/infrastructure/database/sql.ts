@@ -17,6 +17,9 @@ const TRANSLATION_TABLES = {
   settlement: ['settlement_translations', 'settlement_id'],
   category: ['category_translations', 'category_id'],
   organization: ['organization_translations', 'organization_id'],
+  news: ['news_translations', 'news_id'],
+  publication: ['publication_translations', 'publication_id'],
+  exhibition: ['exhibition_translations', 'exhibition_id'],
 } as const;
 export type TranslationTable = keyof typeof TRANSLATION_TABLES;
 
