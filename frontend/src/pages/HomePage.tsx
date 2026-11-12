@@ -669,8 +669,8 @@ function HomeMap() {
   if (branches.status !== 'ready' || branches.data.items.length === 0) return null;
   return (
     <section className="wrap sec" aria-labelledby="home-map">
-      <h2 id="home-map" className="h2 mb-2">{t('branchMap.title')}</h2>
-      <p className="lead mb-6">{t('branchMap.lead')}</p>
+      <h2 id="home-map" className="h2 mb-2 text-center">{t('branchMap.title')}</h2>
+      <p className="lead mx-auto mb-6 text-center">{t('branchMap.lead')}</p>
       <SchemeMap branches={branches.data.items} lang={lang} />
     </section>
   );
