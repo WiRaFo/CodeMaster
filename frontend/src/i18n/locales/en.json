@@ -258,7 +258,31 @@
   },
   "search": {
     "title": "Site search",
-    "query": "Query: “{{q}}”"
+    "query": "Query: “{{q}}”",
+    "label": "What to find on the site",
+    "submit": "Search",
+    "intro": "Searches sections, news, publications, exhibitions, branches and answers to questions. Archival documents are searched in the electronic catalogue.",
+    "found_one": "{{count}} result found",
+    "found_other": "{{count}} results found",
+    "nothing": "Nothing was found on the site pages. Try another word or search the catalogue.",
+    "more": "All results in this section",
+    "shown": "Showing the first {{shown}} of {{total}}",
+    "groups": {
+      "pages": "Site sections",
+      "news": "News",
+      "publications": "Digital history",
+      "exhibitions": "Online exhibitions",
+      "branches": "Branches and contacts",
+      "faq": "Questions and answers"
+    },
+    "catalog": {
+      "title": "Electronic catalogue",
+      "code": "This looks like an archival reference code. Documents are searched by code in the catalogue.",
+      "found_one": "{{count}} document found in the catalogue",
+      "found_other": "{{count}} documents found in the catalogue",
+      "none": "Nothing matches this code in the catalogue yet, but you can refine the query there.",
+      "go": "Search the catalogue"
+    }
   },
   "accessibilityPage": {
     "lead": "We want everyone to be able to use this website, including people with visual, hearing, motor and cognitive impairments. Our target is WCAG 2.2 level AA.",

@@ -493,3 +493,16 @@ export interface CollectionDetail extends CollectionSummary {
 export interface GalleryItem extends DocumentSummary {
   image: { url: string; width: number | null; height: number | null };
 }
+
+/** Поиск по сайту из шапки (GET /search, F-007). */
+export type SiteSearchGroupType = 'pages' | 'news' | 'publications' | 'exhibitions' | 'branches' | 'faq';
+export interface SiteSearchResult {
+  query: string;
+  total: number;
+  groups: Array<{
+    type: SiteSearchGroupType;
+    total: number;
+    items: Array<{ title: string; path: string; excerpt: string | null; date: string | null }>;
+  }>;
+  catalogHint: { count: number; looksLikeCode: boolean; path: string } | null;
+}

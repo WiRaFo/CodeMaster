@@ -7,6 +7,7 @@ import { registerErrorHandling } from './http/errors.ts';
 import { adminRoutes } from './modules/admin/admin.routes.ts';
 import { authRoutes } from './modules/auth/auth.routes.ts';
 import { branchRoutes } from './modules/branches/branches.routes.ts';
+import { searchRoutes } from './modules/search/search.routes.ts';
 import { contentRoutes } from './modules/content/content.routes.ts';
 import { exhibitionRoutes } from './modules/exhibitions/exhibitions.routes.ts';
 import { assistantRoutes } from './modules/assistant/assistant.routes.ts';
@@ -88,6 +89,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(historyRoutes, { db, storage });
       await api.register(collectionRoutes, { db });
       await api.register(siteRoutes, { db, storage, allowedOrigins });
+      await api.register(searchRoutes, { db });
       await api.register(analyticsRoutes, { db, allowedOrigins });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
       await api.register(adminRoutes, { db, storage, allowedOrigins });

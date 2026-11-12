@@ -25,8 +25,13 @@ const TRANSLATION_TABLES = {
   exhibition: ['exhibition_translations', 'exhibition_id'],
   exhibitionItem: ['exhibition_item_translations', 'item_id'],
   asset: ['asset_translations', 'asset_id'],
+  page: ['page_translations', 'page_id'],
+  faqItem: ['faq_item_translations', 'faq_item_id'],
 } as const;
 export type TranslationTable = keyof typeof TRANSLATION_TABLES;
+
+/** Имя таблицы переводов и её внешний ключ (константы кода). */
+export const translationTable = (table: TranslationTable): readonly [string, string] => TRANSLATION_TABLES[table];
 
 /**
  * LEFT JOIN LATERAL с переводом на запрошенном языке; если его нет — русский, затем любой.

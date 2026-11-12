@@ -59,6 +59,7 @@
 
 /* «Белым по чёрному». */
 :root.a11y.a11y-wb {
+  --color-edge: #000000;
   --color-bg: #000000;
   --color-surface: #000000;
   --color-surface-2: #000000;

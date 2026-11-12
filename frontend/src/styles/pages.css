@@ -452,3 +452,18 @@ html.a11y .chat,html.a11y .chat-bubble{border:2px solid #000}
 html[data-motion="reduce"] .smap-drop,html[data-motion="reduce"] .smap-reg{transition:none}
 html[data-motion="reduce"] .smap-reg.hot{transform:none}
 html.a11y .smap-pop{border:2px solid #000}
+
+/* Поиск по сайту (F-007): карточка перехода в каталог и группы результатов по разделам. */
+.ss-catalog{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:start;margin:0 0 34px;padding:24px 26px;border-radius:24px;background:var(--tint);border:1px solid var(--line2)}
+.ss-catalog-icon{width:48px;height:48px;color:var(--brand)}
+.ss-group{margin:0 0 34px}
+.ss-group-title{display:flex;align-items:center;gap:12px;margin:0 0 14px;font-size:calc(24px * var(--fs,1));font-weight:800;color:var(--ink)}
+.ss-count{display:inline-grid;place-items:center;min-width:2em;padding:2px 10px;border-radius:99px;background:var(--chip);font-size:calc(16px * var(--fs,1));font-weight:700}
+.ss-list{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.ss-item{display:flex;flex-direction:column;gap:6px;padding:18px 22px;border-radius:20px;background:#fff;border:1px solid var(--line)}
+.ss-item-title{font-size:calc(20px * var(--fs,1));font-weight:700}
+.ss-date{font-size:calc(15px * var(--fs,1))}
+.ss-excerpt{margin:0;color:var(--muted);overflow-wrap:anywhere}
+.ss-more{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:14px 0 0}
+@media (max-width:720px){.ss-catalog{grid-template-columns:1fr;padding:20px}.ss-catalog .btn{justify-self:start}.ss-item{padding:16px}}
+html.a11y .ss-catalog,html.a11y .ss-item{border:2px solid #000}
