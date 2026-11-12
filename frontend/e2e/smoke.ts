@@ -263,11 +263,15 @@ async function main() {
       // Сценарий 14: версия для слабовидящих сохраняется при переходах, смене языка и перезагрузке (дизайн 11.11.2026).
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/kk', {});
-      await page.getByRole('banner').getByRole('button', { name: 'Нашар көретіндерге арналған нұсқа' }).click();
+      // Меню «Доступность» в шапке: переключатель версии, цвет и размер внутри меню.
+      const menuKk = page.locator('.am-main');
+      await menuKk.getByRole('button', { name: 'Сайттың қолжетімділік параметрлері' }).click();
+      await menuKk.getByRole('button', { name: 'Көру қабілеті нашарлар нұсқасы' }).click();
       check(await page.evaluate(() => document.documentElement.classList.contains('a11y')), 'сценарий 14: версия для слабовидящих включается без перезагрузки');
-      const bar = page.getByRole('region', { name: 'Нашар көретіндерге арналған нұсқаның баптаулары' });
-      await bar.getByRole('button', { name: /Қара фонда ақ/ }).click();
-      await bar.getByRole('button', { name: 'Өте ірі' }).click();
+      await menuKk.getByRole('button', { name: /Қара фонда ақ/ }).click();
+      await menuKk.getByRole('button', { name: 'Өте ірі' }).click();
+      await page.keyboard.press('Escape');
+      check(!(await menuKk.locator('.am-panel').count()), 'сценарий 14: меню закрывается по Esc');
       await page.getByRole('navigation', { name: 'Негізгі бөлімдер' }).getByRole('link', { name: 'Қорлар мен каталог' }).click();
       await page.waitForURL(/\/kk\/catalog/);
       await page.getByRole('navigation', { name: 'Сайт тілі' }).first().getByRole('link', { name: 'RU' }).click();
@@ -277,10 +281,12 @@ async function main() {
       const state = await page.evaluate(() => ({ cls: document.documentElement.className, lang: document.documentElement.lang }));
       check(/\ba11y\b/.test(state.cls) && /a11y-wb/.test(state.cls) && /a11y-xl/.test(state.cls), `сценарий 14: режим, цвет и размер сохранились после перехода, смены языка и перезагрузки (${state.cls})`);
       check(state.lang === 'ru', 'сценарий 14: язык сменился, режим остался');
-      check(await page.getByRole('button', { name: 'Обычная версия сайта' }).first().isVisible(), 'сценарий 14: кнопка выхода подписана на новом языке');
+      const menuRu = page.locator('.am-main');
+      await menuRu.getByRole('button', { name: 'Настройки доступности сайта' }).click();
+      check((await menuRu.getByRole('button', { name: 'Версия для слабовидящих' }).getAttribute('aria-pressed')) === 'true', 'сценарий 14: переключатель подписан на новом языке и включён');
       const violations = await axe(page);
       check(violations.length === 0, `axe версия для слабовидящих б/ч, крупный: ${violations.join('; ')}`);
-      await page.getByRole('region', { name: 'Настройки версии для слабовидящих' }).getByRole('button', { name: 'Обычная версия сайта' }).click();
+      await menuRu.getByRole('button', { name: 'Версия для слабовидящих' }).click();
       check(!(await page.evaluate(() => document.documentElement.classList.contains('a11y'))), 'сценарий 14: выход возвращает обычную версию');
       await page.close();
     }
