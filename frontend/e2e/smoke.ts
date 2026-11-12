@@ -606,6 +606,7 @@ async function main() {
     await importScenario(browser);
     await contentAdminScenario(browser);
     await newsAdminScenario(browser);
+    await memoryAdminScenario(browser);
     await seoScenario(browser);
     check(cspViolations.length === 0, `нет нарушений CSP: ${cspViolations.slice(0, 3).join(' | ')}`);
 
@@ -791,6 +792,38 @@ async function newsAdminScenario(browser: Browser) {
     return { status: r.status, type: r.headers.get('content-type') ?? '', head: (await r.text()).slice(0, 40) };
   });
   check(csv.status === 200 && csv.type.includes('text/csv') && csv.head.replace(/^\uFEFF/, '').startsWith('Номер фонда;'), `экспорт каталога: CSV с заголовком шаблона (${csv.status} ${csv.head})`);
+  await page.close();
+}
+
+/** «Архив памяти» в панели (F-149): событие хронологии из панели появляется на сайте и удаляется. */
+async function memoryAdminScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.admin.password) return;
+  const page = await signIn(browser, staff.admin);
+  const tag = Date.now().toString(36);
+  const title = `[Демо] Событие e2e ${tag}`;
+  await page.goto(`${BASE}/admin/memory/events`);
+  await page.getByRole('button', { name: 'Добавить событие' }).click();
+  const form = page.getByRole('form', { name: 'Новое событие' });
+  await form.getByLabel('Адрес').fill(`e2e-event-${tag}`);
+  await form.getByLabel('Год').fill('1999');
+  await form.getByLabel('Происхождение').selectOption('demo');
+  await form.getByLabel('Источник').fill('[Демо] Проверка e2e');
+  await form.getByLabel('Опубликовано на сайте').check();
+  await form.getByLabel('Название').first().fill(title);
+  check((await axe(page)).length === 0, `axe архив памяти в панели: ${(await axe(page)).join('; ')}`);
+  await form.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Событие сохранено.' }).waitFor();
+
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(`${BASE}/ru/history/timeline`);
+  check(await site.getByRole('region', { name: '1990-е' }).getByRole('heading', { name: title }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: событие из панели в хронологии');
+  await site.close();
+
+  await page.getByRole('button', { name: `Удалить: ${title}` }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('status').filter({ hasText: 'удалено' }).waitFor();
+  check(true, 'архив памяти: удаление события с подтверждением');
   await page.close();
 }
 

@@ -207,3 +207,58 @@ export const newsInputSchema = z.object({
   })),
 }).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' });
 export type NewsInput = z.infer<typeof newsInputSchema>;
+
+/* «Архив памяти» в панели (ТЗ §5.6, §6.6; F-149). Источник обязателен: событие и сведения о человеке без источника не публикуются. */
+const slugSchema = z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(3).max(120);
+const optionalLongText = (max: number) => z.string().trim().max(max).transform((v) => (v === '' ? null : v)).nullish().transform((v) => v ?? null);
+const optionalYear = z.union([z.literal(''), z.null(), z.coerce.number().int().min(1000).max(2100)]).optional().transform((v) => (typeof v === 'number' ? v : null));
+
+export const timelineEventInputSchema = z.object({
+  slug: slugSchema,
+  year: z.coerce.number().int().min(1000).max(2100),
+  /** Точная дата, если известна; год даты должен совпасть с годом события. */
+  date: z.union([z.literal(''), z.null(), z.iso.date()]).optional().transform((v) => (v ? v : null)),
+  published: z.boolean(),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  sourceNote: z.string().trim().min(5).max(500),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    title: z.string().trim().min(3).max(300),
+    description: optionalLongText(10_000),
+  })),
+})
+  .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
+  .refine((v) => v.date === null || v.date.startsWith(String(v.year)), { path: ['date'], message: 'year mismatch' });
+export type TimelineEventInput = z.infer<typeof timelineEventInputSchema>;
+
+export const personInputSchema = z.object({
+  slug: slugSchema,
+  birthYear: optionalYear,
+  deathYear: optionalYear,
+  published: z.boolean(),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  sourceNote: z.string().trim().min(5).max(500),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    fullName: z.string().trim().min(3).max(200),
+    biography: optionalLongText(20_000),
+  })),
+})
+  .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'fullName'], message: 'required' })
+  .refine((v) => v.birthYear === null || v.deathYear === null || v.birthYear <= v.deathYear, { path: ['deathYear'], message: 'order' });
+export type PersonInput = z.infer<typeof personInputSchema>;
+
+export const COLLECTION_ITEM_TYPES = ['document', 'person'] as const;
+export const collectionInputSchema = z.object({
+  slug: slugSchema,
+  published: z.boolean(),
+  featured: z.boolean(),
+  sortOrder: z.coerce.number().int().min(0).max(10_000),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    title: z.string().trim().min(3).max(300),
+    description: optionalLongText(2000),
+  })),
+  items: z.array(z.object({ type: z.enum(COLLECTION_ITEM_TYPES), id: z.uuid() })).max(200),
+})
+  .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' })
+  .refine((v) => new Set(v.items.map((i) => `${i.type}:${i.id}`)).size === v.items.length, { path: ['items'], message: 'duplicate' });
+export type CollectionInput = z.infer<typeof collectionInputSchema>;
