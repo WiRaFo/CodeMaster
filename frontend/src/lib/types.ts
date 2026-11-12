@@ -146,11 +146,25 @@ export interface StaffContact {
 
 export type HistoryBlock = { type: 'p' | 'h'; text: string } | { type: 'ol' | 'ul'; items: string[] };
 
-/** Ответ /about: история, структура, соцсети. */
+/** Раздел «Об архиве» из панели (история, деятельность и т. д.). */
+export interface AboutSection {
+  key: string;
+  title: string;
+  lead: string | null;
+  blocks: InfoBlock[];
+  actualizedAt: string | null;
+  contentLang: string;
+  translationStatus: string;
+  dataOrigin: DataOrigin;
+}
+
+/** Ответ /about: история и другие разделы, структура, соцсети, фотогалерея учреждения. */
 export interface AboutInfo {
-  history: { title: string; blocks: HistoryBlock[]; contentLang: string; translationStatus: string; dataOrigin: DataOrigin } | null;
+  history: AboutSection | null;
+  sections: AboutSection[];
   staff: StaffContact[];
   social: Array<{ network: 'instagram' | 'facebook'; label: string; url: string }>;
+  gallery: Array<{ url: string; width: number | null; height: number | null; alt: string; caption: string | null; contentLang: string | null; dataOrigin: DataOrigin }>;
 }
 
 export interface FacetValue {

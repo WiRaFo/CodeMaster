@@ -607,6 +607,7 @@ async function main() {
     await contentAdminScenario(browser);
     await newsAdminScenario(browser);
     await memoryAdminScenario(browser);
+    await aboutAdminScenario(browser);
     await seoScenario(browser);
     check(cspViolations.length === 0, `нет нарушений CSP: ${cspViolations.slice(0, 3).join(' | ')}`);
 
@@ -865,6 +866,62 @@ async function memoryAdminScenario(browser: Browser) {
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
   await page.getByRole('status').filter({ hasText: 'удалено' }).waitFor();
   check(true, 'архив памяти: удаление публикации с подтверждением');
+  await page.close();
+}
+
+/** «Об архиве» в панели (F-023, F-021): раздел появляется на сайте и скрывается; фото до антивируса на сайт не попадает. */
+async function aboutAdminScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.admin.password) return;
+  const page = await signIn(browser, staff.admin);
+  const tag = Date.now().toString(36);
+  const title = `[Демо] Задачи архива e2e ${tag}`;
+  await page.goto(`${BASE}/admin/about`);
+  await page.getByRole('link', { name: 'Задачи и функции' }).or(page.getByRole('link', { name: /Задачи архива e2e/ })).first().click();
+  const form = page.getByRole('form', { name: 'Правка раздела' });
+  await form.getByLabel('Заголовок').first().fill(title);
+  await form.getByLabel('Текст раздела').first().fill('Демонстрационный текст раздела.\n\n## Подзаголовок\n- пункт списка');
+  await form.getByRole('checkbox', { name: 'Показывать на сайте' }).check();
+  check((await axe(page)).length === 0, `axe раздел «Об архиве» в панели: ${(await axe(page)).join('; ')}`);
+  await form.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Сохранено, раздел на сайте.' }).waitFor();
+
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(`${BASE}/kk/about`);
+  check(await site.getByRole('heading', { level: 2, name: title }).waitFor({ timeout: 5000 }).then(() => true, () => false), '«Об архиве»: раздел из панели виден на сайте');
+  check(await site.getByRole('heading', { level: 3, name: 'Подзаголовок' }).isVisible(), '«Об архиве»: подзаголовок раздела — h3');
+
+  await form.getByRole('checkbox', { name: 'Показывать на сайте' }).uncheck();
+  await form.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Сохранено, раздел скрыт.' }).waitFor();
+  const hidden = await (await fetch(`${BASE}/api/v1/about?lang=kk`)).json() as { sections: Array<{ title: string }> };
+  check(!hidden.sections.some((x) => x.title === title), `«Об архиве»: скрытого раздела нет в ответе API`);
+  // Публичные ответы API кешируются браузером на минуту: проверяем в новом контексте без кеша.
+  const fresh = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const freshPage = await fresh.newPage();
+  await freshPage.goto(`${BASE}/kk/about`);
+  await freshPage.getByRole('heading', { level: 3, name: 'Подзаголовок' }).or(freshPage.getByRole('heading', { level: 2, name: 'Сайт бөлімдері' })).first().waitFor();
+  await freshPage.getByText(/Шығыс Қазақстан|Восточно-Казахстанской/).first().waitFor();
+  check(await freshPage.getByRole('heading', { name: title }).count() === 0, '«Об архиве»: скрытый раздел пропал со страницы');
+  await fresh.close();
+  await site.close();
+
+  await page.goto(`${BASE}/admin/about`);
+  const gallery = page.getByRole('region', { name: /^Фотогалерея архива/ });
+  await gallery.waitFor();
+  const before = await (await fetch(`${BASE}/api/v1/about?lang=ru`)).json() as { gallery: unknown[] };
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5d6c3f20000000049454e44ae426082', 'hex');
+  await gallery.getByLabel('Происхождение').selectOption('demo');
+  await gallery.getByLabel('Добавить фото').setInputFiles({ name: `e2e-${tag}.png`, mimeType: 'image/png', buffer: png });
+  const row = gallery.getByRole('listitem').filter({ hasText: `e2e-${tag}.png` });
+  check(await row.getByText(/ожидает проверки антивирусом/).waitFor({ timeout: 5000 }).then(() => true, () => false), '«Об архиве»: фото загружено и ждёт проверки антивирусом');
+  check((await axe(page)).length === 0, `axe «Об архиве» в панели: ${(await axe(page)).join('; ')}`);
+  const after = await (await fetch(`${BASE}/api/v1/about?lang=ru`)).json() as { gallery: unknown[] };
+  check(after.gallery.length === before.gallery.length, '«Об архиве»: непроверенное фото не попадает на сайт');
+  await row.getByRole('button', { name: /^Удалить: фото/ }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Фото удалено.' }).waitFor();
+  check(await gallery.getByText(`e2e-${tag}.png`).first().waitFor({ state: 'detached', timeout: 5000 }).then(() => true, () => false), '«Об архиве»: удаление фото с подтверждением');
   await page.close();
 }
 

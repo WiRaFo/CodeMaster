@@ -4,9 +4,11 @@ import { Link, useParams } from 'react-router';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
-import type { AboutInfo, BranchDetail, HistoryBlock, StaffContact } from '../lib/types.ts';
+import { formatDate } from '../lib/format.ts';
+import type { AboutInfo, AboutSection, BranchDetail, HistoryBlock, StaffContact } from '../lib/types.ts';
 import { useApi } from '../lib/useApi.ts';
 import { VerificationBadge, telHref } from './BranchesPage.tsx';
+import { InfoBlockView } from './ReferencePage.tsx';
 
 /** Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте. */
 export function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) {
@@ -99,14 +101,37 @@ export function AboutPage() {
         {about.status !== 'ready' ? <LoadStatus status={about.status} /> : about.data.history ? (
           <>
             <p className="mb-2"><Link to={`/${lang}/history/timeline`}>{t('timeline.title')}</Link></p>
-            <TranslationNote contentLang={about.data.history.contentLang} translationStatus={about.data.history.translationStatus} />
-            <div className="mt-2 flex max-w-[75ch] flex-col gap-3" lang={about.data.history.contentLang}>
-              {about.data.history.blocks.map((block, i) => <HistoryBlockView key={i} block={block} />)}
-            </div>
+            <AboutSectionBody section={about.data.history} />
             <p className="mt-4 text-sm text-muted">{t('about.source')}</p>
           </>
         ) : <p>{t('about.unavailable')}</p>}
       </section>
+      {about.status === 'ready' ? about.data.sections.map((s) => (
+        <section key={s.key} aria-labelledby={`about-${s.key.replace('/', '-')}`} className="mb-8">
+          <h2 id={`about-${s.key.replace('/', '-')}`} className="mb-3 text-xl font-semibold" lang={s.contentLang}>{s.title}</h2>
+          <AboutSectionBody section={s} />
+        </section>
+      )) : null}
+      {about.status === 'ready' && about.data.gallery.length > 0 ? (
+        <section aria-labelledby="about-gallery" className="mb-8">
+          <h2 id="about-gallery" className="mb-3 text-xl font-semibold">{t('about.galleryTitle')}</h2>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {about.data.gallery.map((img) => (
+              <li key={img.url}>
+                <figure lang={img.contentLang ?? undefined}>
+                  <img src={img.url} alt={img.alt} loading="lazy" width={img.width ?? undefined} height={img.height ?? undefined} className="h-auto w-full rounded-md border border-border" />
+                  {img.caption || img.dataOrigin === 'demo' ? (
+                    <figcaption className="mt-1 text-sm">
+                      {img.caption}
+                      {img.dataOrigin === 'demo' ? <span className="block text-muted" lang={lang}>{t('about.demoPhoto')}</span> : null}
+                    </figcaption>
+                  ) : null}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <section aria-labelledby="about-more" className="mb-8 max-w-3xl">
         <h2 id="about-more" className="mb-3 text-xl font-semibold">{t('about.moreTitle')}</h2>
         <ul className="flex list-disc flex-col gap-1 pl-6">
@@ -116,6 +141,22 @@ export function AboutPage() {
           <li><Link to={`/${lang}/news`}>{t('nav.news')}</Link></li>
         </ul>
       </section>
+    </>
+  );
+}
+
+/** Текст раздела «Об архиве»: вводный абзац, блоки с подзаголовками h3, пометка о языке и дата актуализации. */
+function AboutSectionBody({ section }: { section: AboutSection }) {
+  const { t } = useTranslation();
+  const { lang = 'kk' } = useParams();
+  return (
+    <>
+      <TranslationNote contentLang={section.contentLang} translationStatus={section.translationStatus} />
+      <div className="mt-2 flex max-w-[75ch] flex-col gap-3" lang={section.contentLang}>
+        {section.lead ? <p className="text-lg">{section.lead}</p> : null}
+        {section.blocks.map((block, i) => <InfoBlockView key={i} block={block} headingLevel={3} />)}
+      </div>
+      {section.actualizedAt ? <p className="mt-2 text-sm text-muted">{t('about.actualized', { date: formatDate(section.actualizedAt, lang) })}</p> : null}
     </>
   );
 }

@@ -47,10 +47,11 @@ export function ReferencePage({ pageKey }: { pageKey: ReferenceKey }) {
   );
 }
 
-function InfoBlockView({ block }: { block: InfoBlock }) {
+/** Блок справочного текста. headingLevel — уровень подзаголовков: 3, когда текст стоит внутри раздела с h2. */
+export function InfoBlockView({ block, headingLevel = 2 }: { block: InfoBlock; headingLevel?: 2 | 3 }) {
   const { t } = useTranslation();
   switch (block.type) {
-    case 'h': return <h2 className="mt-3 text-xl font-semibold">{block.text}</h2>;
+    case 'h': return headingLevel === 3 ? <h3 className="mt-2 text-lg font-semibold">{block.text}</h3> : <h2 className="mt-3 text-xl font-semibold">{block.text}</h2>;
     case 'p': return <p>{block.text}</p>;
     case 'pending':
       return (

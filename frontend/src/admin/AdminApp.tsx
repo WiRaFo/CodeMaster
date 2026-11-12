@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { AboutAdminPage, AboutSectionEditPage } from './AboutAdmin.tsx';
 import { adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
 import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
@@ -171,6 +172,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
             {news ? <AdminNavItem to="/admin/news" label="Новости" /> : null}
             {can('publications:edit') ? <AdminNavItem to="/admin/memory" label="Архив памяти" /> : null}
+            {can('pages:edit') ? <AdminNavItem to="/admin/about" label="Об архиве" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
@@ -200,6 +202,8 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="memory/events" element={can('publications:edit') ? <MemoryEventsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/persons" element={can('publications:edit') ? <MemoryPersonsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
           <Route path="memory/collections" element={can('publications:edit') ? <MemoryCollectionsPage canWrite={can('publications:publish')} /> : <NoAccess />} />
+          <Route path="about" element={can('pages:edit') ? <AboutAdminPage /> : <NoAccess />} />
+          <Route path="about/sections/*" element={can('pages:edit') ? <AboutSectionEditPage /> : <NoAccess />} />
           <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
           <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
           <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
