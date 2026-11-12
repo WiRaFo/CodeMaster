@@ -19,7 +19,7 @@ export function NewsItemPage() {
   const n = item.data;
   return (
     <article className="prose-page">
-      <PageHeading title={n.title ?? slug}>
+      <PageHeading title={n.title ?? slug} meta={{ description: n.lead ?? undefined }}>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-muted">
           <time dateTime={n.publishedAt}>{formatDate(n.publishedAt, lang)}</time>
           {n.rubric?.name ? <span>· {n.rubric.name}</span> : null}

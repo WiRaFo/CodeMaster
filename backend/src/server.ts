@@ -12,6 +12,7 @@ const app = await buildApp({
   logLevel: env.LOG_LEVEL,
   secureCookies: env.NODE_ENV === 'production',
   allowedOrigins: env.ADMIN_ALLOWED_ORIGINS,
+  trustProxy: env.TRUST_PROXY,
 });
 
 const shutdown = async (signal: string) => {

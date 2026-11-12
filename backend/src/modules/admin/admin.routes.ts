@@ -181,6 +181,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.get('/admin/documents/:id', async (request) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const { id } = uuidParam.parse(request.params);
     const branchId = await branchOf(db, 'documents', id);
     if (!branchId) throw notFound();
@@ -253,6 +254,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.post('/admin/documents', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const input = documentInputSchema.parse(request.body);
     const branchId = await branchOf(db, 'cases', input.caseId);
     if (!branchId) throw new ApiError(400, 'VALIDATION_FAILED', 'Unknown case', [{ path: ['caseId'], code: 'unknown' }]);
@@ -276,6 +278,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.patch('/admin/documents/:id', async (request) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const { id } = uuidParam.parse(request.params);
     const input = documentInputSchema.parse(request.body);
     const branchId = await branchOf(db, 'documents', id);
@@ -335,6 +338,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
    * и на сайте не показывается: публичное представление пропускает только проверенные файлы.
    */
   app.post('/admin/documents/:id/pages', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const { id } = uuidParam.parse(request.params);
     const branchId = await branchOf(db, 'documents', id);
     if (!branchId) throw notFound();
@@ -385,6 +389,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.delete('/admin/documents/:id', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const { id } = uuidParam.parse(request.params);
     const body = workflowBodySchema.parse(request.body ?? {});
     const branchId = await branchOf(db, 'documents', id);
@@ -401,6 +406,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
 
   /** Фонд, опись, дело: простые формы создания (ЭТАП 10a). Создаются черновиками. */
   app.post('/admin/fonds', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const input = fondInputSchema.parse(request.body);
     const branch = await db.branch.findFirst({ where: { slug: input.branchSlug, deletedAt: null }, select: { id: true } });
     if (!branch) throw new ApiError(400, 'VALIDATION_FAILED', 'Unknown branch', [{ path: ['branchSlug'], code: 'unknown' }]);
@@ -427,6 +433,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.post('/admin/inventories', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const input = inventoryInputSchema.parse(request.body);
     const branchId = await branchOf(db, 'fonds', input.fondId);
     if (!branchId) throw new ApiError(400, 'VALIDATION_FAILED', 'Unknown fond', [{ path: ['fondId'], code: 'unknown' }]);
@@ -452,6 +459,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   });
 
   app.post('/admin/cases', async (request, reply) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const input = caseInputSchema.parse(request.body);
     const branchId = await branchOf(db, 'inventories', input.inventoryId);
     if (!branchId) throw new ApiError(400, 'VALIDATION_FAILED', 'Unknown inventory', [{ path: ['inventoryId'], code: 'unknown' }]);
@@ -481,6 +489,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
    * POST /admin/{documents|fonds|inventories|cases}/:id/{submit|request-changes|approve|publish|archive|restore}
    */
   app.post('/admin/:entity/:id/:action', async (request) => {
+    requireCatalogRead(request); // до разбора данных и поиска записи: без прав каталога — сразу 403
     const params = z.object({ entity: z.string().max(20), id: z.uuid(), action: z.string().max(20) }).parse(request.params);
     const action = actionFromPath(params.action);
     if (!isCatalogEntity(params.entity) || !action) throw notFound();

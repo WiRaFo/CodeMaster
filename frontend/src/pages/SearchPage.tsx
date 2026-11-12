@@ -10,7 +10,7 @@ export function SearchPage() {
   const q = params.get('q') ?? '';
   return (
     <>
-      <PageHeading title={t('search.title')} />
+      <PageHeading title={t('search.title')} meta={{ noindex: true }} />
       {q ? <p className="mb-4">{t('search.query', { q })}</p> : null}
       <p className="mb-4">{t('stub.text')}</p>
       <Link to={`/${lang}`}>{t('stub.toHome')}</Link>
