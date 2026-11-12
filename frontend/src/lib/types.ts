@@ -94,3 +94,21 @@ export interface BranchSummary {
   phone: string | null;
   needsVerification: boolean;
 }
+
+export interface FacetValue {
+  slug?: string;
+  code?: string;
+  value?: string;
+  name: string | null;
+  count: number;
+}
+
+export interface CatalogFacets {
+  types: FacetValue[];
+  periods: FacetValue[];
+  branches: FacetValue[];
+  settlements: FacetValue[];
+  topics: FacetValue[];
+  access: Array<{ value: 'open' | 'restricted'; count: number }>;
+  hasDigitalCopy: { true: number; false: number };
+}

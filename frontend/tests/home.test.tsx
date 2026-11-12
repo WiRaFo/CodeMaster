@@ -73,9 +73,9 @@ describe('главная (ТЗ §5.1)', () => {
     await user.type(within(form).getByRole('searchbox'), 'протокол заседания');
     await user.click(within(form).getByRole('button', { name: 'Искать' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/ru/catalog'));
-    expect(router.state.location.search).toBe('?q=%D0%BF%D1%80%D0%BE%D1%82%D0%BE%D0%BA%D0%BE%D0%BB%20%D0%B7%D0%B0%D1%81%D0%B5%D0%B4%D0%B0%D0%BD%D0%B8%D1%8F');
+    expect(new URLSearchParams(router.state.location.search).get('q')).toBe('протокол заседания');
     expect(await screen.findByText('По запросу «протокол заседания» найдено 2 документа')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/v1/catalog/documents?lang=ru&page=1&pageSize=20&q='), expect.anything());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/v1\/catalog\/documents\?q=%D0%BF.*&lang=ru&sort=relevance&page=1&pageSize=20$/), expect.anything());
   });
 
   it('нет нарушений axe на главной в трёх языках', async () => {

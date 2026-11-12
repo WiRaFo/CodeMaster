@@ -106,3 +106,41 @@ describe('служебные маршруты', () => {
     expect(res.body['error']).toMatchObject({ code: 'NOT_FOUND' });
   });
 });
+
+describe('фасеты каталога (ЭТАП 5, F-031)', () => {
+  type Facet = Array<{ slug?: string; code?: string; value?: string; count: number }>;
+  const counts = (list: Facet, key: 'slug' | 'code' | 'value') => Object.fromEntries(list.map((x) => [x[key], x.count]));
+
+  it('населённые пункты, тематики и периоды считаются только по публичным документам', async () => {
+    const res = await t.get('/api/v1/catalog/facets?lang=ru');
+    // Закрытый TEST-1/1/1/3 привязан к Риддеру и военной истории — его нет в счётчиках.
+    expect(counts(res.body['settlements'] as Facet, 'slug')).toEqual({ 'ust-kamenogorsk': 3, ridder: 1 });
+    expect(counts(res.body['topics'] as Facet, 'slug')).toEqual({ industry: 2, people: 1, family: 1 });
+    expect(counts(res.body['periods'] as Facet, 'slug')).toEqual({ '1946-1991': 4 });
+    expect((res.body['settlements'] as Array<{ name: string }>).map((s) => s.name)).toContain('Усть-Каменогорск');
+  });
+
+  it('счётчик фасета не учитывает собственный фильтр, но учитывает остальные', async () => {
+    const res = await t.get('/api/v1/catalog/facets?settlement=ridder&type=photo');
+    // Тип фото исключает документы Риддера (там только документы организаций и исторические) — фасет городов показывает
+    // сколько фото в каждом городе, без учёта выбранного города.
+    expect(counts(res.body['settlements'] as Facet, 'slug')).toEqual({ 'ust-kamenogorsk': 1 });
+    // Фасет типов учитывает выбранный город, но не выбранный тип.
+    const types = counts(res.body['types'] as Facet, 'code');
+    expect(types['photo']).toBeUndefined();
+    expect(Object.values(types).reduce((a: number, b) => a + Number(b), 0)).toBe(1);
+    const docs = await t.get('/api/v1/catalog/documents?settlement=ridder&type=photo');
+    expect(docs.body['total']).toBe(0);
+  });
+
+  it('фильтры по населённому пункту, тематике и периоду в выдаче', async () => {
+    const bySettlement = await t.get('/api/v1/catalog/documents?settlement=ust-kamenogorsk&sort=date_asc');
+    expect(bySettlement.body['total']).toBe(3);
+    const byTopic = await t.get('/api/v1/catalog/documents?topic=industry');
+    expect(byTopic.body['total']).toBe(2);
+    const byTopicHidden = await t.get('/api/v1/catalog/documents?topic=military');
+    expect(byTopicHidden.body['total']).toBe(0);
+    const byPeriod = await t.get('/api/v1/catalog/documents?period=1917-1940');
+    expect(byPeriod.body['total']).toBe(0);
+  });
+});

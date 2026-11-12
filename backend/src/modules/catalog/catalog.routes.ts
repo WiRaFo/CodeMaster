@@ -54,6 +54,8 @@ export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClie
       types: f.types.map((r) => ({ code: r.key, name: r.name, count: n(r.count) })),
       periods: f.periods.map((r) => ({ slug: r.key, name: r.name, count: n(r.count) })),
       branches: f.branches.map((r) => ({ slug: r.key, name: r.name, count: n(r.count) })),
+      settlements: f.settlements.map((r) => ({ slug: r.key, name: r.name, count: n(r.count) })),
+      topics: f.topics.map((r) => ({ slug: r.key, name: r.name, count: n(r.count) })),
       access: f.access.map((r) => ({ value: r.key, count: n(r.count) })),
       hasDigitalCopy: {
         true: n(f.copies.find((r) => r.key)?.count ?? 0n),

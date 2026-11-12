@@ -250,7 +250,7 @@
 OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и публикуется только в dev (`/api/docs`). В prod спецификация собирается в `docs/api/openapi.json` на этапе сборки.
 
 
-## 8. Состояние реализации (ЭТАПЫ 2 и 4, 2026-11-09)
+## 8. Состояние реализации (ЭТАПЫ 2, 4 и 5, 2026-11-09)
 
 Код: `backend/src` (Fastify 5, Zod 4), схемы параметров — `packages/shared/src/api.ts`. Запуск: `npm run dev -w backend`.
 
@@ -260,7 +260,7 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 |---|---|
 | `GET /health`, `GET /ready` | `ready` проверяет БД; MinIO подключится на этапе хранилища |
 | `GET /api/v1/catalog/documents` | Фильтры `q`, `fond`, `inventory`, `case`, `branch` (slug или uuid), `period` (slug), `type` (код типа), `settlement` (slug), `topic` (slug), `organization` (uuid), `author`, `yearFrom`, `yearTo`, `hasDigitalCopy`, `access`; `sort`, `page`, `pageSize`, `lang`. Если `q` распознан как шифр, ответ содержит `interpretedCode` и фильтрует по фонду, описи и делу |
-| `GET /api/v1/catalog/facets` | Счётчики по типу, периоду, подразделению, доступу, наличию копии с учётом текущих фильтров |
+| `GET /api/v1/catalog/facets` | Счётчики по типу, периоду, подразделению, населённому пункту, тематике, доступу, наличию копии. С ЭТАПА 5 фасеты дизъюнктивные: счётчик фасета считается со всеми фильтрами, кроме его собственного |
 | `GET /api/v1/catalog/documents/:id` | Две формы ответа: `open` (с `transcription`, `digitalCopy.pageCount`) и `restricted` (с `accessConditions`, без копии и расшифровки) |
 | `GET /api/v1/catalog/documents/:id/pages` | Только для эффективно открытых документов; у ограниченных — 404 |
 | `GET /api/v1/catalog/fonds`, `/fonds/:id`, `/inventories/:id`, `/cases/:id` | Через представления `public_fonds_v`, `public_inventories_v`, `public_cases_v`, `public_documents_v` |
