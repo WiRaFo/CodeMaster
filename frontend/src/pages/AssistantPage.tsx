@@ -102,6 +102,17 @@ function Answer({ answer }: { answer: AssistantAnswer }) {
       return (<><p>{t('assistant.answers.navigation')}</p><SectionLinks links={answer.links} /></>);
     case 'unknown':
       return (<><p>{t('assistant.answers.unknown')}</p><SectionLinks links={answer.links} /><SemanticDocuments documents={answer.semantic} /></>);
+    case 'knowledge':
+      return (
+        <>
+          <div lang={answer.knowledge.contentLang} className="flex flex-col gap-2">
+            {answer.knowledge.answer.split(/\n+/).map((p, i) => <p key={i} className="m-0">{p}</p>)}
+          </div>
+          {answer.knowledge.contentLang !== answer.lang ? <p className="mt-1 text-sm text-muted">{t('content.otherLanguage', { lang: t(`lang.${answer.knowledge.contentLang}`) })}</p> : null}
+          <p className="mt-1 text-sm text-muted">{t('assistant.answers.knowledgeNote')}</p>
+          <SectionLinks links={answer.links} />
+        </>
+      );
     case 'term':
       return (
         <>

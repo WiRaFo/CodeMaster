@@ -34,6 +34,7 @@ import { publicationsAdminRoutes } from './publications-admin.ts';
 import { aboutAdminRoutes } from './about-admin.ts';
 import { newsAdminRoutes } from './news-admin.ts';
 import { overviewAdminRoutes } from './overview-admin.ts';
+import { analyticsAdminRoutes } from './analytics-admin.ts';
 import { userAdminRoutes } from './users-admin.ts';
 import { CATALOG_READ, MASTER_BUCKET, STATUS_RU, UPLOAD_LIMIT, UPLOAD_TYPES, actionFromPath, catalogBranchScope, notifyWorkflow, ruFirst, sniffImage } from './admin-common.ts';
 import {
@@ -539,6 +540,7 @@ export async function adminRoutes(app: FastifyInstance, { db, storage, allowedOr
   await aboutAdminRoutes(app, { db, storage });
   await exportAdminRoutes(app, { db });
   await overviewAdminRoutes(app, { db });
+  await analyticsAdminRoutes(app, { db });
 
   // ——— вспомогательные функции, которым нужен db ———
 

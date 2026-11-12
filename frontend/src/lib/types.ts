@@ -306,6 +306,8 @@ export type AssistantAnswer =
   /** semantic — документы, похожие по смыслу (только при подключённой модели ИИ). */
   | { intent: 'unknown'; links: AssistantSection[]; semantic?: AssistantDocument[] }
   | { intent: 'term'; term: string; links: AssistantSection[] }
+  /** Ответ из базы знаний, которую ведут сотрудники; contentLang — язык текста (русский, если перевода нет). */
+  | { intent: 'knowledge'; lang: string; links: AssistantSection[]; knowledge: { question: string; answer: string; contentLang: string } }
   | {
       intent: 'branch';
       recognized: AssistantRecognized[];

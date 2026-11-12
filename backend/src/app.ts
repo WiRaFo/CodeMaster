@@ -14,6 +14,7 @@ import { collectionRoutes } from './modules/history/collections.routes.ts';
 import { historyRoutes } from './modules/history/history.routes.ts';
 import { siteRoutes } from './modules/content/site.routes.ts';
 import { catalogRoutes } from './modules/catalog/catalog.routes.ts';
+import { analyticsRoutes } from './modules/analytics/analytics.ts';
 import { healthRoutes } from './modules/health/health.routes.ts';
 import { referenceRoutes } from './modules/reference/reference.routes.ts';
 
@@ -87,6 +88,7 @@ export async function buildApp({ db, storage, logLevel = 'info', secureCookies =
       await api.register(historyRoutes, { db, storage });
       await api.register(collectionRoutes, { db });
       await api.register(siteRoutes, { db, storage, allowedOrigins });
+      await api.register(analyticsRoutes, { db, allowedOrigins });
       await api.register(authRoutes, { db, secureCookies, allowedOrigins });
       await api.register(adminRoutes, { db, storage, allowedOrigins });
     },

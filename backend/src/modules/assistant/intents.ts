@@ -1,3 +1,4 @@
+import { ASSISTANT_SECTIONS } from '@archive-vko/shared';
 import type { ParsedQuery } from './query-parser.ts';
 
 /**
@@ -10,7 +11,7 @@ export const TERMS = [
   'archive', 'archivalDocument', 'personnel', 'archivalCopy', 'guide', 'catalog',
 ] as const;
 export type Term = (typeof TERMS)[number];
-export const SECTIONS = ['services', 'exhibitions', 'news', 'history', 'accessibility', 'faq', 'about', 'visitors', 'catalog', 'branches'] as const;
+export const SECTIONS = ASSISTANT_SECTIONS;
 export type Section = (typeof SECTIONS)[number];
 
 export type Intent =

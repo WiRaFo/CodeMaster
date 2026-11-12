@@ -557,7 +557,8 @@
       "relaxed": "No exact matches. I searched without: {{what}}.",
       "found": "Documents found: {{count}}.",
       "allResults": "All results in the catalog",
-      "suggestions": "You may also try:"
+      "suggestions": "You may also try:",
+      "knowledgeNote": "This answer was prepared by archive staff."
     },
     "suggest": {
       "withCopy": "Only with a digital copy",

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import { isLocale } from '../i18n/index.ts';
+import { reportView } from '../lib/analytics.ts';
 import { setLanguageLinks } from '../lib/head.ts';
 import { writeStorage } from '../lib/storage.ts';
 import { preferredLocale, LANG_STORAGE_KEY } from './preferred-locale.ts';
@@ -40,6 +41,11 @@ export function LangLayout() {
 
   useEffect(() => {
     if (valid) setLanguageLinks(window.location.origin, pathname);
+  }, [valid, pathname]);
+
+  // Просмотр страницы для обезличенной статистики разделов (F-126).
+  useEffect(() => {
+    if (valid) reportView(pathname);
   }, [valid, pathname]);
 
   useEffect(() => {

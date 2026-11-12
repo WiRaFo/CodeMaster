@@ -6,6 +6,7 @@ import { adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
 import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
 import { FeedbackAdminPage } from './FeedbackAdminPage.tsx';
+import { AnalyticsAdminPage, KnowledgeAdminPage } from './AnalyticsAdmin.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 import { DocumentEditPage } from './DocumentEditPage.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
@@ -175,8 +176,10 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {can('pages:edit') ? <AdminNavItem to="/admin/about" label="Об архиве" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
+            {can('pages:edit') ? <AdminNavItem to="/admin/assistant" label="База знаний ИИ" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
             {can('feedback:read') ? <AdminNavItem to="/admin/feedback" label="Отзывы" /> : null}
+            {can('stats:read') ? <AdminNavItem to="/admin/analytics" label="Аналитика" /> : null}
             {can('users:manage') ? <AdminNavItem to="/admin/users" label="Сотрудники" /> : null}
             {can('audit:read') ? <AdminNavItem to="/admin/audit" label="Журнал действий" /> : null}
             <li>
@@ -207,6 +210,8 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
           <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
           <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
+          <Route path="assistant" element={can('pages:edit') ? <KnowledgeAdminPage /> : <NoAccess />} />
+          <Route path="analytics" element={can('stats:read') ? <AnalyticsAdminPage /> : <NoAccess />} />
           <Route path="branches" element={can('branches:edit') ? <BranchesAdminPage /> : <NoAccess />} />
           <Route path="branches/:id" element={can('branches:edit') ? <BranchEditPage /> : <NoAccess />} />
           <Route path="feedback" element={can('feedback:read') ? <FeedbackAdminPage /> : <NoAccess />} />

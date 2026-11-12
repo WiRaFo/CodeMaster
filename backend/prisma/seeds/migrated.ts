@@ -3,6 +3,7 @@ import {
   ARCHIVE_BRANCHES, ARCHIVE_DATA_DATE, ARCHIVE_MAIN, ARCHIVE_SETTLEMENTS, ARCHIVE_SOCIAL, ARCHIVE_STAFF, BRANCH_DIRECTOR,
 } from './archive-data.ts';
 import { ANTICORRUPTION_SETTING, ANTICORRUPTION_TEXT } from './archive-anticorruption.ts';
+import { seedAssistantKnowledge } from './assistant-knowledge.ts';
 import { ARCHIVE_CALENDAR } from './archive-calendar.ts';
 import { ARCHIVE_HISTORY_RU, type HistoryBlock } from './archive-history.ts';
 import { ARCHIVE_TIMELINE, timelineText } from './archive-timeline.ts';
@@ -166,6 +167,7 @@ export async function seedMigrated(db: PrismaClient): Promise<void> {
   await seedPersons(db);
   await seedAnticorruption(db);
   await seedInfoPages(db);
+  await seedAssistantKnowledge(db);
   await db.siteSetting.upsert({
     where: { key: 'social_links' },
     update: { value: ARCHIVE_SOCIAL },
