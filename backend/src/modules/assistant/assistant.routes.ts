@@ -2,7 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { assistantAskSchema, type Locale } from '@archive-vko/shared';
 import { ApiError } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
+import type { PrismaClient } from '@prisma/client';
+import type { EmbeddingProvider } from '../ai/embeddings.ts';
+import { semanticSearch } from '../ai/semantic.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
+import { CatalogRepository } from '../catalog/catalog.repository.ts';
+import { documentSummaryDto } from '../catalog/catalog.mapper.ts';
 import { classifyIntent, type Intent } from './intents.ts';
 import { normalize, parseQuery, type ParsedQuery, type SettlementDictEntry } from './query-parser.ts';
 
@@ -11,6 +16,8 @@ import { normalize, parseQuery, type ParsedQuery, type SettlementDictEntry } fro
  * определяются правилами, а ответ собирается только из публичных маршрутов API этого же сервера.
  * Поэтому помощник видит ровно то же, что посетитель каталога: закрытое не попадает в ответ,
  * а каждая ссылка ведёт на существующую запись. Текст ответа формирует интерфейс по ключам словаря.
+ * Если подключена модель ИИ (AI_PROVIDER), ответ дополняется документами, похожими по смыслу на вопрос;
+ * без модели или при её сбое помощник отвечает только правилами, как раньше.
  */
 
 interface Named { name: string | null }
@@ -51,8 +58,32 @@ export function catalogParams(p: ParsedQuery, drop: ReadonlySet<Relaxable> = new
   return q;
 }
 
-export async function assistantRoutes(app: FastifyInstance): Promise<void> {
+export interface AssistantOptions {
+  db?: PrismaClient;
+  embeddings?: EmbeddingProvider | null;
+  aiTimeoutMs?: number;
+}
+
+export async function assistantRoutes(app: FastifyInstance, opts: AssistantOptions = {}): Promise<void> {
   const limiter = new LoginLimiter(30, 30);
+  const repo = opts.db ? new CatalogRepository(opts.db) : null;
+
+  /** Документы, похожие по смыслу на вопрос (только публичные); [] без модели или при её сбое. */
+  async function semantic(question: string, lang: Locale, exclude: readonly string[]) {
+    if (!opts.db || !repo || !opts.embeddings) return [];
+    try {
+      const hits = await semanticSearch(opts.db, opts.embeddings, question, { limit: 5, timeoutMs: opts.aiTimeoutMs ?? 4000 });
+      if (!hits) return [];
+      const rows = await repo.documentsByIds(hits.map((h) => h.id).filter((id) => !exclude.includes(id)), lang);
+      return rows.map((r) => documentSummaryDto(r, lang)).map((d) => ({
+        id: d.id, title: d.title, code: d.archiveCode.formatted, date: d.date, type: d.type.name,
+        access: d.access, hasDigitalCopy: d.hasDigitalCopy, dataOrigin: d.dataOrigin,
+      }));
+    } catch (error) {
+      app.log.warn({ error: String(error) }, 'assistant: semantic search failed, answering by rules only');
+      return [];
+    }
+  }
   let dict: { at: number; entries: SettlementDictEntry[] } | null = null;
 
   /** Вызов публичного маршрута этого же API: те же правила доступа, что и у посетителя. */
@@ -177,10 +208,12 @@ export async function assistantRoutes(app: FastifyInstance): Promise<void> {
         return { ...base, links: [intent.section] };
       case 'branch':
         return { ...base, recognized: await labels(parsed, lang), branches: await branches(parsed, lang), links: ['branches'] };
-      case 'search':
-        return { ...base, recognized: await labels(parsed, lang), ...(await search(parsed, lang)) };
+      case 'search': {
+        const found = await search(parsed, lang);
+        return { ...base, recognized: await labels(parsed, lang), ...found, semantic: await semantic(query.q, lang, found.documents.map((d) => d.id)) };
+      }
       case 'unknown':
-        return { ...base, links: ['catalog'] };
+        return { ...base, links: ['catalog'], semantic: await semantic(query.q, lang, []) };
     }
   });
 }

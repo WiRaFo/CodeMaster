@@ -605,6 +605,7 @@ async function main() {
     await branchAdminScenario(browser);
     await importScenario(browser);
     await contentAdminScenario(browser);
+    await newsAdminScenario(browser);
     await seoScenario(browser);
     check(cspViolations.length === 0, `нет нарушений CSP: ${cspViolations.slice(0, 3).join(' | ')}`);
 
@@ -745,6 +746,51 @@ async function contentAdminScenario(browser: Browser) {
   check((await page.getByRole('cell', { name: /ridder@archive\.local/ }).count()) === 1, 'сотрудники: администратор филиала в списке');
   await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
   check((await axe(page)).length === 0, `axe сотрудники: ${(await axe(page)).join('; ')}`);
+  await page.close();
+}
+
+/** Новости в панели (F-100) и лента с поиском и рубриками (F-101); выгрузка каталога в CSV (F-145). */
+async function newsAdminScenario(browser: Browser) {
+  const staff = staffCredentials();
+  if (!staff.admin.password) return;
+  const page = await signIn(browser, staff.admin);
+  const tag = Date.now().toString(36);
+  const title = `[Демо] Новость e2e ${tag}`;
+  await page.goto(`${BASE}/admin/news`);
+  await page.getByRole('button', { name: 'Добавить новость' }).click();
+  const form = page.getByRole('form', { name: 'Новая новость' });
+  await form.getByLabel('Адрес страницы').fill(`e2e-news-${tag}`);
+  await form.getByLabel('Рубрика').selectOption('events');
+  await form.getByLabel('Происхождение').selectOption('demo');
+  await form.getByLabel('Заголовок').first().fill(title);
+  await form.getByLabel('Текст').first().fill('Тестовая новость, будет удалена после проверки.');
+  check((await axe(page)).length === 0, `axe новости в панели: ${(await axe(page)).join('; ')}`);
+  await form.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByRole('status').filter({ hasText: 'Новость создана черновиком.' }).waitFor();
+  await page.getByRole('button', { name: `Опубликовать: ${title}` }).click();
+  await page.getByRole('status').filter({ hasText: 'опубликована' }).waitFor();
+
+  const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await site.goto(`${BASE}/ru/news`);
+  const search = site.getByRole('search', { name: 'Поиск по новостям' });
+  await search.getByRole('searchbox').fill(tag);
+  await search.getByRole('button', { name: 'Найти' }).click();
+  check(await site.getByRole('link', { name: title }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'новости: опубликованная новость находится поиском');
+  await site.getByRole('navigation', { name: 'Рубрики новостей' }).getByRole('link', { name: /^Мероприятия/ }).click();
+  check(/rubric=events/.test(site.url()) && await site.getByRole('link', { name: title }).isVisible(), 'новости: рубрика в адресе, новость в своей рубрике');
+  check((await axe(site)).length === 0, `axe /ru/news с фильтром: ${(await axe(site)).join('; ')}`);
+  await site.close();
+
+  await page.getByRole('button', { name: `Удалить: ${title}` }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('status').filter({ hasText: 'удалена' }).waitFor();
+  check(true, 'новости: удаление с подтверждением');
+
+  const csv = await page.evaluate(async () => {
+    const r = await fetch('/api/v1/admin/export/documents.csv');
+    return { status: r.status, type: r.headers.get('content-type') ?? '', head: (await r.text()).slice(0, 40) };
+  });
+  check(csv.status === 200 && csv.type.includes('text/csv') && csv.head.replace(/^\uFEFF/, '').startsWith('Номер фонда;'), `экспорт каталога: CSV с заголовком шаблона (${csv.status} ${csv.head})`);
   await page.close();
 }
 

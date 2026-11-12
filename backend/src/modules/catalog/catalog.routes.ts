@@ -15,6 +15,9 @@ import {
 import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { pageOf } from '../../http/pagination.ts';
+import type { EmbeddingProvider } from '../ai/embeddings.ts';
+import { semanticSearch } from '../ai/semantic.ts';
+import { LoginLimiter } from '../auth/login-limiter.ts';
 import { CatalogRepository, type FondRow } from './catalog.repository.ts';
 import { archiveCodeDto, dateDto, documentSummaryDto } from './catalog.mapper.ts';
 
@@ -31,8 +34,49 @@ function uuidOr404(params: unknown): string {
 /** Форматы изображений страниц, которые сайт отдаёт браузеру. Остальные типы не отдаются, даже если лежат в хранилище. */
 const VIEWABLE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']);
 
-export async function catalogRoutes(app: FastifyInstance, opts: { db: PrismaClient; storage: ObjectStorage }): Promise<void> {
+export interface CatalogOptions {
+  db: PrismaClient;
+  storage: ObjectStorage;
+  /** Модель смыслового поиска; null — только обычный поиск. */
+  embeddings?: EmbeddingProvider | null;
+  aiTimeoutMs?: number;
+}
+
+const semanticQuerySchema = z.object({
+  q: z.string().trim().min(2).max(300),
+  lang: langOnlySchema.shape.lang,
+  limit: z.coerce.number().int().min(1).max(20).default(6),
+});
+
+export async function catalogRoutes(app: FastifyInstance, opts: CatalogOptions): Promise<void> {
   const repo = new CatalogRepository(opts.db);
+  const embeddings = opts.embeddings ?? null;
+  // Запрос к модели дороже обычного поиска: не больше 30 в минуту с одного адреса.
+  const semanticLimiter = new LoginLimiter(30, 30);
+
+  /**
+   * Смысловой поиск (D-023): дополняет обычную выдачу документами, похожими по смыслу.
+   * available=false — модель не подключена или не ответила; интерфейс тогда просто не показывает этот блок.
+   */
+  app.get('/catalog/semantic', async (request, reply) => {
+    const query = semanticQuerySchema.parse(request.query);
+    const lang = resolveLang(request, reply, query.lang);
+    if (!embeddings) return { available: false, model: null, items: [] };
+    if (!semanticLimiter.take(request.ip, 'semantic')) throw new ApiError(429, 'TOO_MANY_ATTEMPTS', 'Too many requests, try again in a minute');
+    const hits = await semanticSearch(opts.db, embeddings, query.q, { limit: query.limit, timeoutMs: opts.aiTimeoutMs ?? 4000 });
+    if (hits === null) {
+      request.log.warn({ model: embeddings.model }, 'semantic search unavailable, falling back to full-text search');
+      return { available: false, model: embeddings.model, items: [] };
+    }
+    const scores = new Map(hits.map((h) => [h.id, h.score]));
+    const rows = await repo.documentsByIds(hits.map((h) => h.id), lang);
+    reply.header('Cache-Control', 'no-store');
+    return {
+      available: true,
+      model: embeddings.model,
+      items: rows.map((r) => ({ ...documentSummaryDto(r, lang), score: Math.round((scores.get(r.id) ?? 0) * 1000) / 1000 })),
+    };
+  });
 
   app.get('/catalog/documents', async (request, reply) => {
     const query = documentSearchSchema.parse(request.query);

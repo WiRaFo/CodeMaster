@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import argon2 from 'argon2';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { ApiError, notFound } from '../../http/errors.ts';
+import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission, type Staff } from '../../http/staff.ts';
 import { writeAudit } from '../audit/audit.ts';
 
@@ -122,8 +122,7 @@ export async function userAdminRoutes(app: FastifyInstance, { db }: { db: Prisma
     const input = updateSchema.parse(request.body);
     const roles = await loadRoles();
     const before = await requireManageable(staff, id, roles);
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch === 'string' && ifMatch !== before.updatedAt.toISOString()) throw new ApiError(409, 'CONFLICT', 'The record was changed by someone else; reload it');
+    assertIfMatch(request, before.updatedAt);
     const assigned = await resolveRoles(staff, input.roles, roles);
     const key = (code: string, slug: string | null) => `${code}@${slug ?? ''}`;
     const beforeRoles = before.roles.map((r) => key(r.role.code, r.branch?.slug ?? null)).sort();

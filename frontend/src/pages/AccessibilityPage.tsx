@@ -4,7 +4,11 @@ import { PageHeading } from '../components/shared/PageHeading.tsx';
 /** Заявление о доступности (docs/accessibility.md §5, §12): панель, клавиатура, известные ограничения. */
 export function AccessibilityPage() {
   const { t } = useTranslation();
-  const list = (key: string) => t(key, { returnObjects: true }) as unknown as string[];
+  // Список из словаря; если ключ окажется не массивом, страница покажет пустой список, а не упадёт.
+  const list = (key: string): string[] => {
+    const value: unknown = t(key, { returnObjects: true });
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+  };
   return (
     <article className="prose-page">
       <PageHeading title={t('nav.accessibility')}>

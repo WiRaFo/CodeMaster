@@ -4,13 +4,8 @@ import { AdminHeading, ErrorMessage, useAuth } from './AdminApp.tsx';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { AdminApiError, adminRequest, errorText } from './api.ts';
 import { useAdminData } from './useAdminData.ts';
+import { ADMIN_LOCALES, type AdminLocale } from './format.ts';
 
-type Locale = 'ru' | 'kk' | 'en';
-const LOCALES: ReadonlyArray<{ code: Locale; label: string }> = [
-  { code: 'ru', label: 'Русский' },
-  { code: 'kk', label: 'Казахский' },
-  { code: 'en', label: 'Английский' },
-];
 const TR_STATUS: Record<string, string> = { reviewed: 'проверен', machine: 'машинный перевод', missing: 'нет' };
 
 interface PageRow { key: string; title: string; actualizedAt: string | null; pending: number; languages: Array<{ locale: string; status: string }> }
@@ -43,14 +38,14 @@ export function PagesAdminPage() {
 }
 
 interface PageForm { title: string; lead: string; markup: string }
-interface PageDetail { key: string; updatedAt: string; actualizedAt: string | null; translations: Partial<Record<Locale, PageForm & { lead: string | null; translationStatus: string }>> }
+interface PageDetail { key: string; updatedAt: string; actualizedAt: string | null; translations: Partial<Record<AdminLocale, PageForm & { lead: string | null; translationStatus: string }>> }
 
 export function PageEditPage() {
   const params = useParams();
   const key = params['*'] ?? '';
   const { can } = useAuth();
   const loaded = useAdminData<PageDetail>(`/admin/pages/${key}`);
-  const [forms, setForms] = useState<Record<Locale, PageForm> | null>(null);
+  const [forms, setForms] = useState<Record<AdminLocale, PageForm> | null>(null);
   const [actualizedAt, setActualizedAt] = useState('');
   const [updatedAt, setUpdatedAt] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +54,7 @@ export function PageEditPage() {
   useEffect(() => {
     const d = loaded.data;
     if (!d) return;
-    const f = (l: Locale): PageForm => ({ title: d.translations[l]?.title ?? '', lead: d.translations[l]?.lead ?? '', markup: d.translations[l]?.markup ?? '' });
+    const f = (l: AdminLocale): PageForm => ({ title: d.translations[l]?.title ?? '', lead: d.translations[l]?.lead ?? '', markup: d.translations[l]?.markup ?? '' });
     setForms({ ru: f('ru'), kk: f('kk'), en: f('en') });
     setActualizedAt(d.actualizedAt ?? new Date().toISOString().slice(0, 10));
     setUpdatedAt(d.updatedAt);
@@ -73,7 +68,7 @@ export function PageEditPage() {
     event.preventDefault();
     setError(null);
     setStatus(null);
-    const translations = Object.fromEntries(LOCALES.filter((l) => forms[l.code].title.trim()).map((l) => [l.code, forms[l.code]]));
+    const translations = Object.fromEntries(ADMIN_LOCALES.filter((l) => forms[l.code].title.trim()).map((l) => [l.code, forms[l.code]]));
     try {
       const res = await adminRequest<{ updatedAt: string; changed: string[] }>('PUT', `/admin/pages/${key}`, { actualizedAt, translations }, { 'If-Match': updatedAt });
       setUpdatedAt(res.updatedAt);
@@ -103,7 +98,7 @@ export function PageEditPage() {
           <label htmlFor="pg-date">Дата актуализации</label>
           <input id="pg-date" className="input" type="date" value={actualizedAt} readOnly={readOnly} onChange={(e) => setActualizedAt(e.target.value)} />
         </div>
-        {LOCALES.map((l) => (
+        {ADMIN_LOCALES.map((l) => (
           <fieldset key={l.code} className="flex flex-col gap-3">
             <legend className="mb-2 text-xl font-semibold">{l.label}{loaded.data?.translations[l.code] ? ` (${TR_STATUS[loaded.data.translations[l.code]?.translationStatus ?? ''] ?? ''})` : ''}</legend>
             {(['title', 'lead'] as const).map((k) => (
@@ -131,8 +126,8 @@ export function PageEditPage() {
 // ---------- Вопросы и ответы ----------
 
 const TOPIC: Record<string, string> = { services: 'Справки и услуги', catalog: 'Каталог и поиск', access: 'Доступ к документам', visit: 'Посещение архива', site: 'Работа сайта' };
-interface FaqRow { id: string; topic: string; sortOrder: number; published: boolean; dataOrigin: 'verified' | 'demo'; updatedAt: string; translations: Partial<Record<Locale, { question: string; answer: string; translationStatus: string }>> }
-interface FaqForm { topic: string; sortOrder: string; published: boolean; dataOrigin: 'verified' | 'demo'; texts: Record<Locale, { question: string; answer: string }> }
+interface FaqRow { id: string; topic: string; sortOrder: number; published: boolean; dataOrigin: 'verified' | 'demo'; updatedAt: string; translations: Partial<Record<AdminLocale, { question: string; answer: string; translationStatus: string }>> }
+interface FaqForm { topic: string; sortOrder: string; published: boolean; dataOrigin: 'verified' | 'demo'; texts: Record<AdminLocale, { question: string; answer: string }> }
 
 const emptyFaq = (): FaqForm => ({ topic: 'site', sortOrder: '0', published: false, dataOrigin: 'verified', texts: { ru: { question: '', answer: '' }, kk: { question: '', answer: '' }, en: { question: '', answer: '' } } });
 const formOf = (f: FaqRow): FaqForm => ({
@@ -155,7 +150,7 @@ export function FaqAdminPage() {
     if (!editing) return;
     setError(null);
     const f = editing.form;
-    const translations = Object.fromEntries(LOCALES.filter((l) => f.texts[l.code].question.trim()).map((l) => [l.code, f.texts[l.code]]));
+    const translations = Object.fromEntries(ADMIN_LOCALES.filter((l) => f.texts[l.code].question.trim()).map((l) => [l.code, f.texts[l.code]]));
     try {
       await adminRequest(editing.id ? 'PUT' : 'POST', editing.id ? `/admin/faq/${editing.id}` : '/admin/faq',
         { topic: f.topic, sortOrder: Number(f.sortOrder) || 0, published: f.published, dataOrigin: f.dataOrigin, translations },
@@ -180,7 +175,7 @@ export function FaqAdminPage() {
     }
   };
 
-  const setText = (l: Locale, k: 'question' | 'answer', v: string) => editing && setEditing({ ...editing, form: { ...editing.form, texts: { ...editing.form.texts, [l]: { ...editing.form.texts[l], [k]: v } } } });
+  const setText = (l: AdminLocale, k: 'question' | 'answer', v: string) => editing && setEditing({ ...editing, form: { ...editing.form, texts: { ...editing.form.texts, [l]: { ...editing.form.texts[l], [k]: v } } } });
 
   return (
     <>
@@ -211,7 +206,7 @@ export function FaqAdminPage() {
               </select>
             </div>
           </div>
-          {LOCALES.map((l) => (
+          {ADMIN_LOCALES.map((l) => (
             <fieldset key={l.code} className="flex flex-col gap-2">
               <legend className="font-semibold">{l.label}{l.code === 'ru' ? ' (обязательно)' : ''}</legend>
               <div className="admin-field">
@@ -247,7 +242,7 @@ export function FaqAdminPage() {
                     <li key={f.id} className="rounded-md border border-border bg-surface p-3">
                       <p className="font-semibold">{f.translations.ru?.question ?? f.translations.kk?.question ?? f.id}</p>
                       <p className="text-sm text-muted">
-                        {f.published ? 'На сайте' : 'Скрыт'}{f.dataOrigin === 'demo' ? ', демонстрационный' : ''}. Языки: {LOCALES.filter((l) => f.translations[l.code]).map((l) => l.code.toUpperCase()).join(', ')}
+                        {f.published ? 'На сайте' : 'Скрыт'}{f.dataOrigin === 'demo' ? ', демонстрационный' : ''}. Языки: {ADMIN_LOCALES.filter((l) => f.translations[l.code]).map((l) => l.code.toUpperCase()).join(', ')}
                       </p>
                       {writable ? (
                         <div className="mt-2 flex flex-wrap gap-2">

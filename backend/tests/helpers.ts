@@ -36,11 +36,11 @@ export async function publicPageKeys(db: PrismaClient | Prisma.TransactionClient
 }
 
 /** Приложение Fastify поверх тестовой базы; запросы выполняются через app.inject без сети. */
-export async function testApp() {
+export async function testApp(extra: Partial<Pick<import('../src/app.ts').AppOptions, 'embeddings' | 'aiTimeoutMs'>> = {}) {
   const { buildApp } = await import('../src/app.ts');
   const db = testDb();
   const { LocalStorage } = await import('../src/infrastructure/storage/local-storage.ts');
-  const app = await buildApp({ db, storage: new LocalStorage(inject('testStorageDir')), logLevel: 'silent' });
+  const app = await buildApp({ db, storage: new LocalStorage(inject('testStorageDir')), logLevel: 'silent', ...extra });
   return {
     app,
     db,

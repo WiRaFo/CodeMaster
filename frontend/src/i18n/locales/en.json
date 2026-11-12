@@ -116,7 +116,26 @@
     "allBranches": "All branches, map and contacts",
     "branchesNote": "Addresses and phone numbers were transferred from the current archive website and are being verified.",
     "newsTitle": "News and events",
-    "allNews": "All news"
+    "allNews": "All news",
+    "useful": {
+      "title": "Useful information",
+      "catalogHelp": {
+        "title": "How to use the catalog",
+        "text": "Answers to common questions about search, archival codes and access levels."
+      },
+      "fonds": {
+        "title": "How fonds and inventories are organised",
+        "text": "Guide to the fonds: from fond to inventory, file and document."
+      },
+      "published": {
+        "title": "What is published",
+        "text": "Catalog documents that have a digital copy."
+      },
+      "branches": {
+        "title": "Branch information",
+        "text": "Addresses, phone numbers and opening hours of the archive and its branches."
+      }
+    }
   },
   "notFound": {
     "title": "Page not found",
@@ -200,11 +219,23 @@
       "apply": "Apply",
       "yearInvalid": "Enter a four-digit year between 1000 and 2100.",
       "yearOrder": "The start year must not be later than the end year."
+    },
+    "semantic": {
+      "title": "Similar in meaning",
+      "note": "Selected by a local AI model by the meaning of the query, even when the query words are not in the text. Matches may be imprecise."
     }
   },
   "news": {
     "empty": "No news yet.",
-    "back": "All news"
+    "back": "All news",
+    "searchLabel": "Search news",
+    "searchButton": "Search",
+    "reset": "Reset",
+    "rubrics": "News categories",
+    "allRubrics": "All categories",
+    "found_one": "{{count}} news item found",
+    "found_other": "{{count}} news items found",
+    "nothingFound": "No news match this query. Change the query or choose another category."
   },
   "origin": {
     "demo": "Demo",

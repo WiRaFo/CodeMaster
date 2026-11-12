@@ -804,6 +804,7 @@ model Document {
   relationsOut    DocumentRelation[]    @relation("RelationSource")
   relationsIn     DocumentRelation[]    @relation("RelationTargetDocument")
   categories      DocumentCategory[]
+  embeddings      DocumentEmbedding[]
   settlements     DocumentSettlement[]
   tags            DocumentTag[]
   persons         DocumentPerson[]
@@ -1755,4 +1756,21 @@ model MemorableDateTranslation {
 
   @@id([memorableDateId, locale])
   @@map("memorable_date_translations")
+}
+
+/// Векторы смыслового поиска (D-023). Только публичные метаданные (название и описание) документов из public_documents_v;
+/// закрытые документы не индексируются, а поиск дополнительно соединяется с public_documents_v.
+/// Размерность не фиксирована: зависит от модели, строки разных моделей не смешиваются (поле model).
+model DocumentEmbedding {
+  documentId  String                 @map("document_id") @db.Uuid
+  locale      Locale
+  model       String
+  contentHash String                 @map("content_hash")
+  embedding   Unsupported("vector")
+  updatedAt   DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, locale, model])
+  @@map("document_embeddings")
 }

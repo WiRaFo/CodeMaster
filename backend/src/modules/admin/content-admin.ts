@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FAQ_TOPICS, LOCALES, faqInputSchema, type Locale } from '@archive-vko/shared';
-import { ApiError, notFound } from '../../http/errors.ts';
+import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission } from '../../http/staff.ts';
 import { writeAudit } from '../audit/audit.ts';
 import { INFO_PAGE_KEYS } from '../content/site.routes.ts';
@@ -79,8 +79,7 @@ export async function contentAdminRoutes(app: FastifyInstance, { db }: { db: Pri
     const key = pageKey(request.params);
     const page = await db.page.findFirst({ where: { key, deletedAt: null }, include: { translations: true } });
     if (!page) throw notFound();
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch === 'string' && ifMatch !== page.updatedAt.toISOString()) throw new ApiError(409, 'CONFLICT', 'The page was changed by someone else; reload it');
+    assertIfMatch(request, page.updatedAt);
     const input = pageInputSchema.parse(request.body);
     const parsed = Object.entries(input.translations).map(([locale, t]) => ({ locale: locale as Locale, t, ...parseMarkup(t.markup) }));
     const issues = parsed.flatMap((p) => p.issues.map((i) => ({ path: ['translations', p.locale, 'markup', String(i.line)], code: 'markup', message: i.message })));
@@ -153,8 +152,7 @@ export async function contentAdminRoutes(app: FastifyInstance, { db }: { db: Pri
     const { id } = z.object({ id: z.uuid() }).parse(request.params);
     const current = await db.faqItem.findUnique({ where: { id }, select: { updatedAt: true } });
     if (!current) throw notFound();
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch === 'string' && ifMatch !== current.updatedAt.toISOString()) throw new ApiError(409, 'CONFLICT', 'The item was changed by someone else; reload it');
+    assertIfMatch(request, current.updatedAt);
     return faqOut(await saveFaq(id, request.body, staff.session.userId, request));
   });
 

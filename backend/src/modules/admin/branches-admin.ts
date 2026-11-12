@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { LOCALES, type Locale } from '@archive-vko/shared';
-import { ApiError, notFound } from '../../http/errors.ts';
+import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { staffOf, type Staff } from '../../http/staff.ts';
 import { hasGrant } from '../auth/session.ts';
 import { writeAudit } from '../audit/audit.ts';
@@ -39,7 +39,6 @@ export const branchInputSchema = z
   .refine((v) => (v.lat === null) === (v.lng === null), { path: ['lng'], message: 'Укажите обе координаты или ни одной' })
   .refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru'], message: 'Русское название обязательно' });
 
-export type BranchInput = z.infer<typeof branchInputSchema>;
 
 const canEditBranch = (staff: Staff, branchId: string) => hasGrant(staff.grants, 'branches:edit', branchId);
 const canEditAny = (staff: Staff) => staff.grants.global.has('branches:edit') || staff.grants.byBranch.has('branches:edit');
@@ -102,10 +101,7 @@ export async function branchAdminRoutes(app: FastifyInstance, { db }: { db: Pris
     if (!canEditBranch(staff, id)) throw notFound();
     const before = await db.branch.findFirst({ where: { id, deletedAt: null }, include: { translations: true } });
     if (!before) throw notFound();
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch === 'string' && ifMatch !== before.updatedAt.toISOString()) {
-      throw new ApiError(409, 'CONFLICT', 'The record was changed by someone else; reload it');
-    }
+    assertIfMatch(request, before.updatedAt);
     const input = branchInputSchema.parse(request.body);
     const today = new Date(new Date().toISOString().slice(0, 10));
     const fields = ['phone', 'email', 'website', 'postalCode', 'lat', 'lng', 'showOnMap'] as const;

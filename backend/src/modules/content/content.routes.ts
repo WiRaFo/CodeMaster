@@ -5,7 +5,7 @@ import { langOnlySchema, newsListSchema, type Locale } from '@archive-vko/shared
 import { notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { pageOf } from '../../http/pagination.ts';
-import { and, bestTranslation } from '../../infrastructure/database/sql.ts';
+import { and, bestTranslation, likePattern } from '../../infrastructure/database/sql.ts';
 import { archiveCodeDto, dateDto } from '../catalog/catalog.mapper.ts';
 
 /**
@@ -97,16 +97,36 @@ export async function contentRoutes(app: FastifyInstance, opts: { db: PrismaClie
     const query = newsListSchema.parse(request.query);
     const lang = resolveLang(request, reply, query.lang);
     const conds = [PUBLIC_NEWS];
+    // Поиск по всем языковым версиям новости: запрос на казахском находит казахский перевод (F-101, F-131).
+    const textCond = query.q
+      ? Prisma.sql`EXISTS (SELECT 1 FROM news_translations x WHERE x.news_id = n.id AND x.translation_status <> 'missing'
+          AND (x.search_vector @@ plainto_tsquery(archive_search_config(x.locale), ${query.q})
+               OR x.title ILIKE ${likePattern(query.q)} ESCAPE '\\'))`
+      : null;
+    if (textCond) conds.push(textCond);
+    // Счётчики рубрик учитывают поиск, но не саму рубрику: выбор рубрики не обнуляет соседние.
+    const rubricNews = textCond ? Prisma.sql`${PUBLIC_NEWS} AND ${textCond}` : PUBLIC_NEWS;
     if (query.rubric) conds.push(Prisma.sql`c.kind = 'news_rubric' AND c.slug = ${query.rubric}`);
     const where = and(conds);
     const offset = (query.page - 1) * query.pageSize;
-    const [countRows, rows] = await Promise.all([
+    const [countRows, rows, rubrics] = await Promise.all([
       db.$queryRaw<Array<{ total: bigint }>>`
         SELECT count(*) AS total FROM news n LEFT JOIN categories c ON c.id = n.category_id ${where}`,
       db.$queryRaw<NewsRow[]>`${newsSelect(lang)} ${where}
         ORDER BY n.published_at DESC, n.slug LIMIT ${query.pageSize} OFFSET ${offset}`,
+      db.$queryRaw<Array<{ slug: string; name: string | null; count: bigint }>>`
+        SELECT c.slug, ct.name, count(n.id) AS count
+        FROM categories c
+        ${bestTranslation('category', 'ct', 'c.id', lang, ['name'])}
+        LEFT JOIN news n ON n.category_id = c.id AND ${rubricNews}
+        WHERE c.kind = 'news_rubric'
+        GROUP BY c.slug, ct.name, c.sort_order
+        ORDER BY c.sort_order, c.slug`,
     ]);
-    return pageOf(rows.map(newsSummary), Number(countRows[0]?.total ?? 0), query.page, query.pageSize);
+    return {
+      ...pageOf(rows.map(newsSummary), Number(countRows[0]?.total ?? 0), query.page, query.pageSize),
+      rubrics: rubrics.map((r) => ({ slug: r.slug, name: r.name, count: Number(r.count) })),
+    };
   });
 
   app.get('/news/:slug', async (request, reply) => {

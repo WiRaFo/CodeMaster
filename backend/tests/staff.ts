@@ -17,7 +17,7 @@ export async function createStaff(db: PrismaClient, role: string, opts: { branch
 export interface Client {
   cookie: string;
   csrf: string;
-  request(method: string, url: string, body?: unknown, headers?: Record<string, string>): Promise<{ status: number; body: Record<string, unknown> }>;
+  request(method: string, url: string, body?: unknown, headers?: Record<string, string>): Promise<{ status: number; body: Record<string, unknown>; text: string; headers: Record<string, unknown> }>;
 }
 
 /** Вход через API; дальше запросы идут с cookie сессии и CSRF-токеном, как из браузера. */
@@ -37,7 +37,8 @@ export async function login(app: FastifyInstance, email: string, password = STAF
         headers: { cookie, 'x-csrf-token': csrf, ...headers },
         ...(body === undefined ? {} : { payload: body as Record<string, unknown> }),
       });
-      return { status: r.statusCode, body: r.body ? (r.json() as Record<string, unknown>) : {} };
+      const json = String(r.headers['content-type'] ?? '').includes('application/json');
+      return { status: r.statusCode, body: r.body && json ? (r.json() as Record<string, unknown>) : {}, text: r.body, headers: r.headers };
     },
   };
 }

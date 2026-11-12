@@ -3,15 +3,10 @@ import { Link, useParams } from 'react-router';
 import { AdminHeading, ErrorMessage } from './AdminApp.tsx';
 import { AdminApiError, adminRequest, errorText } from './api.ts';
 import { useAdminData } from './useAdminData.ts';
+import { ADMIN_LOCALES, type AdminLocale } from './format.ts';
 
 interface BranchRow { id: string; slug: string; name: string; phone: string | null; hasCoordinates: boolean; verifiedAt: string | null }
 
-type Locale = 'ru' | 'kk' | 'en';
-const LOCALES: ReadonlyArray<{ code: Locale; label: string }> = [
-  { code: 'ru', label: 'Русский' },
-  { code: 'kk', label: 'Казахский' },
-  { code: 'en', label: 'Английский' },
-];
 const TEXT_FIELDS = [
   { key: 'fullName', label: 'Полное название', required: true },
   { key: 'shortName', label: 'Краткое название', required: false },
@@ -34,7 +29,7 @@ interface BranchDetail {
   showOnMap: boolean;
   verifiedAt: string | null;
   updatedAt: string;
-  translations: Partial<Record<Locale, Record<TextKey, string | null> & { translationStatus: string }>>;
+  translations: Partial<Record<AdminLocale, Record<TextKey, string | null> & { translationStatus: string }>>;
 }
 
 const FIELD_LABEL: Record<string, string> = {
@@ -77,7 +72,7 @@ const emptyTexts = (): Texts => ({ fullName: '', shortName: '', address: '', sch
 export function BranchEditPage() {
   const { id = '' } = useParams();
   const loaded = useAdminData<BranchDetail>(`/admin/branches/${id}`);
-  const [form, setForm] = useState<{ phone: string; email: string; website: string; postalCode: string; lat: string; lng: string; showOnMap: boolean; texts: Record<Locale, Texts> } | null>(null);
+  const [form, setForm] = useState<{ phone: string; email: string; website: string; postalCode: string; lat: string; lng: string; showOnMap: boolean; texts: Record<AdminLocale, Texts> } | null>(null);
   const [updatedAt, setUpdatedAt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<Set<string>>(new Set());
@@ -87,7 +82,7 @@ export function BranchEditPage() {
   useEffect(() => {
     const b = loaded.data;
     if (!b) return;
-    const texts = (l: Locale): Texts => {
+    const texts = (l: AdminLocale): Texts => {
       const t = b.translations[l];
       return t ? { fullName: t.fullName ?? '', shortName: t.shortName ?? '', address: t.address ?? '', scheduleText: t.scheduleText ?? '', readingRoomSchedule: t.readingRoomSchedule ?? '' } : emptyTexts();
     };
@@ -104,7 +99,7 @@ export function BranchEditPage() {
 
   const name = form.texts.ru.shortName || form.texts.ru.fullName || loaded.data.slug;
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
-  const setText = (l: Locale, k: TextKey, v: string) => setForm({ ...form, texts: { ...form.texts, [l]: { ...form.texts[l], [k]: v } } });
+  const setText = (l: AdminLocale, k: TextKey, v: string) => setForm({ ...form, texts: { ...form.texts, [l]: { ...form.texts[l], [k]: v } } });
   const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
 
   const submit = async (event: FormEvent) => {
@@ -114,7 +109,7 @@ export function BranchEditPage() {
     setStatus(null);
     setInvalid(new Set());
     // Язык без названия не отправляется: неполный перевод не затирает имеющийся.
-    const translations = Object.fromEntries(LOCALES.filter((l) => form.texts[l.code].fullName.trim()).map((l) => [l.code, form.texts[l.code]]));
+    const translations = Object.fromEntries(ADMIN_LOCALES.filter((l) => form.texts[l.code].fullName.trim()).map((l) => [l.code, form.texts[l.code]]));
     try {
       const res = await adminRequest<{ updatedAt: string; changed: string[] }>('PATCH', `/admin/branches/${id}`, {
         phone: form.phone, email: form.email, website: form.website, postalCode: form.postalCode,
@@ -164,7 +159,7 @@ export function BranchEditPage() {
             Показывать на карте
           </label>
         </fieldset>
-        {LOCALES.map((l) => (
+        {ADMIN_LOCALES.map((l) => (
           <fieldset key={l.code} className="flex flex-col gap-3">
             <legend className="mb-2 text-xl font-semibold">{l.label}</legend>
             {l.code !== 'ru' ? <p className="hint">Правка на этом языке снимает пометку «машинный перевод».</p> : null}

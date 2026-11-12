@@ -7,6 +7,7 @@ import { AdminApiError, adminRequest, adminUpload, errorText } from './api.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { ACCESS_LABEL, ACTION_LABEL, AUDIT_LABEL, STATUS_LABEL, actionPath } from './labels.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 interface TranslationForm {
   title: string;
@@ -484,7 +485,7 @@ export function DocumentEditPage() {
             <ol className="grid gap-2">
               {doc.data.history.map((h, i) => (
                 <li key={i} className="border-b border-border pb-2">
-                  <time dateTime={h.at} className="text-sm text-muted">{new Date(h.at).toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })}</time>
+                  <time dateTime={h.at} className="text-sm text-muted">{formatDateTime(h.at)}</time>
                   {' · '}
                   <strong>{AUDIT_LABEL[h.action] ?? h.action}</strong>
                   {h.user ? ` · ${h.user}` : ''}

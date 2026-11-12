@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
-import { AdminApiError, adminRequest, configureAdminApi } from './api.ts';
+import { adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
 import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
 import { FeedbackAdminPage } from './FeedbackAdminPage.tsx';
@@ -12,6 +12,7 @@ import { ExhibitionEditPage, ExhibitionsAdminPage, canSeeExhibitions } from './E
 import { HierarchyPage } from './HierarchyPage.tsx';
 import { ImportPage } from './ImportPage.tsx';
 import { FaqAdminPage, PageEditPage, PagesAdminPage } from './ContentAdmin.tsx';
+import { NewsAdminPage } from './NewsAdmin.tsx';
 import { UsersAdminPage } from './UsersAdmin.tsx';
 import { LoginPage } from './LoginPage.tsx';
 
@@ -134,6 +135,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
   const can = useCallback((p: string) => me.permissions.includes(p), [me.permissions]);
   const catalog = ['catalog:edit', 'catalog:submit', 'catalog:review', 'catalog:publish'].some(can);
   const exhibitions = canSeeExhibitions(can);
+  const news = can('news:edit') || can('news:publish');
 
   return (
     <AuthContext.Provider value={{ me, can, logout, refreshNotifications, unread }}>
@@ -165,6 +167,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {catalog ? <AdminNavItem to="/admin/hierarchy" label="Фонды, описи, дела" /> : null}
             {can('catalog:import') ? <AdminNavItem to="/admin/import" label="Импорт описи" /> : null}
             {exhibitions ? <AdminNavItem to="/admin/exhibitions" label="Выставки" /> : null}
+            {news ? <AdminNavItem to="/admin/news" label="Новости" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
@@ -188,6 +191,7 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="exhibitions" element={exhibitions ? <ExhibitionsAdminPage /> : <NoAccess />} />
           <Route path="exhibitions/new" element={can('exhibitions:edit') ? <ExhibitionEditPage /> : <NoAccess />} />
           <Route path="exhibitions/:id" element={exhibitions ? <ExhibitionEditPage /> : <NoAccess />} />
+          <Route path="news" element={news ? <NewsAdminPage /> : <NoAccess />} />
           <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
           <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
           <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
@@ -261,5 +265,3 @@ export function ErrorMessage({ error }: { error: string | null }) {
     </p>
   );
 }
-
-export const isAdminApiError = (e: unknown): e is AdminApiError => e instanceof AdminApiError;

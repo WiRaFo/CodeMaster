@@ -15,12 +15,12 @@ import {
   type Locale,
   type WorkflowAction,
 } from '@archive-vko/shared';
-import { ApiError, notFound } from '../../http/errors.ts';
+import { ApiError, assertIfMatch, notFound } from '../../http/errors.ts';
 import { requirePermission, staffOf, type Staff } from '../../http/staff.ts';
 import type { ObjectStorage } from '../../infrastructure/storage/local-storage.ts';
 import { writeAudit } from '../audit/audit.ts';
 import { hasGrant } from '../auth/session.ts';
-import { MASTER_BUCKET, STATUS_RU, actionFromPath, notifyWorkflow, sniffImage } from './admin-common.ts';
+import { MASTER_BUCKET, STATUS_RU, actionFromPath, notifyWorkflow, ruFirst, sniffImage } from './admin-common.ts';
 
 /**
  * Выставки в панели управления (ТЗ §6.5, с. 14–15; F-093, F-148).
@@ -64,7 +64,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
 
   async function labelOf(tx: PrismaClient | Prisma.TransactionClient, id: string): Promise<string> {
     const list = await tx.exhibitionTranslation.findMany({ where: { exhibitionId: id }, select: { locale: true, title: true } });
-    return (list.find((t) => t.locale === 'ru') ?? list[0])?.title ?? id;
+    return ruFirst(list)?.title ?? id;
   }
 
   async function completenessIssues(tx: PrismaClient | Prisma.TransactionClient, id: string) {
@@ -147,7 +147,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
         slug: e.slug,
         status: e.publicationStatus,
         dataOrigin: e.dataOrigin,
-        title: (e.translations.find((t) => t.locale === 'ru') ?? e.translations[0])?.title ?? null,
+        title: ruFirst(e.translations)?.title ?? null,
         itemCount: e._count.items,
         updatedAt: e.updatedAt.toISOString(),
       })),
@@ -256,10 +256,7 @@ export async function exhibitionAdminRoutes(app: FastifyInstance, { db, storage 
     requireRead(request); // до разбора данных и поиска записи: без прав выставок — сразу 403
     const { id } = ids.parse(request.params);
     const { staff, exhibition } = await requireEditable(request, id);
-    const ifMatch = request.headers['if-match'];
-    if (typeof ifMatch === 'string' && ifMatch !== exhibition.updatedAt.toISOString()) {
-      throw new ApiError(409, 'CONFLICT', 'The record was changed by someone else; reload it');
-    }
+    assertIfMatch(request, exhibition.updatedAt);
     const input = exhibitionInputSchema.parse(request.body);
     if (!LOCALES.some((l) => input.translations[l]?.title)) {
       throw new ApiError(400, 'VALIDATION_FAILED', 'Title is required', [{ path: ['translations', 'ru', 'title'], code: 'required' }]);

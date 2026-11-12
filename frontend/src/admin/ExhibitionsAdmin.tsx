@@ -5,6 +5,7 @@ import { AdminApiError, adminRequest, adminUpload, errorText } from './api.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { ACTION_LABEL, STATUS_LABEL, actionPath } from './labels.ts';
 import { useAdminData } from './useAdminData.ts';
+import { formatDateTime } from './format.ts';
 
 /** ЭТАП 8. Выставки в панели управления (ТЗ §6.5, с. 14–15; F-148). */
 
@@ -104,7 +105,7 @@ export function ExhibitionsAdminPage() {
                     <td><Link to={`/admin/exhibitions/${r.id}`}>{r.title ?? r.slug}</Link></td>
                     <td><span className="status-badge" data-status={r.status}>{STATUS_LABEL[r.status] ?? r.status}</span></td>
                     <td>{r.itemCount}</td>
-                    <td>{new Date(r.updatedAt).toLocaleString('ru-RU')}</td>
+                    <td>{formatDateTime(r.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -335,7 +336,7 @@ export function ExhibitionEditPage() {
           <ol className="grid gap-1 text-sm">
             {d.history.map((h) => (
               <li key={`${h.at}-${h.summary}`}>
-                <time dateTime={h.at}>{new Date(h.at).toLocaleString('ru-RU')}</time> · {h.user ?? 'система'} · {h.summary}
+                <time dateTime={h.at}>{formatDateTime(h.at)}</time> · {h.user ?? 'система'} · {h.summary}
               </li>
             ))}
           </ol>

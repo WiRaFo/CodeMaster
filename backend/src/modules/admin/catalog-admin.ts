@@ -1,6 +1,7 @@
 import type { AccessLevel, Prisma, PrismaClient, PublicationStatus } from '@prisma/client';
 import { LOCALES, formatArchiveCode, type DocumentInput, type Locale } from '@archive-vko/shared';
 import { ApiError, notFound } from '../../http/errors.ts';
+import { ruFirst } from './admin-common.ts';
 
 /** Сущности каталога, у которых есть статус согласования. Ресурс прав для всех — `catalog`. */
 export const CATALOG_ENTITIES = ['documents', 'fonds', 'inventories', 'cases'] as const;
@@ -79,7 +80,7 @@ export async function setStatus(
 /** Название записи для уведомлений и журнала: русское, иначе первое заполненное. */
 export async function labelOf(db: PrismaClient | Prisma.TransactionClient, entity: CatalogEntity, id: string): Promise<string> {
   const pick = (list: Array<{ locale: Locale; title: string }>) =>
-    (list.find((t) => t.locale === 'ru') ?? list[0])?.title ?? id;
+    ruFirst(list)?.title ?? id;
   switch (entity) {
     case 'documents': {
       const d = await db.document.findUnique({

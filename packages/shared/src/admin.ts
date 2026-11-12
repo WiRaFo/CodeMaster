@@ -185,3 +185,25 @@ export const faqInputSchema = z.object({
   translations: z.partialRecord(z.enum(LOCALES), z.object({ question: z.string().trim().min(5).max(500), answer: z.string().trim().min(5).max(5000) })),
 }).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'question'], message: 'required' });
 export type FaqInput = z.infer<typeof faqInputSchema>;
+
+/** Рубрики новостей (справочник categories.kind = news_rubric). */
+export const NEWS_RUBRICS = ['news', 'announcements', 'events'] as const;
+
+/**
+ * Новость в панели (ТЗ §5.11, F-100). Текст — обычные абзацы через пустую строку, без HTML.
+ * Адрес (slug) задаётся латиницей; дата публикации необязательна: при публикации ставится текущая.
+ */
+export const newsInputSchema = z.object({
+  slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(3).max(120),
+  rubric: z.enum(NEWS_RUBRICS),
+  branchSlug: z.string().trim().min(1).max(60).nullish().transform((v) => v ?? null),
+  dataOrigin: z.enum(STAFF_DATA_ORIGINS),
+  sourceUrl: z.string().trim().max(500).transform((v) => (v === '' ? null : v)).nullish()
+    .refine((v) => v == null || /^https:\/\/[^\s]+$/.test(v), { message: 'https' }).transform((v) => v ?? null),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    title: z.string().trim().min(5).max(300),
+    lead: z.string().trim().max(1000).transform((v) => (v === '' ? null : v)).nullish().transform((v) => v ?? null),
+    bodyText: z.string().trim().min(10).max(20_000),
+  })),
+}).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'title'], message: 'required' });
+export type NewsInput = z.infer<typeof newsInputSchema>;
