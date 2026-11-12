@@ -6,7 +6,13 @@ import { LocalStorage } from './infrastructure/storage/local-storage.ts';
 
 const env = loadEnv();
 const db = createPrismaClient(env.DATABASE_URL);
-const app = await buildApp({ db, storage: new LocalStorage(env.STORAGE_DIR), logLevel: env.LOG_LEVEL });
+const app = await buildApp({
+  db,
+  storage: new LocalStorage(env.STORAGE_DIR),
+  logLevel: env.LOG_LEVEL,
+  secureCookies: env.NODE_ENV === 'production',
+  allowedOrigins: env.ADMIN_ALLOWED_ORIGINS,
+});
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');

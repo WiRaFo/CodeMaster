@@ -250,7 +250,7 @@
 OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и публикуется только в dev (`/api/docs`). В prod спецификация собирается в `docs/api/openapi.json` на этапе сборки.
 
 
-## 8. Состояние реализации (ЭТАПЫ 2, 4, 5 и 6, 2026-11-09)
+## 8. Состояние реализации (ЭТАПЫ 2, 4, 5, 6 и 10a, 2026-11-09)
 
 Код: `backend/src` (Fastify 5, Zod 4), схемы параметров — `packages/shared/src/api.ts`. Запуск: `npm run dev -w backend`.
 
@@ -283,5 +283,26 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 - ETag (сейчас только `Cache-Control: public, max-age=60` для успешных публичных GET, `no-store` для ошибок).
 - URL производных изображений: `pages[].derivatives` отдаёт параметры без ссылок до подключения MinIO. До тех пор страница отдаётся целиком маршрутом `/pages/:page/image` (для синтетических SVG этого достаточно; для настоящих сканов нужны WebP-производные и DZI).
 - Общий поиск `/search`, `/search/suggest`, `/search/interpret` — ЭТАП поиска по сайту и ИИ.
-- Сессии, CSRF, RBAC, ограничение входа и аудит — вместе с административным API (ЭТАП 10a); публичный API их не требует.
 - Rate limit и `@fastify/helmet` — ЭТАП безопасности; сейчас выставляются `X-Content-Type-Options` и `X-Request-Id`.
+
+### Административный API (ЭТАП 10a)
+
+Код: `backend/src/modules/auth`, `backend/src/modules/admin`, `backend/src/http/staff.ts`; схемы — `packages/shared/src/admin.ts` (общие для формы и сервера). Все ответы `/api/v1/auth/*` и `/api/v1/admin/*` — `Cache-Control: no-store`.
+
+| Маршрут | Примечание |
+|---|---|
+| `POST /auth/login` | `{ email, password }` → cookie `sid` (`HttpOnly; SameSite=Strict; Path=/api`, `Secure` в production) и `{ user, permissions, csrfToken }`. В БД хранится только sha256 токена. Ошибка всегда `401 INVALID_CREDENTIALS` без подсказки; 5 попыток в минуту на IP+email и 20 на IP — `429 TOO_MANY_ATTEMPTS`; 10 неудач подряд блокируют учётку на 15 минут. Для неизвестного email сверяется фиктивный хеш, чтобы время ответа не выдавало наличие учётки. Вход, отказ и блокировка пишутся в журнал |
+| `GET /auth/me`, `POST /auth/logout` | Текущий пользователь, роли (с филиалом), права, `csrfToken`; выход удаляет сессию |
+| `GET /admin/reference`, `GET /admin/catalog/tree` | Справочники формы и дерево фонд → опись → дело с учётом филиала роли |
+| `GET /admin/documents`, `GET/PATCH/DELETE /admin/documents/:id`, `POST /admin/documents` | `PATCH` с `If-Match: <updatedAt>` (иначе `409 CONFLICT`). Черновик и «на доработке» правит `catalog:edit`, остальные статусы — только `catalog:publish`. Открытие доступа требует `confirmOpenAccess`, удаление — `confirm` |
+| `POST /admin/fonds`, `/admin/inventories`, `/admin/cases` | Создаются черновиками; повтор шифра — `409` |
+| `POST /admin/:entity/:id/:action` | `entity`: documents, fonds, inventories, cases; `action`: submit, request-changes (нужен комментарий), approve, publish, archive (нужен `confirm`), restore. Недопустимый переход — `409 INVALID_STATUS_TRANSITION`; неполная карточка — `422 INCOMPLETE_RECORD` со списком полей |
+| `POST /admin/documents/:id/pages` | Тело — сам файл (`image/jpeg`, `image/png`, `image/webp`, до 20 МБ), имя в `X-Filename`. Тип проверяется по сигнатуре; файл ложится в `ObjectStorage` с `antivirusStatus: pending` и на сайте не виден до проверки (ClamAV — ЭТАП 13) |
+| `GET /admin/notifications`, `POST /admin/notifications/:id/read` | Уведомления цикла: на проверку — ролям с `catalog:review`, одобрено — ролям с `catalog:publish`, возврат, публикация, архив — автору |
+| `GET /admin/dashboard` | Счётчики по статусам, очереди на проверку и публикацию, свои записи |
+| `GET /admin/audit-logs` | Только с `audit:read`; фильтры по действию и сущности |
+
+Защита: каждый изменяющий запрос проверяет `Sec-Fetch-Site` и `Origin` (должен совпадать с `Host` или `ADMIN_ALLOWED_ORIGINS`) и заголовок `X-CSRF-Token`; иначе `403 CSRF_FAILED`. Права читаются из БД на каждом запросе, поэтому изменение роли действует сразу. Без сессии — `401`, без права — `403`. Сессия: 30 минут простоя, 8 часов максимум.
+
+Не сделано в 10a: `POST /auth/password`, управление пользователями и ролями (F-142, F-143), импорт и экспорт (F-145), ограничение входа хранится в памяти процесса (для одного экземпляра API; при нескольких — Redis), счётчики обзора считаются по всем филиалам.
+

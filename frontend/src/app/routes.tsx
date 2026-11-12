@@ -20,6 +20,8 @@ function RootRedirect() {
 
 export const routes: RouteObject[] = [
   { path: '/', element: <RootRedirect /> },
+  // Панель управления — отдельный чанк, посетители сайта его не загружают (F-140).
+  { path: '/admin/*', lazy: async () => ({ Component: (await import('../admin/AdminApp.tsx')).AdminApp }) },
   {
     path: '/:lang',
     element: <LangLayout />,

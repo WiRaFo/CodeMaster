@@ -2,7 +2,7 @@ import 'dotenv/config';
 import type { PrismaClient } from '@prisma/client';
 import { createPrismaClient } from '../../src/infrastructure/database/client.ts';
 import { LocalStorage, type ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
-import { seedAdmin } from './admin.ts';
+import { seedAdmin, seedDemoStaff } from './admin.ts';
 import { seedDemo } from './demo.ts';
 import { seedMigrated } from './migrated.ts';
 import { seedReference } from './reference.ts';
@@ -42,6 +42,8 @@ async function main(): Promise<void> {
     const password = process.env['SEED_ADMIN_PASSWORD'];
     if (email && password) await seedAdmin(db, email, password);
     else console.warn('SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD не заданы: администратор не создан');
+    const demoStaffPassword = process.env['SEED_DEMO_STAFF_PASSWORD'];
+    if (demoStaffPassword && sets.includes('demo') && !production) await seedDemoStaff(db, demoStaffPassword);
     console.log(`Сиды загружены: справочники, ${sets.join(', ')}`);
   } finally {
     await db.$disconnect();
