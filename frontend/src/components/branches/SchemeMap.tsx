@@ -1,5 +1,5 @@
 import { ExternalLink, Landmark, Mail, MapPin, Phone, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { telHref } from '../../lib/main-branch.ts';
@@ -50,17 +50,17 @@ export function SchemeMap({ branches, lang }: { branches: BranchSummary[]; lang:
     groups.set(key, [...(groups.get(key) ?? []), b].sort((a, c) => Number(c.isMain) - Number(a.isMain)));
   }
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(null);
     opener.current?.focus();
-  };
+  }, []);
   useEffect(() => {
     if (!open) return;
     panel.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, close]);
 
   const spot = open ? SPOTS[open] : null;
   const items = open ? groups.get(open) ?? [] : [];

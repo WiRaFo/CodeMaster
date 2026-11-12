@@ -336,7 +336,7 @@ async function main() {
       const page = await context.newPage();
       await openWithPrefs(page, '/ru/branches', {});
       await page.getByText('Найдено подразделений: 15').waitFor();
-      check(await page.getByTestId('map-pending').isVisible(), 'сценарий 8: без сверенных координат вместо карты — пояснение');
+      check(await page.getByTestId('scheme-map').isVisible(), 'сценарий 8: без сверенных координат вместо карты — схема области с метками');
       check(!(await page.getByTestId('branch-map').count()), 'сценарий 8: карта не показывается без координат');
       await page.getByRole('searchbox', { name: 'Название или населённый пункт' }).fill('Лениногорск');
       await page.keyboard.press('Enter');

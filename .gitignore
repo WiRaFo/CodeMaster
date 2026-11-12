@@ -8,3 +8,4 @@ coverage/
 .DS_Store
 backend/storage/
 lighthouse-reports/
+*.tsbuildinfo

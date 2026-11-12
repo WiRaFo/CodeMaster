@@ -325,6 +325,32 @@ OpenAPI 3.1 генерируется из Zod-схем (`@fastify/swagger`) и �
 
 Данные берутся только из публичных маршрутов этого же API, поэтому правила доступа те же, что у посетителя.
 
+### База знаний помощника и аналитика сайта (12.11.2026)
+
+Помощник сначала ищет ответ в базе знаний (`assistant_knowledge`, только опубликованные записи): запись подходит, если в вопросе есть её ключевая фраза; из нескольких берётся запись с самой длинной совпавшей фразой. Тогда `intent: knowledge` и поле `knowledge: { question, answer, contentLang }`, остальные поля как у обычного ответа. Если база знаний недоступна, помощник отвечает по правилам. Каждый вопрос пишется в `search_queries` с `source = assistant`; `result_count = 0` означает, что ответа не нашлось.
+
+Счётчики сайта (без cookies, IP и идентификаторов; при `DNT: 1` или `Sec-GPC: 1` ничего не пишется; запрос с другого сайта — `403`):
+
+| Маршрут | Примечание |
+|---|---|
+| `POST /analytics/view` | `{ path }`. Считает просмотр раздела и языка за день (`analytics_page_views`). Ответ `204` |
+| `POST /analytics/error` | `{ kind: not_found \| load_failed, path }`. Адрес хранится без параметров, почта и длинные числа замаскированы (`analytics_errors`). Ответ `204` |
+
+Запрос каталога (`GET /catalog/documents?q=…`, первая страница) пишется в `search_queries` с замаскированными почтой и длинными числами. Вызовы каталога от помощника (заголовок `x-archive-internal: assistant`) не пишутся повторно.
+
+Панель:
+
+| Маршрут | Право | Примечание |
+|---|---|---|
+| `GET /admin/analytics?days=1…365` | `stats:read` | Просмотры по разделам, языкам и дням; частые запросы; запросы без результата; ошибки |
+| `GET /admin/assistant/knowledge` | `pages:edit` | Записи базы знаний с переводами |
+| `GET /admin/assistant/unanswered?days` | `pages:edit` | Вопросы помощнику без ответа: заготовки для новых записей |
+| `POST /admin/assistant/knowledge` | `pages:publish` | `{ published, links[], translations: { ru (обязательно), kk?, en? } }`, в переводе `question`, `keywords[]`, `answer`. `201` |
+| `PUT /admin/assistant/knowledge/:id` | `pages:publish` | То же, с `If-Match` (`409` при устаревшей версии) |
+| `DELETE /admin/assistant/knowledge/:id` | `pages:publish` | Тело `{ confirm: true }`, иначе `400`. `204` |
+
+Все изменения базы знаний попадают в журнал действий. Маршруты `/admin/analytics/search`, `/admin/analytics/report` и `/analytics/recommendations` из проектных таблиц выше не делались: отчёт собран в одном `GET /admin/analytics`, рекомендаций от модели нет.
+
 ### Цифровая история, FAQ, отзывы (ЭТАП 7)
 
 | Маршрут | Примечание |

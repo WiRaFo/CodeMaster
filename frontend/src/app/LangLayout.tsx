@@ -27,7 +27,7 @@ export function LangLayout() {
   const { pathname, search } = useLocation();
   const { i18n } = useTranslation();
   const firstRender = useRef(true);
-  const lastRest = useRef<string | null>(null);
+  const lastRest = useRef(pathname.replace(/^\/[^/]+/, ''));
 
   const valid = isLocale(lang);
   const isHome = /^\/[^/]+\/?$/.test(pathname);
@@ -61,11 +61,6 @@ export function LangLayout() {
     const h1 = document.querySelector<HTMLElement>('#main h1');
     h1?.focus();
   }, [pathname]);
-
-  useEffect(() => {
-    lastRest.current = pathname.replace(/^\/[^/]+/, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (lang === 'admin') {
     return (

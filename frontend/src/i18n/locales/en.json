@@ -467,10 +467,7 @@
     "empty": "Nothing found. Try a different query.",
     "mapTitle": "Map of branches",
     "mapNote": "All addresses and contacts are also listed below.",
-    "mapPending": "The map will appear once the archive has verified the coordinates. Until then, use the addresses and route links on each card.",
     "details": "Details",
-    "needsVerification": "Being verified",
-    "breadcrumbs": "You are here",
     "contacts": "Contacts and hours",
     "address": "Address",
     "phone": "Phone",
@@ -520,7 +517,6 @@
   },
   "assistant": {
     "lead": "The assistant helps you find open materials on the site and points you to the right section.",
-    "disclaimer": "The assistant works by rules: it analyses your question and shows only published materials with links; it does not make up text. It does not accept applications or requests.",
     "question": "Your question",
     "ask": "Ask",
     "you": "You",

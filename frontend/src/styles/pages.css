@@ -264,8 +264,6 @@ html.a11y .faq-box{border:2px solid #000}html.a11y .faq-tab{border:2px solid #00
 
 /* ИИ-помощник (Assistant.dc.html) */
 .asst-page{max-width:860px;margin:0 auto}
-.asst-note{display:flex;gap:14px;align-items:flex-start;margin:0 0 32px;padding:18px 22px;border-radius:18px;background:var(--tint);color:var(--ink);font-size:calc(17px * var(--fs,1));line-height:1.55}
-.asst-note svg{color:var(--brand);margin-top:3px}
 .asst-log{display:flex;flex-direction:column;gap:24px;margin:0 0 32px;padding:0;list-style:none}
 .asst-you{align-self:flex-end;max-width:80%;margin:0;padding:14px 20px;border-radius:16px;background:var(--ink);color:#fff;font-weight:700;font-size:calc(18px * var(--fs,1))}
 .asst-bot{max-width:92%;padding:22px 24px;border-radius:20px;display:flex;flex-direction:column;gap:10px}

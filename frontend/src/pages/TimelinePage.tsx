@@ -95,7 +95,11 @@ export function TimelinePage() {
   const [free, setFree] = useState<number | null>(null);
   const [hover, setHover] = useState<{ year: number; event: TimelineEvent; snapped: boolean } | null>(null);
   const [dragging, setDragging] = useState(false);
-  useEffect(() => { if (!dragging) setFree(null); }, [selected?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Выбор события отметкой, списком или клавишами возвращает ползунок на отметку; во время перетаскивания — нет.
+  const draggingNow = useRef(false);
+  draggingNow.current = dragging;
+  const shownSlug = selected?.slug;
+  useEffect(() => { if (!draggingNow.current) setFree(null); }, [shownSlug]);
   const pointAt = (clientX: number) => {
     const rect = axis.current?.getBoundingClientRect();
     if (!rect || rect.width === 0 || filtered.length === 0) return null;

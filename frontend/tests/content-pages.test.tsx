@@ -96,7 +96,7 @@ describe('цифровая история региона (F-080–F-084)', () =>
     expect(screen.getByText('Доступ ограничен')).toBeInTheDocument();
     expect(screen.getByText('Демонстрационный материал.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ауэзов Мухтар Омарханович (1897–1961)' })).toHaveAttribute('href', '/ru/history/persons/auezov-mukhtar');
-    expect(screen.getByRole('link', { name: '1940: Образован архив' })).toHaveAttribute('href', '/ru/history/timeline#event-archive-founded');
+    expect(screen.getByRole('link', { name: '1940: Образован архив' })).toHaveAttribute('href', '/ru/history/timeline?event=archive-founded');
     expect(await axeViolations(container)).toEqual([]);
   });
 });
