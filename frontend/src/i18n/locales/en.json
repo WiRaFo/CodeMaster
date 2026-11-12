@@ -283,7 +283,7 @@
   "catalogSearch": {
     "label": "Search the electronic catalogue",
     "submit": "Search",
-    "hint": "For example: “board meeting minutes” or the code “F. 12. Inv. 3. File 45”."
+    "hint": "For example: “board meeting minutes” or a reference code: type “F. 12” and press Space — “Inv.”, “File” and “Fol.” follow automatically."
   },
   "catalog": {
     "results": "Search results",

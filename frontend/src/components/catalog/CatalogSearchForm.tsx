@@ -2,6 +2,8 @@ import { Search } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
+import { cleanCipher } from '../../lib/cipher-input.ts';
+import { CipherSearchInput } from './CipherSearchInput.tsx';
 
 /**
  * Поиск по архивному учёту (F-011). Отделён от поиска по сайту в шапке (F-007):
@@ -24,7 +26,7 @@ export function CatalogSearchForm({ id, initialQuery = '', large = false, keepPa
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     const params = new URLSearchParams(keepParams);
-    const q = query.trim();
+    const q = cleanCipher(query);
     if (q) params.set('q', q);
     const search = params.toString();
     navigate(`/${lang}/catalog${search ? `?${search}` : ''}`);
@@ -35,8 +37,8 @@ export function CatalogSearchForm({ id, initialQuery = '', large = false, keepPa
       <form role="search" aria-label={t('catalogSearch.label')} onSubmit={onSubmit} className="cat-search">
         <label htmlFor={id} className="label mb-2">{t('catalogSearch.label')}</label>
         <div className="field-row">
-          <input id={id} type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={200}
-            aria-describedby={`${id}-hint`} className="field cat-search-field" autoComplete="off" />
+          <CipherSearchInput id={id} name="q" value={query} onValue={setQuery} maxLength={200}
+            aria-describedby={`${id}-hint`} className="field cat-search-field" />
           <button type="submit" className="btn cat-search-btn">
             <Search aria-hidden="true" className="size-5" />{t('catalogSearch.submit')}
           </button>
@@ -52,8 +54,8 @@ export function CatalogSearchForm({ id, initialQuery = '', large = false, keepPa
         {t('catalogSearch.label')}
       </label>
       <div className="flex flex-wrap gap-2">
-        <input id={id} type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={200}
-          aria-describedby={`${id}-hint`} className="input min-w-0 flex-1 basis-60" autoComplete="off" />
+        <CipherSearchInput id={id} name="q" value={query} onValue={setQuery} maxLength={200}
+          aria-describedby={`${id}-hint`} className="input min-w-0 flex-1 basis-60" />
         <button type="submit" className="btn-primary">
           <Search aria-hidden="true" className="size-5" />
           <span>{t('catalogSearch.submit')}</span>

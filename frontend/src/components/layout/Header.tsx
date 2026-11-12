@@ -2,7 +2,9 @@ import { Menu, Phone, Search, X } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router';
+import { cleanCipher } from '../../lib/cipher-input.ts';
 import { telHref, useMainBranch } from '../../lib/main-branch.ts';
+import { CipherSearchInput } from '../catalog/CipherSearchInput.tsx';
 import { SECTIONS, sectionHref, type SectionKey } from '../../lib/sections.ts';
 import { AccessMenu } from './AccessMenu.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
@@ -71,7 +73,7 @@ export function Header() {
 
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
-    const q = query.trim();
+    const q = cleanCipher(query);
     navigate(q ? `/${lang}/search?q=${encodeURIComponent(q)}` : `/${lang}/search`);
   };
 
@@ -125,7 +127,7 @@ export function Header() {
           </Link>
           <form className="hdr-search" role="search" aria-label={t('header.searchFull')} onSubmit={onSearch}>
             <label htmlFor="site-search" className="sr-only">{t('header.searchLabel')}</label>
-            <input id="site-search" type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)}
+            <CipherSearchInput id="site-search" name="q" value={query} onValue={setQuery}
               placeholder={t('header.searchPlaceholder')} maxLength={200} className="field" />
             <button type="submit" className="btn">
               <Search aria-hidden="true" className="size-5" />{t('header.searchSubmit')}

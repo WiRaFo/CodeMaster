@@ -7,6 +7,8 @@ import { usePageMeta } from '../app/usePageMeta.ts';
 import { MonthDates } from '../components/home/MonthDates.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
+import { CipherSearchInput } from '../components/catalog/CipherSearchInput.tsx';
+import { cleanCipher } from '../lib/cipher-input.ts';
 import { formatDate, formatYears } from '../lib/format.ts';
 import { telHref, useMainBranch } from '../lib/main-branch.ts';
 import { SchemeMap } from '../components/branches/SchemeMap.tsx';
@@ -165,7 +167,7 @@ function CatalogBlock() {
   const [query, setQuery] = useState('');
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const q = query.trim();
+    const q = cleanCipher(query);
     navigate(q ? `/${lang}/catalog?q=${encodeURIComponent(q)}` : `/${lang}/catalog`);
   };
   const drawers = ['fond', 'inventory', 'case', 'sheets'] as const;
@@ -179,8 +181,8 @@ function CatalogBlock() {
           <form role="search" aria-label={t('catalogSearch.label')} className="max-w-[640px]" onSubmit={onSubmit}>
             <label className="label mb-2" htmlFor="home-catalog-search">{t('catalogSearch.label')}</label>
             <div className="field-row">
-              <input id="home-catalog-search" className="field" type="search" name="q" value={query} maxLength={200}
-                autoComplete="off" aria-describedby="home-catalog-hint" onChange={(e) => setQuery(e.target.value)} />
+              <CipherSearchInput id="home-catalog-search" className="field" name="q" value={query} maxLength={200}
+                aria-describedby="home-catalog-hint" onValue={setQuery} />
               <button type="submit" className="btn"><Search aria-hidden="true" className="size-5" />{t('catalogSearch.submit')}</button>
             </div>
           </form>
