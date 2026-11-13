@@ -287,7 +287,7 @@ export interface PeriodRef {
 }
 
 /** ЭТАП 12. Ответ архивного помощника (GET /assistant/ask). Текст ответа строится по словарю интерфейса. */
-export type AssistantSection = 'exhibitions' | 'news' | 'history' | 'accessibility' | 'faq' | 'about' | 'visitors' | 'catalog' | 'branches';
+export type AssistantSection = 'services' | 'exhibitions' | 'news' | 'history' | 'accessibility' | 'faq' | 'about' | 'visitors' | 'catalog' | 'branches';
 export type AssistantRecognized =
   | { kind: 'years'; yearFrom: number; yearTo: number; text: string }
   | { kind: 'type' | 'settlement' | 'topic'; value: string; label: string; text: string };
@@ -306,6 +306,8 @@ export type AssistantAnswer =
   /** semantic — документы, похожие по смыслу (только при подключённой модели ИИ). */
   | { intent: 'unknown'; links: AssistantSection[]; semantic?: AssistantDocument[] }
   | { intent: 'term'; term: string; links: AssistantSection[] }
+  /** Ответ из базы знаний, которую ведут сотрудники; contentLang — язык текста (русский, если перевода нет). */
+  | { intent: 'knowledge'; lang: string; links: AssistantSection[]; knowledge: { question: string; answer: string; contentLang: string } }
   | {
       intent: 'branch';
       recognized: AssistantRecognized[];
@@ -490,4 +492,17 @@ export interface CollectionDetail extends CollectionSummary {
 /** Плитка галереи (GET /history/gallery, F-085): документ и его первая публичная страница. */
 export interface GalleryItem extends DocumentSummary {
   image: { url: string; width: number | null; height: number | null };
+}
+
+/** Поиск по сайту из шапки (GET /search, F-007). */
+export type SiteSearchGroupType = 'pages' | 'news' | 'publications' | 'exhibitions' | 'branches' | 'faq';
+export interface SiteSearchResult {
+  query: string;
+  total: number;
+  groups: Array<{
+    type: SiteSearchGroupType;
+    total: number;
+    items: Array<{ title: string; path: string; excerpt: string | null; date: string | null }>;
+  }>;
+  catalogHint: { count: number; looksLikeCode: boolean; path: string } | null;
 }

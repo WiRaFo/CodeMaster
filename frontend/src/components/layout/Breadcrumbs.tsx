@@ -12,8 +12,8 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   const { lang = 'kk' } = useParams();
   const all: Crumb[] = [{ label: t('nav.home'), to: `/${lang}` }, ...items];
   return (
-    <nav aria-label={t('breadcrumbs.label')} className="mb-3 text-sm">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <nav aria-label={t('breadcrumbs.label')} className="crumbs">
+      <ol className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
         {all.map((c, i) => {
           const last = i === all.length - 1;
           return (

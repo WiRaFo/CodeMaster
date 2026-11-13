@@ -1,0 +1,62 @@
+/*
+ * Панель управления в общем стиле сайта «Небо и золото» (12.11.2026): те же цвета, шрифт, кнопки,
+ * поля, карточки и таблицы, что на публичных страницах. Только оформление, разметка панели не меняется.
+ * Всё ограничено body.adm, поэтому на сайт не влияет.
+ */
+body.adm{background:var(--bg);color:var(--ink)}
+body.adm h1{font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+body.adm main h1::after{content:"";display:block;width:72px;height:6px;margin-top:10px;border-radius:3px;background:var(--gold)}
+body.adm h2{color:var(--ink)}
+
+/* Шапка: тёмная полоса с гербом, под ней — разделы-вкладки. */
+body.adm .adm-head{position:sticky;top:0;z-index:20;background:#fff;box-shadow:0 6px 24px -18px rgba(27,46,87,.45)}
+body.adm .adm-top{background:var(--ink);border-bottom:3px solid var(--gold)}
+body.adm .adm-bar{color:#fff;min-height:64px}
+body.adm .adm-brand{display:flex;align-items:center;gap:12px;margin:0;font-weight:800;font-size:1.125rem}
+body.adm .adm-brand img{border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+body.adm .adm-user,body.adm .adm-user .text-muted{color:var(--odm)}
+body.adm .btn-secondary.adm-logout{min-height:2.75rem;background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+body.adm .btn-secondary.adm-logout:hover{background:rgba(255,255,255,.12);color:#fff;border-color:#fff}
+body.adm .adm-nav ul{gap:6px}
+body.adm .admin-nav-link{min-height:2.75rem;padding:.25rem 1rem;border-radius:12px;color:var(--brand);font-weight:700;text-decoration:none;transition:background-color .2s,color .2s}
+body.adm .admin-nav-link:hover{background:var(--tint);color:var(--ink)}
+body.adm .admin-nav-link[aria-current='page']{background:var(--ink);color:#fff;text-decoration:none}
+
+/* Карточки и блоки: скруглённые, с мягкой тенью, как карточки сайта. */
+body.adm main .rounded-md.border,body.adm main .rounded.border,body.adm .an-card,body.adm .an-kpi>div{border-radius:18px;border-color:var(--line);background:#fff;box-shadow:0 10px 30px -22px rgba(27,46,87,.45)}
+body.adm main form.rounded-md.border{padding:1.25rem 1.5rem}
+body.adm .an-kpi dd{color:var(--ink)}
+body.adm .an-bar>span{background:var(--brand)}
+
+/* Кнопки — как .btn сайта: синие, скругление 14, лёгкий подъём при наведении. */
+body.adm .btn-primary,body.adm .btn-secondary{border-radius:14px;transition:background-color .2s,transform .2s,box-shadow .2s}
+body.adm .btn-primary{background:var(--brand);border-color:var(--brand)}
+body.adm .btn-primary:hover{background:var(--ink);border-color:var(--ink);transform:translateY(-2px);box-shadow:0 12px 20px -14px rgba(0,0,0,.5)}
+body.adm .btn-secondary{color:var(--brand);border-color:var(--line2)}
+body.adm .btn-secondary:hover{background:var(--tint);border-color:var(--brand);color:var(--ink);transform:translateY(-2px)}
+body.adm .btn-primary:disabled,body.adm .btn-secondary:disabled{transform:none;box-shadow:none;opacity:.55;cursor:default}
+
+/* Поля — как .field сайта. */
+body.adm .input{border:2px solid var(--line2);border-radius:14px;background:#fff;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+body.adm .input:hover{border-color:var(--brand)}
+body.adm .input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(53,102,176,.18)}
+body.adm .admin-field>label,body.adm legend{color:var(--ink);font-weight:700}
+
+/* Таблицы: шапка в тоне сайта, строки подсвечиваются. */
+body.adm .admin-table{border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+body.adm .admin-table th{background:var(--tint);color:var(--ink);font-weight:700;border-bottom:1px solid var(--line)}
+body.adm .admin-table tbody tr:hover td{background:#F9FBFF}
+body.adm .admin-table tr:last-child td{border-bottom:0}
+
+/* Статусы — пилюли сайта. */
+body.adm .status-badge{padding:.2rem .7rem;border-color:var(--line2);background:var(--chip);font-weight:600}
+body.adm .status-badge[data-status='published']{background:#E6F4EC;color:#1E6B3F;border-color:#9BD0B0}
+
+/* Вход: карточка с гербом. */
+body.adm .adm-login{margin-top:6vh;padding:2rem 2rem 2.25rem;border-radius:24px;background:#fff;border:1px solid var(--line);box-shadow:0 24px 60px -30px rgba(27,46,87,.5);text-align:left}
+body.adm .adm-login-seal{display:block;margin:0 0 1rem;border-radius:50%}
+body.adm .adm-login .btn-primary{width:100%}
+
+body.adm a:focus-visible,body.adm button:focus-visible,body.adm .input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){body.adm .btn-primary:hover,body.adm .btn-secondary:hover{transform:none}}
+html[data-motion="reduce"] body.adm .btn-primary:hover,html[data-motion="reduce"] body.adm .btn-secondary:hover{transform:none}

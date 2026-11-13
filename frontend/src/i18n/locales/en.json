@@ -32,17 +32,26 @@
     "catalogButton": "E-catalogue",
     "menuOpen": "Menu",
     "menuTitle": "Site sections",
-    "close": "Close"
+    "close": "Close",
+    "official": "Official information and reference website",
+    "motionStop": "Stop animation",
+    "motionStart": "Turn animation on",
+    "motionAria": "Stop animation on the site",
+    "lowVisionOn": "Low-vision version",
+    "lowVisionOff": "Standard version",
+    "lowVisionShortOn": "Low vision",
+    "lowVisionShortOff": "Standard version",
+    "sections": "Sections",
+    "sectionsBar": "Site sections (bar)",
+    "catalogSearch": "Search the catalogue",
+    "homeShort": "Home page",
+    "searchFull": "Search the site and catalogue"
   },
   "lang": {
     "label": "Site language",
     "kk": "Қазақша",
     "ru": "Русский",
     "en": "English"
-  },
-  "theme": {
-    "toDark": "Switch to dark theme",
-    "toLight": "Switch to light theme"
   },
   "a11y": {
     "button": "Accessibility",
@@ -78,14 +87,15 @@
     "phone": "Phone",
     "email": "Email",
     "schedule": "Opening hours",
-    "needsVerification": "Details were transferred from the current website and are being verified",
     "allBranches": "All branches and contacts",
     "contactsUnavailable": "Contact details could not be loaded right now.",
     "social": "Social media",
     "socialPending": "Links to the archive's official social media pages will appear once the archive confirms them.",
     "infoOnly": "This website is for information only: applications, requests and orders are not accepted through it.",
     "sections": "Sections",
-    "copyright": "© {{year}} State Archive of East Kazakhstan Region"
+    "copyright": "© {{year}} State Archive of East Kazakhstan Region",
+    "more": "More",
+    "emblemAlt": "Emblem of the State Archive of East Kazakhstan Region"
   },
   "stub": {
     "text": "This section will be added in later stages of the prototype.",
@@ -114,7 +124,6 @@
     "allExhibitions": "All exhibitions",
     "branchesTitle": "Our branches",
     "allBranches": "All branches, map and contacts",
-    "branchesNote": "Addresses and phone numbers were transferred from the current archive website and are being verified.",
     "newsTitle": "News and events",
     "allNews": "All news",
     "useful": {
@@ -135,6 +144,111 @@
         "title": "Branch information",
         "text": "Addresses, phone numbers and opening hours of the archive and its branches."
       }
+    },
+    "heroLine1": "The digital memory",
+    "heroLine2": "of East Kazakhstan",
+    "heroArt": "Illustration: a fonds, an inventory and a file in the archive",
+    "open": "Open",
+    "quickKicker": {
+      "findDocument": "Catalogue",
+      "certificate": "Public service",
+      "readingRoom": "Visitors",
+      "findBranch": "Branches"
+    },
+    "quickText": {
+      "findDocument": "By title, keywords or archival reference code.",
+      "certificate": "Where to apply and which documents you need.",
+      "readingRoom": "Opening hours and how to prepare for your visit.",
+      "findBranch": "Addresses, phone numbers and opening hours of the archive’s branches."
+    },
+    "cipherTitle": "How to read a reference code",
+    "cipherExample": "Sample reference code:",
+    "cipher": {
+      "fond": {
+        "code": "F. 12",
+        "label": "Fonds",
+        "text": "Records of one organisation or person"
+      },
+      "inventory": {
+        "code": "Inv. 3",
+        "label": "Inventory",
+        "text": "List of files within a fonds"
+      },
+      "case": {
+        "code": "File 45",
+        "label": "File",
+        "text": "A folder of documents"
+      },
+      "sheets": {
+        "code": "Sh. 1–12",
+        "label": "Sheets",
+        "text": "Pages within a file"
+      }
+    },
+    "manuscript": {
+      "title": "From manuscript to transcription",
+      "text": "Published documents have a digital copy and a transcription. Old handwriting can be read in plain letters and found by words.",
+      "toText": "Show transcription",
+      "toSheet": "Show manuscript",
+      "caption": "Transcription — sample",
+      "plainTitle": "Dear sirs!",
+      "plain": "This repository holds the memory of the Eastern lands, from the Irtysh to the peaks of the Altai: files, letters, orders and the fates of people.",
+      "plainSign": "Keeper of the archive"
+    },
+    "historyLead": "“The Great Archive of Memory”: publications on regional history based on archival documents.",
+    "allPublications": "All publications",
+    "historyTabs": {
+      "timeline": {
+        "tab": "by year",
+        "name": "Timeline"
+      },
+      "persons": {
+        "tab": "people",
+        "name": "Historical figures"
+      },
+      "collections": {
+        "tab": "selections",
+        "name": "Collections"
+      },
+      "gallery": {
+        "tab": "photos",
+        "name": "Gallery"
+      },
+      "calendar": {
+        "tab": "dates",
+        "name": "Calendar of memorable dates"
+      }
+    },
+    "topicSoon": "coming soon",
+    "topicCount": "Publications: {{count}}",
+    "exhibitionsLead": "Thematic displays of the archive’s documents and photographs. You can go through an exhibition in order, from the first item to the last.",
+    "years": "Years: {{years}}",
+    "startViewing": "Start viewing",
+    "rubricLabel": "Category",
+    "allRubrics": "All categories",
+    "rubricEmpty": "There are no publications in this category yet.",
+    "assistant": {
+      "title": "AI assistant",
+      "text": "The assistant tells you where to find the site’s open materials and links to the right sections. It does not accept applications or requests.",
+      "label": "Your question",
+      "ask": "Ask",
+      "examplesTitle": "Sample questions",
+      "examples": [
+        "How do I apply for an archival certificate?",
+        "What is an inventory?",
+        "How do I find a document by its reference code?",
+        "Where is the reading room?"
+      ]
+    },
+    "contacts": {
+      "title": "Branches and contacts",
+      "text_one": "The archive, its sites and branches: {{count}} unit across the region.",
+      "text_other": "The archive, its sites and branches: {{count}} units across the region.",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "schedule": "Hours",
+      "find": "Find a branch"
     }
   },
   "notFound": {
@@ -144,7 +258,31 @@
   },
   "search": {
     "title": "Site search",
-    "query": "Query: “{{q}}”"
+    "query": "Query: “{{q}}”",
+    "label": "What to find on the site",
+    "submit": "Search",
+    "intro": "Searches sections, news, publications, exhibitions, branches and answers to questions. Archival documents are searched in the electronic catalogue.",
+    "found_one": "{{count}} result found",
+    "found_other": "{{count}} results found",
+    "nothing": "Nothing was found on the site pages. Try another word or search the catalogue.",
+    "more": "All results in this section",
+    "shown": "Showing the first {{shown}} of {{total}}",
+    "groups": {
+      "pages": "Site sections",
+      "news": "News",
+      "publications": "Digital history",
+      "exhibitions": "Online exhibitions",
+      "branches": "Branches and contacts",
+      "faq": "Questions and answers"
+    },
+    "catalog": {
+      "title": "Electronic catalogue",
+      "code": "This looks like an archival reference code. Documents are searched by code in the catalogue.",
+      "found_one": "{{count}} document found in the catalogue",
+      "found_other": "{{count}} documents found in the catalogue",
+      "none": "Nothing matches this code in the catalogue yet, but you can refine the query there.",
+      "go": "Search the catalogue"
+    }
   },
   "accessibilityPage": {
     "lead": "We want everyone to be able to use this website, including people with visual, hearing, motor and cognitive impairments. Our target is WCAG 2.2 level AA.",
@@ -169,7 +307,7 @@
   "catalogSearch": {
     "label": "Search the electronic catalogue",
     "submit": "Search",
-    "hint": "For example: “board meeting minutes” or the code “F. 12. Inv. 3. File 45”."
+    "hint": "For example: “board meeting minutes” or a reference code: type “F. 12” and press Space — “Inv.”, “File” and “Fol.” follow automatically."
   },
   "catalog": {
     "results": "Search results",
@@ -221,12 +359,15 @@
       "yearOrder": "The start year must not be later than the end year.",
       "organization": "Organisation",
       "author": "Author or compiler",
-      "authorHint": "Part of a name is enough."
+      "authorHint": "Part of a name is enough.",
+      "copyGroup": "Digital copy"
     },
     "semantic": {
       "title": "Similar in meaning",
       "note": "Selected by a local AI model by the meaning of the query, even when the query words are not in the text. Matches may be imprecise."
-    }
+    },
+    "reset": "Reset",
+    "boxLabel": "F. · Inv. · File"
   },
   "news": {
     "empty": "No news yet.",
@@ -238,12 +379,12 @@
     "allRubrics": "All categories",
     "found_one": "{{count}} news item found",
     "found_other": "{{count}} news items found",
-    "nothingFound": "No news match this query. Change the query or choose another category."
+    "nothingFound": "No news match this query. Change the query or choose another category.",
+    "readMore": "Read more"
   },
   "origin": {
     "demo": "Demo",
-    "synthetic": "Test data",
-    "demoNote": "Prototype demo material; it will be replaced with archive content."
+    "synthetic": "Test data"
   },
   "content": {
     "otherLanguage": "This text is available only in: {{lang}}",
@@ -309,10 +450,7 @@
       "keys": "Keys in the image area: left and right arrows turn pages, “+” and “−” zoom, “0” resets.",
       "fallbackAlt": "Page {{page}} of the digital copy"
     },
-    "originNote": {
-      "synthetic": "Synthetic record for development and testing; not an archival document.",
-      "demo": "Demo record of the prototype; it will be replaced with the archive's data."
-    }
+    "hierarchyLabel": "Where the document is kept in the archive"
   },
   "exhibitions": {
     "listLead": "Themed displays of archival documents and photographs. Each exhibition can be viewed in order, from the first exhibit to the last.",
@@ -353,11 +491,7 @@
     "empty": "Nothing found. Try a different query.",
     "mapTitle": "Map of branches",
     "mapNote": "All addresses and contacts are also listed below.",
-    "mapPending": "The map will appear once the archive has verified the coordinates. Until then, use the addresses and route links on each card.",
     "details": "Details",
-    "needsVerification": "Being verified",
-    "needsVerificationNote": "This information was carried over from the archive's current website and has not been verified yet. Please call before visiting.",
-    "breadcrumbs": "You are here",
     "contacts": "Contacts and hours",
     "address": "Address",
     "phone": "Phone",
@@ -401,11 +535,12 @@
     },
     "structureLink": "Archive structure and management",
     "basis": "The branches were established and renamed by Resolution No. 142 of the East Kazakhstan Regional Akimat of 2 June 2026.",
-    "basisLink": "Text of the resolution (PDF, 6 pages, 1.3 MB, in Kazakh and Russian, scanned)"
+    "basisLink": "Text of the resolution (PDF, 6 pages, 1.3 MB, in Kazakh and Russian, scanned)",
+    "searchPlaceholder": "For example: Ridder",
+    "more": "Address and route"
   },
   "assistant": {
     "lead": "The assistant helps you find open materials on the site and points you to the right section.",
-    "disclaimer": "The assistant works by rules: it analyses your question and shows only published materials with links; it does not make up text. It does not accept applications or requests.",
     "question": "Your question",
     "ask": "Ask",
     "you": "You",
@@ -442,7 +577,8 @@
       "relaxed": "No exact matches. I searched without: {{what}}.",
       "found": "Documents found: {{count}}.",
       "allResults": "All results in the catalog",
-      "suggestions": "You may also try:"
+      "suggestions": "You may also try:",
+      "knowledgeNote": "This answer was prepared by archive staff."
     },
     "suggest": {
       "withCopy": "Only with a digital copy",
@@ -458,8 +594,29 @@
       "archiveCode": "An archive reference code is the document's address in the archive: the fonds, inventory, file and folio numbers, for example “F. 1. Inv. 2. File 3. Fol. 4”. You can type a code into the catalog search.",
       "restricted": "Restricted documents appear on the site only as a record card with access conditions, without a copy or transcription. Closed documents are not published on the site.",
       "readingRoom": "In the reading room you can work with original documents and copies that are not published on the site. The address and hours are in “Branches and contacts”.",
-      "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one."
-    }
+      "digitalCopy": "A digital copy is a scan of a document that you can view on the site. Only open documents that have passed checks have one.",
+      "archive": "An archive is an institution that accepts documents for storage, keeps records of them, preserves them and provides access to them. A regional state archive keeps documents of the region’s authorities, organisations and citizens.",
+      "archivalDocument": "An archival document is a document kept in an archive because it is valuable to society, the state or a person: an order, minutes, a letter, a photograph, a map.",
+      "personnel": "Personnel records are orders on hiring and dismissal, personal files, pay accounts and payrolls. They are used to confirm length of service and earnings.",
+      "archivalCopy": "An archival copy reproduces a whole document, an archival extract only the part you need. The archive issues them on application; this site does not accept applications.",
+      "guide": "A guide is a reference book on the archive’s fonds: which fonds exist, whose documents they hold and for which years.",
+      "catalog": "The e-catalogue searches descriptions of fonds, inventories, files and documents. It shows the reference code, dates and access conditions, and for some documents a digital copy."
+    },
+    "restart": "Start over",
+    "notFound": "No answer? See",
+    "notFoundFaq": "questions and answers",
+    "notFoundCall": "or call the archive:",
+    "answerLang": "Answer language",
+    "langName": {
+      "kk": "Kazakh",
+      "ru": "Russian",
+      "en": "English"
+    },
+    "chatLabel": "Chat with the AI assistant",
+    "botName": "Archive AI assistant",
+    "status": "Answers from the website’s open materials",
+    "greeting": "Hello! I am the AI assistant of the State Archive of East Kazakhstan Region. Ask about documents, branches, opening hours or archival terms, and I will give you links to the right sections of the website.",
+    "placeholder": "Ask about the archive…"
   },
   "history": {
     "lead": "The “Great Archive of Memory”: stories about the region's history based on archival records.",
@@ -484,7 +641,8 @@
     "persons": "People",
     "events": "Timeline events",
     "photos_one": "Photo ({{count}})",
-    "photos_other": "Photos ({{count}})"
+    "photos_other": "Photos ({{count}})",
+    "filterLabel": "Publication filter"
   },
   "feedback": {
     "lead": "Tell us what is inconvenient on the site, what is hard to find or what we should add.",
@@ -521,7 +679,6 @@
   },
   "faq": {
     "lead": "Frequently asked questions, grouped by topic.",
-    "demoNote": "The answers were prepared by the development team and will be agreed with the archive.",
     "more": "Didn't find an answer? Ask the assistant or leave feedback:",
     "topic": {
       "services": "Certificates and services",
@@ -529,7 +686,9 @@
       "access": "Access to documents",
       "visit": "Visiting the archive",
       "site": "Using the website"
-    }
+    },
+    "linksLabel": "Go to section",
+    "langSwitch": "Switch site language"
   },
   "visitors": {
     "lead": "How to prepare for a visit to the archive.",
@@ -539,11 +698,24 @@
       "find": "Find the documents you need in the e-catalogue in advance.",
       "code": "Write down the reference code of each document: it is how the document is found.",
       "access": "Check the access conditions on the document's record card.",
-      "contact": "Confirm the opening hours by phone: the details are still being verified."
+      "contact": "Check the opening hours by phone before your visit."
     },
     "contactsTitle": "Address and opening hours",
     "allBranches": "All branches and contacts",
-    "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions."
+    "pending": "The reading room rules and the list of archive services will be published once the archive provides the current versions.",
+    "stepsHint": "Tick the steps as you go so that nothing is forgotten.",
+    "done": "Done: {{count}} of {{total}}",
+    "readingRoomTitle": "Reading room",
+    "readingRoomText": "How the archive reading room works. You cannot book a visit, order files or apply through the website.",
+    "beforeVisit": "Before your visit",
+    "before1": "Find the documents in the e-catalogue and write down their codes: fond, inventory, file.",
+    "before2": "Check the access level: restricted documents are issued on the terms shown in the record.",
+    "stepTitles": {
+      "find": "Find the documents you need",
+      "code": "Write down the reference code",
+      "access": "Check the access conditions",
+      "contact": "Check the opening hours"
+    }
   },
   "about": {
     "lead": "State Archive of East Kazakhstan Region: history, structure and contacts.",
@@ -561,8 +733,17 @@
     "source": "Information provided by the archive on 10 November 2026.",
     "unavailable": "This section has not been filled in yet.",
     "galleryTitle": "Archive photo gallery",
-    "demoPhoto": "Demo photo",
-    "actualized": "Information current as of {{date}}."
+    "actualized": "Information current as of {{date}}.",
+    "netTitle": "The archive network today",
+    "statUnits": "units: the archive, its site and branches",
+    "statLangs": "site languages: Kazakh, Russian, English",
+    "allOnMap": "All sites and branches on the map",
+    "pickYear": "Pick a year on the tape to open an event from the archive’s history.",
+    "yearsLabel": "Years of the archive’s history",
+    "earlier": "Earlier",
+    "later": "Later",
+    "fullHistory": "The whole history",
+    "byYears": "History by year"
   },
   "calendar": {
     "title": "Calendar of memorable dates",
@@ -613,7 +794,9 @@
       "paid": "Paid services"
     },
     "pdf": "PDF document on this website",
-    "table": "Table"
+    "table": "Table",
+    "allBranches": "All sites and branches",
+    "askAssistant": "Ask the AI assistant"
   },
   "breadcrumbs": {
     "label": "Breadcrumb"
@@ -653,7 +836,25 @@
     "decade": "{{decade}}s",
     "empty": "No events yet.",
     "fullHistory": "Full history of the archive",
-    "publications": "Publications about this event"
+    "controls": "Period and search",
+    "allYears": "All years",
+    "from": "From",
+    "to": "To",
+    "search": "Find an event",
+    "searchPlaceholder": "For example: branch",
+    "found_one": "{{count}} event",
+    "found_other": "{{count}} events",
+    "axis": "Timeline: event marks",
+    "axisHint": "Drag the slider or click anywhere on the scale, like a video progress bar: near an event it snaps to it. You can also pick a mark or an event in the list; arrow keys ← → work on the scale.",
+    "nothing": "No events in this period. Choose another period or clear the search.",
+    "listLabel": "Events of the selected period",
+    "related": "Related materials",
+    "docsOfYear_one": "{{count}} document from {{year}} in the catalogue",
+    "docsOfYear_other": "{{count}} documents from {{year}} in the catalogue",
+    "docsOfDecade": "Documents from the {{decade}}s in the catalogue",
+    "prev": "Earlier",
+    "next": "Later",
+    "position": "{{n}} of {{total}}"
   },
   "persons": {
     "title": "Historical figures",
@@ -678,5 +879,45 @@
     "lead": "Digitised documents that are open for viewing. Select an image to page through and zoom the copy.",
     "empty": "No open digital copies yet.",
     "alt": "First page of the digital copy: {{title}}"
+  },
+  "navShort": {
+    "catalog": "Fonds and catalogue",
+    "history": "Regional history",
+    "exhibitions": "Exhibitions",
+    "news": "News",
+    "faq": "Questions"
+  },
+  "lowVision": {
+    "size": "Text size",
+    "sizeL": "Large",
+    "sizeXl": "Extra large",
+    "color": "Colour",
+    "colorGroup": "Site colours",
+    "bw": "Black on white",
+    "wb": "White on black",
+    "blue": "Dark blue on light blue",
+    "swatch": "A"
+  },
+  "access": {
+    "menu": "Accessibility",
+    "menuAria": "Site accessibility settings",
+    "textSize": "Text size",
+    "textM": "Normal",
+    "textL": "Large",
+    "textXl": "Extra large",
+    "modeTitle": "Low-vision version",
+    "modeHint": "Large text and high contrast.",
+    "reset": "Reset settings",
+    "animation": "Animation"
+  },
+  "branchMap": {
+    "title": "The archive and its branches on the regional map",
+    "lead": "Click a marker to see the address and contacts.",
+    "central": "Central State Archive of EKR",
+    "pinMany": "{{name}}: {{count}} units in the city",
+    "close": "Close",
+    "open2gis": "Open in 2GIS",
+    "newTab": "(opens in a new tab)",
+    "more": "Details"
   }
 }

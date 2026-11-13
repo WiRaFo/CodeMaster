@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="96" viewBox="0 0 240 96">
+<g fill="none" stroke="#EAD94C" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M0 5H240M0 91H240" stroke-width="5"/>
+<!-- рога вверх: центр плитки -->
+<path d="M120 86V58"/>
+<path d="M120 58C120 38 142 24 158 34C172 43 169 63 155 64C145 65 140 55 146 49"/>
+<path d="M120 58C120 38 98 24 82 34C68 43 71 63 85 64C95 65 100 55 94 49"/>
+<!-- рога вниз: стык плиток -->
+<path d="M0 10V38M240 10V38"/>
+<path d="M0 38C0 58 22 72 38 62C52 53 49 33 35 32C25 31 20 41 26 47"/>
+<path d="M240 38C240 58 218 72 202 62C188 53 191 33 205 32C215 31 220 41 214 47"/>
+</g>
+<g fill="#EAD94C">
+<path d="M120 12l8 10-8 10-8-10z"/>
+<path d="M60 43l6 8-6 8-6-8zM180 43l6 8-6 8-6-8z"/>
+<path d="M0 74l7 9-7 9zM240 74l-7 9 7 9z"/>
+</g>
+</svg>

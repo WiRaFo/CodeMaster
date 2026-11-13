@@ -346,3 +346,22 @@ export const socialLinksInputSchema = z.object({
     url: z.url().max(500).startsWith('https://'),
   })).max(SOCIAL_NETWORKS.length).refine((list) => new Set(list.map((i) => i.network)).size === list.length, { message: 'duplicate network' }),
 });
+
+/** Разделы сайта, на которые помощник даёт ссылки (ТЗ §5.8 А). */
+export const ASSISTANT_SECTIONS = ['services', 'exhibitions', 'news', 'history', 'accessibility', 'faq', 'about', 'visitors', 'catalog', 'branches'] as const;
+export type AssistantSection = (typeof ASSISTANT_SECTIONS)[number];
+
+/**
+ * Запись базы знаний помощника: вопрос, ключевые фразы и ответ на каждом языке, ссылки на разделы.
+ * Помощник отвечает записью, если в вопросе посетителя найдена хотя бы одна её ключевая фраза.
+ */
+export const knowledgeInputSchema = z.object({
+  published: z.boolean(),
+  links: z.array(z.enum(ASSISTANT_SECTIONS)).max(4).transform((v) => [...new Set(v)]),
+  translations: z.partialRecord(z.enum(LOCALES), z.object({
+    question: z.string().trim().min(5).max(300),
+    keywords: z.array(z.string().trim().toLowerCase().min(3).max(60)).min(1).max(20),
+    answer: z.string().trim().min(10).max(3000),
+  })),
+}).refine((v) => v.translations.ru !== undefined, { path: ['translations', 'ru', 'question'], message: 'required' });
+export type KnowledgeInput = z.infer<typeof knowledgeInputSchema>;

@@ -11,14 +11,14 @@ afterAll(() => t.close());
 type Item = Record<string, unknown>;
 
 describe('список выставок (F-090)', () => {
-  it('показывает опубликованные выставки с пометкой «Демо», тематиками, числом экспонатов и обложкой', async () => {
+  it('показывает опубликованные выставки с признаком demo, тематиками, числом экспонатов и обложкой', async () => {
     const res = await t.get('/api/v1/exhibitions?lang=ru');
     expect(res.status).toBe(200);
     expect(res.headers['content-language']).toBe('ru');
     const items = res.body.items ?? [];
     expect(items.map((e) => e['slug'])).toEqual(['demo-exhibition-example', 'demo-exhibition-culture']);
     expect(items[0]).toMatchObject({ dataOrigin: 'demo', itemCount: 4, coverItem: 1, yearFrom: 1946, yearTo: 1991 });
-    expect(String(items[0]?.['title'])).toMatch(/^\[Демо\]/);
+    expect(String(items[0]?.['title'])).not.toMatch(/\[Демо\]/);
     expect(items[0]?.['topics']).toEqual([{ slug: 'industry', name: 'История промышленных предприятий' }]);
     expect(res.body['topics']).toEqual(
       expect.arrayContaining([expect.objectContaining({ slug: 'industry', count: 1 }), expect.objectContaining({ slug: 'culture_art', count: 1 })]),
@@ -41,7 +41,7 @@ describe('выставка и экспонаты (F-091, F-092)', () => {
     expect(res.status).toBe(200);
     const items = res.body['items'] as Item[];
     expect(items.map((i) => i['number'])).toEqual([1, 2, 3, 4]);
-    expect(items[0]).toMatchObject({ title: 'Суреті бар экспонат', image: { alt: '«Демо» деген жазуы бар шартты сурет', width: 1600, height: 1000 } });
+    expect(items[0]).toMatchObject({ title: 'Суреті бар экспонат', image: { alt: 'Экспонат суреті', width: 1600, height: 1000 } });
     expect(items[1]?.['document']).toMatchObject({ access: 'open', code: { formatted: 'Қ. TEST-1. Тізб. 1. Іс 1.' } });
     expect(items[2]?.['image']).toBeNull();
   });
@@ -51,7 +51,7 @@ describe('выставка и экспонаты (F-091, F-092)', () => {
     expect(img.statusCode).toBe(200);
     expect(img.headers['content-type']).toBe('image/svg+xml');
     expect(img.headers['content-security-policy']).toContain('sandbox');
-    expect(img.body).toContain('ДЕМО');
+    expect(img.body).toContain('Экспонат 1');
     const scan = await t.app.inject({ method: 'GET', url: '/api/v1/exhibitions/demo-exhibition-example/items/2/image' });
     expect(scan.statusCode).toBe(200);
     for (const url of ['/items/3/image', '/items/9/image', '/items/0/image', '/items/abc/image']) {

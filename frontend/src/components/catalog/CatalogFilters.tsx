@@ -32,23 +32,21 @@ export function CatalogFilters({ query, facets, onChange, idPrefix }: {
     : [];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <YearRange key={`${query.yearFrom}-${query.yearTo}`} query={query} onChange={onChange} idPrefix={idPrefix} />
       <AuthorFilter key={query.author} query={query} onChange={onChange} idPrefix={idPrefix} />
 
-      <div>
-        <label className="choice w-full">
-          <input
-            type="checkbox"
-            checked={query.hasDigitalCopy}
-            onChange={() => onChange({ ...query, hasDigitalCopy: !query.hasDigitalCopy, page: 1 })}
-          />
-          <span>
-            {t('catalog.filter.hasDigitalCopy')}
-            {facets ? <span className="text-muted"> ({facets.hasDigitalCopy.true})</span> : null}
-          </span>
-        </label>
-      </div>
+      <fieldset className="flt flt-list">
+        <legend className="flt-legend">{t('catalog.filter.copyGroup')}</legend>
+        <div className="flt-items">
+          <label className="frow">
+            <input type="checkbox" checked={query.hasDigitalCopy}
+              onChange={() => onChange({ ...query, hasDigitalCopy: !query.hasDigitalCopy, page: 1 })} />
+            <span className="flex-1">{t('catalog.filter.hasDigitalCopy')}</span>
+            {facets ? <span className="frow-n">{facets.hasDigitalCopy.true}</span> : null}
+          </label>
+        </div>
+      </fieldset>
 
       {groups.map(({ key, values }) => {
         const selected = query.multi[key];
@@ -57,18 +55,18 @@ export function CatalogFilters({ query, facets, onChange, idPrefix }: {
         const items = [...values, ...selected.filter((v) => !known.has(v)).map((v) => ({ value: v, name: v, count: 0 }))];
         if (items.length === 0) return null;
         return (
-          <fieldset key={key} className="min-w-0">
-            <legend className="mb-2 font-semibold">{t(`catalog.filter.${key}`)}</legend>
-            <ul className="flex flex-col gap-1">
+          <fieldset key={key} className="flt flt-list">
+            <legend className="flt-legend">{t(`catalog.filter.${key}`)}</legend>
+            <ul className="flt-items">
               {items.map((item) => {
                 const value = valueOf(item);
                 const id = `${idPrefix}-${key}-${value}`;
                 return (
                   <li key={value}>
-                    <label htmlFor={id} className="facet-option">
+                    <label htmlFor={id} className="frow">
                       <input id={id} type="checkbox" checked={selected.includes(value)} onChange={() => onChange(toggleValue(query, key, value))} />
                       <span className="min-w-0 flex-1">{item.name ?? value}</span>
-                      <span className="text-muted">{item.count}</span>
+                      <span className="frow-n">{item.count}</span>
                     </label>
                   </li>
                 );
@@ -93,13 +91,13 @@ function AuthorFilter({ query, onChange, idPrefix }: { query: CatalogQuery; onCh
     onChange({ ...query, author: value.trim().slice(0, 200), page: 1 });
   };
   return (
-    <form onSubmit={onSubmit} noValidate>
-      <label htmlFor={id} className="mb-2 block font-semibold">{t('catalog.filter.author')}</label>
-      <div className="flex flex-wrap items-end gap-2">
-        <input id={id} className="input min-w-0 grow" maxLength={200} value={value} onChange={(e) => setValue(e.target.value)} aria-describedby={`${id}-hint`} />
-        <button type="submit" className="btn-secondary">{t('catalog.filter.apply')}</button>
+    <form onSubmit={onSubmit} noValidate className="flt">
+      <label htmlFor={id} className="flt-legend block">{t('catalog.filter.author')}</label>
+      <div className="flex gap-2.5">
+        <input id={id} className="flt-input min-w-0 flex-1" maxLength={200} value={value} onChange={(e) => setValue(e.target.value)} aria-describedby={`${id}-hint`} />
+        <button type="submit" className="flt-apply">{t('catalog.filter.apply')}</button>
       </div>
-      <p id={`${id}-hint`} className="mt-1 text-sm text-muted">{t('catalog.filter.authorHint')}</p>
+      <p id={`${id}-hint`} className="muted mt-2 mb-0 text-[calc(15px*var(--fs,1))]">{t('catalog.filter.authorHint')}</p>
     </form>
   );
 }
@@ -125,21 +123,21 @@ function YearRange({ query, onChange, idPrefix }: { query: CatalogQuery; onChang
   const errorId = `${idPrefix}-years-error`;
   return (
     <form onSubmit={onSubmit} noValidate>
-      <fieldset>
-        <legend className="mb-2 font-semibold">{t('catalog.filter.years')}</legend>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col">
-            <label htmlFor={`${idPrefix}-year-from`} className="text-sm">{t('catalog.filter.yearFrom')}</label>
-            <input id={`${idPrefix}-year-from`} className="input w-24" inputMode="numeric" maxLength={4} value={from}
+      <fieldset className="flt">
+        <legend className="flt-legend">{t('catalog.filter.years')}</legend>
+        <div className="flex items-end gap-2.5">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <label htmlFor={`${idPrefix}-year-from`} className="text-[calc(16px*var(--fs,1))]">{t('catalog.filter.yearFrom')}</label>
+            <input id={`${idPrefix}-year-from`} className="flt-input w-full" inputMode="numeric" maxLength={4} value={from}
               onChange={(e) => setFrom(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} />
           </div>
-          <div className="flex flex-col">
-            <label htmlFor={`${idPrefix}-year-to`} className="text-sm">{t('catalog.filter.yearTo')}</label>
-            <input id={`${idPrefix}-year-to`} className="input w-24" inputMode="numeric" maxLength={4} value={to}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <label htmlFor={`${idPrefix}-year-to`} className="text-[calc(16px*var(--fs,1))]">{t('catalog.filter.yearTo')}</label>
+            <input id={`${idPrefix}-year-to`} className="flt-input w-full" inputMode="numeric" maxLength={4} value={to}
               onChange={(e) => setTo(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} />
           </div>
-          <button type="submit" className="btn-secondary">{t('catalog.filter.apply')}</button>
         </div>
+        <button type="submit" className="flt-apply mt-3">{t('catalog.filter.apply')}</button>
         {error ? <p id={errorId} role="alert" className="mt-2 text-danger">{error}</p> : null}
       </fieldset>
     </form>

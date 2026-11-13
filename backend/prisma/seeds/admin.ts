@@ -21,11 +21,11 @@ export async function seedAdmin(db: PrismaClient, email: string, password: strin
  * Пароль берётся из SEED_DEMO_STAFF_PASSWORD и в репозиторий не попадает.
  */
 export const DEMO_STAFF = [
-  { email: 'archivist@archive.local', fullName: '[Демо] Сотрудник архива', role: 'archivist' },
-  { email: 'moderator@archive.local', fullName: '[Демо] Модератор', role: 'moderator' },
-  { email: 'editor@archive.local', fullName: '[Демо] Редактор сайта', role: 'site_admin' },
+  { email: 'archivist@archive.local', fullName: 'Сотрудник архива', role: 'archivist' },
+  { email: 'moderator@archive.local', fullName: 'Модератор', role: 'moderator' },
+  { email: 'editor@archive.local', fullName: 'Редактор сайта', role: 'site_admin' },
   // Администратор одного филиала: права действуют только в пределах филиала Риддер.
-  { email: 'ridder@archive.local', fullName: '[Демо] Администратор филиала Риддер', role: 'branch_admin', branchSlug: 'ridder' },
+  { email: 'ridder@archive.local', fullName: 'Администратор филиала Риддер', role: 'branch_admin', branchSlug: 'ridder' },
 ] as const satisfies ReadonlyArray<{ email: string; fullName: string; role: string; branchSlug?: string }>;
 
 export async function seedDemoStaff(db: PrismaClient, password: string): Promise<void> {

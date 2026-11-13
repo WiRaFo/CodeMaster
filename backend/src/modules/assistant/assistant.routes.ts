@@ -8,7 +8,9 @@ import { semanticSearch } from '../ai/semantic.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
 import { CatalogRepository } from '../catalog/catalog.repository.ts';
 import { documentSummaryDto } from '../catalog/catalog.mapper.ts';
+import { logSearchQuery } from '../analytics/analytics.ts';
 import { classifyIntent, type Intent } from './intents.ts';
+import { findKnowledge } from './knowledge.ts';
 import { normalize, parseQuery, type ParsedQuery, type SettlementDictEntry } from './query-parser.ts';
 
 /**
@@ -88,7 +90,7 @@ export async function assistantRoutes(app: FastifyInstance, opts: AssistantOptio
 
   /** Вызов публичного маршрута этого же API: те же правила доступа, что и у посетителя. */
   async function publicGet<T>(path: string): Promise<T> {
-    const res = await app.inject({ method: 'GET', url: `/api/v1${path}` });
+    const res = await app.inject({ method: 'GET', url: `/api/v1${path}`, headers: { 'x-archive-internal': 'assistant' } });
     if (res.statusCode !== 200) throw new Error(`assistant: ${path} → ${res.statusCode}`);
     return res.json<T>();
   }
@@ -196,24 +198,44 @@ export async function assistantRoutes(app: FastifyInstance, opts: AssistantOptio
     if (!limiter.take(request.ip, 'assistant')) throw new ApiError(429, 'TOO_MANY_ATTEMPTS', 'Too many questions, try again in a minute');
     reply.header('Cache-Control', 'no-store');
 
+    // Сначала база знаний, которую ведут сотрудники; затем правила.
+    const known = opts.db
+      ? await findKnowledge(opts.db, query.q, lang).catch((error: unknown) => {
+        app.log.warn({ error: String(error) }, 'assistant: knowledge base unavailable, answering by rules');
+        return null;
+      })
+      : null;
     const parsed = parseQuery(query.q, await settlements());
-    const intent: Intent = classifyIntent(normalize(query.q), parsed);
-    const base = { intent: intent.kind, lang };
-    switch (intent.kind) {
-      case 'service_request':
-        return { ...base, links: ['visitors', 'branches'] };
-      case 'term':
-        return { ...base, term: intent.term, links: intent.links };
-      case 'navigation':
-        return { ...base, links: [intent.section] };
-      case 'branch':
-        return { ...base, recognized: await labels(parsed, lang), branches: await branches(parsed, lang), links: ['branches'] };
-      case 'search': {
-        const found = await search(parsed, lang);
-        return { ...base, recognized: await labels(parsed, lang), ...found, semantic: await semantic(query.q, lang, found.documents.map((d) => d.id)) };
+    const intent: Intent = known ? { kind: 'unknown' } : classifyIntent(normalize(query.q), parsed);
+    const kind = known ? 'knowledge' : intent.kind;
+    const base = { intent: kind, lang };
+    const answer = await (async () => {
+      if (known) return { ...base, knowledge: { question: known.question, answer: known.answer, contentLang: known.contentLang }, links: known.links, found: 1 };
+      switch (intent.kind) {
+        case 'service_request':
+          return { ...base, links: ['visitors', 'branches'], found: 1 };
+        case 'term':
+          return { ...base, term: intent.term, links: intent.links, found: 1 };
+        case 'navigation':
+          return { ...base, links: [intent.section], found: 1 };
+        case 'branch': {
+          const list = await branches(parsed, lang);
+          return { ...base, recognized: await labels(parsed, lang), branches: list, links: ['branches'], found: list.length };
+        }
+        case 'search': {
+          const found = await search(parsed, lang);
+          const sem = await semantic(query.q, lang, found.documents.map((d) => d.id));
+          return { ...base, recognized: await labels(parsed, lang), ...found, semantic: sem, found: found.total + sem.length };
+        }
+        case 'unknown': {
+          const sem = await semantic(query.q, lang, []);
+          return { ...base, links: ['catalog'], semantic: sem, found: sem.length };
+        }
       }
-      case 'unknown':
-        return { ...base, links: ['catalog'], semantic: await semantic(query.q, lang, []) };
-    }
+    })();
+    // Журнал качества ответов (F-127): без ответа (0) — кандидаты в базу знаний.
+    const { found, ...body } = answer;
+    await logSearchQuery(opts.db, request, { text: query.q, locale: lang, source: 'assistant', resultCount: found, filters: { intent: kind } });
+    return body;
   });
 }

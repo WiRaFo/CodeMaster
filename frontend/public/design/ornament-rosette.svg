@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+<defs>
+<g id="h" fill="none" stroke="#EAD94C" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+<path d="M200 174V120"/>
+<path d="M200 120C200 98 226 86 242 98C256 109 252 130 236 131C226 131 222 120 229 114"/>
+<path d="M200 120C200 98 174 86 158 98C144 109 148 130 164 131C174 131 178 120 171 114"/>
+</g>
+<g id="d" fill="#EAD94C"><path d="M283 104l11 13-11 13-11-13z"/><path d="M200 34l9 12-9 12-9-12z"/></g>
+</defs>
+<circle cx="200" cy="200" r="192" fill="none" stroke="#EAD94C" stroke-width="6"/>
+<circle cx="200" cy="200" r="176" fill="none" stroke="#EAD94C" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
+<use href="#h"/><use href="#h" transform="rotate(90 200 200)"/><use href="#h" transform="rotate(180 200 200)"/><use href="#h" transform="rotate(270 200 200)"/>
+<use href="#d"/><use href="#d" transform="rotate(90 200 200)"/><use href="#d" transform="rotate(180 200 200)"/><use href="#d" transform="rotate(270 200 200)"/>
+<path fill-rule="evenodd" d="M200 168l32 32-32 32-32-32zM200 186l-14 14 14 14 14-14z" fill="#EAD94C"/>
+</svg>

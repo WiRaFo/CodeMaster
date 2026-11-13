@@ -1,36 +1,37 @@
-import { Fragment } from 'react';
+import { Check, Clock, MapPin, Newspaper, Phone, Search } from 'lucide-react';
+import { useEffect, useRef, useState, type Dispatch, type ReactNode, type RefObject, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { formatDate } from '../lib/format.ts';
-import type { AboutInfo, AboutSection, BranchDetail, HistoryBlock, StaffContact } from '../lib/types.ts';
+import type { AboutInfo, AboutSection, BranchDetail, BranchSummary, HistoryBlock, StaffContact } from '../lib/types.ts';
 import { useApi } from '../lib/useApi.ts';
-import { VerificationBadge, telHref } from './BranchesPage.tsx';
+import { telHref } from './BranchesPage.tsx';
 import { InfoBlockView, headingBefore } from './ReferencePage.tsx';
 
-/** Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте. */
-export function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) {
+/**
+ * Контакты основного архива из реестра подразделений: единый источник, без повторения адресов в тексте.
+ * Карточка по дизайну (About.dc.html, Visitors.dc.html): подписи слева сверху, телефон крупно.
+ */
+export function MainContacts({ withReadingRoom, title, titleId, children }: { withReadingRoom: boolean; title?: string; titleId?: string; children?: ReactNode }) {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);
   if (main.status !== 'ready') return <LoadStatus status={main.status} />;
   const b = main.data;
   return (
-    <div className="rounded-md border-2 border-border bg-surface p-4">
-      <p className="mb-2 flex flex-wrap items-center gap-2 font-semibold">
-        <Link to={`/${lang}/branches/main`}>{b.name}</Link>
-        <VerificationBadge show={b.needsVerification} />
-      </p>
-      <dl className="grid gap-1 sm:grid-cols-[12rem_minmax(0,1fr)]">
-        {b.address ? (<><dt className="font-semibold">{t('branches.address')}</dt><dd>{b.address}</dd></>) : null}
-        {b.sites.map((s) => (<Fragment key={s.slug}><dt className="font-semibold">{t('branches.sites')}</dt><dd><Link to={`/${lang}/branches/${s.slug}`}>{s.address ?? s.shortName}</Link></dd></Fragment>))}
-        {b.phone ? (<><dt className="font-semibold">{t('branches.phone')}</dt><dd><a href={telHref(b.phone)}>{b.phone}</a></dd></>) : null}
-        {b.email ? (<><dt className="font-semibold">{t('branches.email')}</dt><dd className="break-words"><a href={`mailto:${b.email}`}>{b.email}</a></dd></>) : null}
-        {b.scheduleText ? (<><dt className="font-semibold">{t('branches.schedule')}</dt><dd>{b.scheduleText}</dd></>) : null}
-        {withReadingRoom && b.readingRoomSchedule ? (<><dt className="font-semibold">{t('branches.readingRoom')}</dt><dd>{b.readingRoomSchedule}</dd></>) : null}
+    <div className="info-card">
+      {title ? <h2 id={titleId} className="info-card-h">{title}</h2> : null}
+      <p className="m-0 font-bold"><Link to={`/${lang}/branches/main`} className="text-inherit">{b.name}</Link></p>
+      <dl className="info-dl">
+        {b.address ? (<div><dt>{t('branches.address')}</dt><dd>{b.address}</dd></div>) : null}
+        {b.phone ? (<div><dt>{t('branches.phone')}</dt><dd><a href={telHref(b.phone)} className="info-phone"><Phone aria-hidden="true" className="size-5" />{b.phone}</a></dd></div>) : null}
+        {b.email ? (<div><dt>{t('branches.email')}</dt><dd className="break-words"><a href={`mailto:${b.email}`}>{b.email}</a></dd></div>) : null}
+        {b.scheduleText ? (<div><dt>{t('branches.schedule')}</dt><dd>{b.scheduleText}{withReadingRoom && b.readingRoomSchedule ? <><br />{b.readingRoomSchedule}</> : null}</dd></div>) : null}
       </dl>
+      {children}
     </div>
   );
 }
@@ -40,108 +41,277 @@ export function MainContacts({ withReadingRoom }: { withReadingRoom: boolean }) 
  * делает сам сайт, и контакты из реестра. Правила читального зала и перечень услуг архива
  * не выдумываются: они появятся после передачи архивом действующих редакций (Q-25).
  */
+const STEPS = ['find', 'code', 'access', 'contact'] as const;
+
+/**
+ * Когда список шагов впервые попадает на экран, галочки проставляются по очереди — показать, как работает памятка.
+ * Если посетитель уже нажал на шаг или движение выключено (системная настройка, «Остановить анимацию»,
+ * версия для слабовидящих), ничего само не отмечается.
+ */
+function useStepsAutofill(
+  ref: RefObject<HTMLOListElement | null>,
+  steps: readonly string[],
+  touched: RefObject<boolean>,
+  setDone: Dispatch<SetStateAction<Record<string, boolean>>>,
+) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const reduced = document.documentElement.dataset['motion'] === 'reduce' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    const timers: number[] = [];
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      steps.forEach((s, i) => {
+        timers.push(window.setTimeout(() => {
+          if (!touched.current) setDone((prev) => ({ ...prev, [s]: true }));
+        }, 500 + i * 650));
+      });
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [ref, steps, touched, setDone]);
+}
+
 export function VisitorsPage() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
-  const steps = ['find', 'code', 'access', 'contact'] as const;
+  const main = useApi<BranchDetail>(`/branches/main?lang=${lang}`);
+  const steps = STEPS;
+  // Отметки шагов — только памятка для посетителя на этой странице, никуда не отправляются.
+  const [done, setDone] = useState<Record<string, boolean>>({});
+  const stepsRef = useRef<HTMLOListElement>(null);
+  const touched = useRef(false);
+  useStepsAutofill(stepsRef, steps, touched, setDone);
+  const count = steps.filter((s) => done[s]).length;
+  const b = main.status === 'ready' ? main.data : null;
   return (
     <>
-      <PageHeading title={t('nav.visitors')}>
-        <p className="mt-2 max-w-3xl">{t('visitors.lead')}</p>
+      <PageHeading title={t('nav.visitors')} aside={b ? (
+        <div className="page-head-aside flex flex-col gap-2.5">
+          <span className="flex items-center gap-2.5 text-[calc(20px*var(--fs,1))] font-extrabold"><Clock aria-hidden="true" className="size-7" />{t('branches.schedule')}</span>
+          {b.scheduleText ? <span>{b.scheduleText}</span> : null}
+          {b.readingRoomSchedule ? <span>{b.readingRoomSchedule}</span> : null}
+          {b.phone ? <a href={telHref(b.phone)} className="info-phone no-underline"><Phone aria-hidden="true" className="bell size-[22px]" />{b.phone}</a> : null}
+        </div>
+      ) : null}>
+        <p className="m-0 max-w-[640px]">{t('visitors.lead')}</p>
+        <p className="mt-4 mb-0 max-w-[640px] text-[calc(17px*var(--fs,1))] text-[var(--odm)]">{t('visitors.infoOnly')}</p>
       </PageHeading>
-      <p className="mb-6 max-w-3xl rounded-md border-2 border-warning-text bg-warning-bg p-3 text-warning-text">{t('visitors.infoOnly')}</p>
-      <section aria-labelledby="visit-steps" className="mb-8 max-w-3xl">
-        <h2 id="visit-steps" className="mb-3 text-xl font-semibold">{t('visitors.stepsTitle')}</h2>
-        <ol className="flex list-decimal flex-col gap-2 pl-6">
-          {steps.map((s) => <li key={s}>{t(`visitors.steps.${s}`)}</li>)}
-        </ol>
-        <p className="mt-3 flex flex-wrap gap-2">
-          <Link to={`/${lang}/catalog`} className="btn-secondary">{t('nav.catalog')}</Link>
-          <Link to={`/${lang}/faq`} className="btn-secondary">{t('nav.faq')}</Link>
-          <Link to={`/${lang}/assistant`} className="btn-secondary">{t('nav.assistant')}</Link>
-        </p>
-      </section>
-      <section aria-labelledby="visit-contacts" className="mb-8 max-w-3xl">
-        <h2 id="visit-contacts" className="mb-3 text-xl font-semibold">{t('visitors.contactsTitle')}</h2>
-        <MainContacts withReadingRoom />
-        <p className="mt-3"><Link to={`/${lang}/branches`}>{t('visitors.allBranches')}</Link></p>
-      </section>
-      <p className="max-w-3xl text-sm text-muted">{t('visitors.pending')}</p>
+
+      <div className="visit-layout">
+        <section aria-labelledby="visit-steps">
+          <h2 id="visit-steps" className="h2 u mb-3">{t('visitors.stepsTitle')}</h2>
+          <p className="muted mb-5">{t('visitors.stepsHint')}</p>
+          <div className="pbar mb-2" aria-hidden="true"><span style={{ width: `${count * 25}%` }} /></div>
+          <p role="status" className="mb-[18px] font-bold">{t('visitors.done', { count, total: steps.length })}</p>
+          <ol ref={stepsRef} className="flex flex-col gap-3">
+            {steps.map((s, i) => (
+              <li key={s}>
+                <button type="button" className="step" aria-pressed={!!done[s]} onClick={() => {
+                  touched.current = true;
+                  setDone({ ...done, [s]: !done[s] });
+                }}>
+                  <span className="step-n" aria-hidden="true">{i + 1}</span>
+                  <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[calc(20px*var(--fs,1))] font-extrabold leading-tight">{t(`visitors.stepTitles.${s}`)}</span>
+                    <span className="muted">{t(`visitors.steps.${s}`)}</span>
+                  </span>
+                  <span className={done[s] ? 'step-check on' : 'step-check'} aria-hidden="true"><Check className="size-5" strokeWidth={3} /></span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-[22px] flex flex-wrap gap-2.5">
+            <Link to={`/${lang}/catalog`} className="btn">{t('nav.catalog')}</Link>
+            <Link to={`/${lang}/faq`} className="btn ghost">{t('nav.faq')}</Link>
+            <Link to={`/${lang}/assistant`} className="btn ghost">{t('nav.assistant')}</Link>
+          </p>
+        </section>
+
+        <aside className="flex flex-col gap-5" aria-label={t('visitors.contactsTitle')}>
+          <section aria-labelledby="visit-rr" className="info-card">
+            <h2 id="visit-rr" className="info-card-h">{t('visitors.readingRoomTitle')}</h2>
+            <p className="m-0">{t('visitors.readingRoomText')}</p>
+            <p className="m-0 font-bold">{t('visitors.beforeVisit')}</p>
+            <ul className="m-0 flex list-disc flex-col gap-2 pl-[22px]">
+              <li>{t('visitors.before1')}</li>
+              <li>{t('visitors.before2')}</li>
+            </ul>
+          </section>
+          <MainContacts withReadingRoom title={t('visitors.contactsTitle')}>
+            <Link to={`/${lang}/branches`} className="btn line mt-2 self-start">{t('visitors.allBranches')}</Link>
+          </MainContacts>
+          <p className="muted m-0 text-[calc(15px*var(--fs,1))]">{t('visitors.pending')}</p>
+        </aside>
+      </div>
     </>
   );
 }
 
-/** «Об архиве» (ТЗ §5.2, с. 5): контакты из реестра, соцсети и история из сведений, переданных архивом. */
+/** «Об архиве» (ТЗ §5.2, с. 5) в дизайне About.dc.html: история по годам, сеть архива, руководство, контакты справа. */
 export function AboutPage() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
   const about = useApi<AboutInfo>(`/about?lang=${lang}`);
+  const branches = useApi<{ items: BranchSummary[] }>(`/branches?lang=${lang}`);
+  const ready = about.status === 'ready' ? about.data : null;
+  const heads = ready ? ready.staff.slice(0, 7) : [];
   return (
     <>
       <PageHeading title={t('nav.about')}>
-        <p className="mt-2 max-w-3xl">{t('about.lead')}</p>
+        <p className="m-0 max-w-[760px]">{t('about.lead')}</p>
       </PageHeading>
-      <section aria-labelledby="about-contacts" className="mb-8 max-w-3xl">
-        <h2 id="about-contacts" className="mb-3 text-xl font-semibold">{t('about.contactsTitle')}</h2>
-        <MainContacts withReadingRoom />
-        {about.status === 'ready' && about.data.social.length > 0 ? (
-          <>
-            <h3 className="mt-4 mb-2 font-semibold">{t('about.socialTitle')}</h3>
-            <ul className="flex flex-wrap gap-x-6 gap-y-1">
-              {about.data.social.map((s) => (
-                <li key={s.network}>{t(`about.network.${s.network}`)}: <a href={s.url} rel="noopener noreferrer">{s.label}</a></li>
+      <div className="about-layout">
+        <div className="flex min-w-0 flex-col gap-16">
+          <section aria-labelledby="about-history">
+            <h2 id="about-history" className="h2 u mb-4">{t('about.historyTitle')}</h2>
+            {about.status !== 'ready' ? <LoadStatus status={about.status} /> : ready?.history ? (
+              <HistoryYears section={ready.history} />
+            ) : <p>{t('about.unavailable')}</p>}
+          </section>
+
+          {branches.status === 'ready' ? (
+            <section aria-labelledby="about-net">
+              <h2 id="about-net" className="h2 mb-6">{t('about.netTitle')}</h2>
+              <ul className="stat-row">
+                <li className="stat"><span className="stat-n">{branches.data.items.length}</span><span>{t('about.statUnits')}</span></li>
+                <li className="stat"><span className="stat-n">3</span><span>{t('about.statLangs')}</span></li>
+              </ul>
+            </section>
+          ) : null}
+
+          {heads.length ? (
+            <section aria-labelledby="about-structure">
+              <h2 id="about-structure" className="h2 mb-3">{t('about.structureTitle')}</h2>
+              <p className="muted mb-6 max-w-[760px]">{t('about.structureLead')}</p>
+              <TranslationNote contentLang={heads[0]?.contentLang ?? null} translationStatus={heads[0]?.translationStatus ?? null} />
+              <ul className="staff-grid">
+                {heads.map((p) => <li key={p.id}><StaffCard person={p} /></li>)}
+              </ul>
+              <p className="mt-5"><Link to={`/${lang}/about/structure`}>{t('about.structureLink')}</Link></p>
+            </section>
+          ) : (
+            <p><Link to={`/${lang}/about/structure`}>{t('about.structureLink')}</Link></p>
+          )}
+
+          {ready ? ready.sections.map((s) => (
+            <section key={s.key} aria-labelledby={`about-${s.key.replace('/', '-')}`}>
+              <h2 id={`about-${s.key.replace('/', '-')}`} className="h2 mb-4" lang={s.contentLang}>{s.title}</h2>
+              <AboutSectionBody section={s} />
+            </section>
+          )) : null}
+
+          {ready && ready.gallery.length > 0 ? (
+            <section aria-labelledby="about-gallery">
+              <h2 id="about-gallery" className="h2 mb-6">{t('about.galleryTitle')}</h2>
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {ready.gallery.map((img) => (
+                  <li key={img.url}>
+                    <figure lang={img.contentLang ?? undefined} className="card overflow-hidden">
+                      <img src={img.url} alt={img.alt} loading="lazy" width={img.width ?? undefined} height={img.height ?? undefined} className="block h-auto w-full" />
+                      {img.caption ? <figcaption className="px-4 py-3 text-[calc(16px*var(--fs,1))]">{img.caption}</figcaption> : null}
+                    </figure>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section aria-labelledby="about-more">
+            <h2 id="about-more" className="h2 mb-6">{t('about.moreTitle')}</h2>
+            <ul className="tile-grid">
+              {([['branches', MapPin], ['catalog', Search], ['history', Clock], ['news', Newspaper]] as const).map(([key, Icon]) => (
+                <li key={key}><Link to={`/${lang}/${key}`} className="tile lift"><span className="icon"><Icon aria-hidden="true" className="size-6" /></span>{t(`nav.${key}`)}</Link></li>
               ))}
             </ul>
-          </>
-        ) : null}
-        <p className="mt-4"><Link to={`/${lang}/about/structure`}>{t('about.structureLink')}</Link></p>
-      </section>
-      <section aria-labelledby="about-history" className="mb-8">
-        <h2 id="about-history" className="mb-3 text-xl font-semibold">{t('about.historyTitle')}</h2>
-        {about.status !== 'ready' ? <LoadStatus status={about.status} /> : about.data.history ? (
-          <>
-            <p className="mb-2"><Link to={`/${lang}/history/timeline`}>{t('timeline.title')}</Link></p>
-            <AboutSectionBody section={about.data.history} />
-            <p className="mt-4 text-sm text-muted">{t('about.source')}</p>
-          </>
-        ) : <p>{t('about.unavailable')}</p>}
-      </section>
-      {about.status === 'ready' ? about.data.sections.map((s) => (
-        <section key={s.key} aria-labelledby={`about-${s.key.replace('/', '-')}`} className="mb-8">
-          <h2 id={`about-${s.key.replace('/', '-')}`} className="mb-3 text-xl font-semibold" lang={s.contentLang}>{s.title}</h2>
-          <AboutSectionBody section={s} />
-        </section>
-      )) : null}
-      {about.status === 'ready' && about.data.gallery.length > 0 ? (
-        <section aria-labelledby="about-gallery" className="mb-8">
-          <h2 id="about-gallery" className="mb-3 text-xl font-semibold">{t('about.galleryTitle')}</h2>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {about.data.gallery.map((img) => (
-              <li key={img.url}>
-                <figure lang={img.contentLang ?? undefined}>
-                  <img src={img.url} alt={img.alt} loading="lazy" width={img.width ?? undefined} height={img.height ?? undefined} className="h-auto w-full rounded-md border border-border" />
-                  {img.caption || img.dataOrigin === 'demo' ? (
-                    <figcaption className="mt-1 text-sm">
-                      {img.caption}
-                      {img.dataOrigin === 'demo' ? <span className="block text-muted" lang={lang}>{t('about.demoPhoto')}</span> : null}
-                    </figcaption>
-                  ) : null}
-                </figure>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <section aria-labelledby="about-more" className="mb-8 max-w-3xl">
-        <h2 id="about-more" className="mb-3 text-xl font-semibold">{t('about.moreTitle')}</h2>
-        <ul className="flex list-disc flex-col gap-1 pl-6">
-          <li><Link to={`/${lang}/branches`}>{t('nav.branches')}</Link></li>
-          <li><Link to={`/${lang}/catalog`}>{t('nav.catalog')}</Link></li>
-          <li><Link to={`/${lang}/history`}>{t('nav.history')}</Link></li>
-          <li><Link to={`/${lang}/news`}>{t('nav.news')}</Link></li>
-        </ul>
-      </section>
+          </section>
+        </div>
+
+        <aside className="about-aside" aria-label={t('about.contactsTitle')}>
+          <MainContacts withReadingRoom title={t('about.contactsTitle')}>
+            {ready && ready.social.length > 0 ? (
+              <dl className="info-dl"><div>
+                <dt>{t('about.socialTitle')}</dt>
+                <dd><ul className="m-0 p-0">{ready.social.map((s) => (
+                  <li key={s.network}>{t(`about.network.${s.network}`)}: <a href={s.url} rel="noopener noreferrer">{s.label}</a></li>
+                ))}</ul></dd>
+              </div></dl>
+            ) : null}
+            <Link to={`/${lang}/branches`} className="btn mt-5 w-full">{t('about.allOnMap')}</Link>
+          </MainContacts>
+        </aside>
+      </div>
     </>
+  );
+}
+
+/** Сотрудник: отдел меткой, имя, должность, телефон и почта. */
+function StaffCard({ person }: { person: StaffContact }) {
+  return (
+    <div className="staff">
+      {person.department ? <span className="chip staff-dep">{person.department}</span> : null}
+      <p className="m-0 font-extrabold">{person.fullName}</p>
+      <p className="muted m-0">{person.position}</p>
+      {person.phone ? <a href={telHref(person.phone)} className="font-bold no-underline">{person.phone}</a> : null}
+      {person.email ? <a href={`mailto:${person.email}`} className="wrap-anywhere">{person.email}</a> : null}
+    </div>
+  );
+}
+
+/**
+ * История архива по годам (About.dc.html): год берётся из текста абзаца переданной архивом истории;
+ * абзацы без года остаются при предыдущем. «Вся история» показывает текст целиком.
+ */
+function HistoryYears({ section }: { section: AboutSection }) {
+  const { t } = useTranslation();
+  const [index, setIndex] = useState(0);
+  const [full, setFull] = useState(false);
+  const steps: Array<{ year: string; blocks: AboutSection['blocks'] }> = [];
+  for (const block of section.blocks) {
+    const text = 'text' in block ? block.text : '';
+    const year = block.type === 'p' ? /(1[89]\d\d|20\d\d)/.exec(text)?.[1] : undefined;
+    const last = steps[steps.length - 1];
+    if (year && (!last || last.year !== year)) steps.push({ year, blocks: [block] });
+    else if (last) last.blocks.push(block);
+  }
+  if (steps.length < 2 || full) {
+    return (
+      <>
+        <AboutSectionBody section={section} />
+        {steps.length >= 2 ? <button type="button" className="btn line sm mt-5" onClick={() => setFull(false)}>{t('about.byYears')}</button> : null}
+      </>
+    );
+  }
+  const current = steps[index] ?? steps[0];
+  if (!current) return null;
+  return (
+    <div lang={section.contentLang}>
+      <TranslationNote contentLang={section.contentLang} translationStatus={section.translationStatus} />
+      <p className="muted mb-4">{t('about.pickYear')}</p>
+      <div className="year-tape" role="group" aria-label={t('about.yearsLabel')}>
+        {steps.map((s, i) => (
+          <button key={`${s.year}-${i}`} type="button" className="year-btn" aria-pressed={i === index} onClick={() => setIndex(i)}>
+            <span className="year-dot" aria-hidden="true" />{s.year}
+          </button>
+        ))}
+      </div>
+      <div className="year-card" aria-live="polite">
+        <span className="year-big" aria-hidden="true">{current.year}</span>
+        <div className="flex min-w-0 flex-col gap-3">
+          {current.blocks.map((block, i) => <InfoBlockView key={i} block={block} headingLevel={3} label={headingBefore(current.blocks, i)} />)}
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <button type="button" className="btn line sm" disabled={index === 0} onClick={() => setIndex(index - 1)}>← {t('about.earlier')}</button>
+        <button type="button" className="btn sm" disabled={index === steps.length - 1} onClick={() => setIndex(index + 1)}>{t('about.later')} →</button>
+        <button type="button" className="btn ghost sm" onClick={() => setFull(true)}>{t('about.fullHistory')}</button>
+      </div>
+    </div>
   );
 }
 

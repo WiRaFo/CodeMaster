@@ -202,6 +202,8 @@ branches 1─* fonds 1─* inventories 1─* cases 1─* documents 1─* digital
 - Индексы фильтров: B-tree по `branch_id`, `fond_id`, `period_id`, `document_type_id`, `(year_from, year_to)`; GIN по массивам `settlement_ids`, `category_ids`.
 - Синонимы и варианты написания (ТЗ §5.8 Б, с. 10): `search_synonyms(id, term, variants text[], locale NULL)` + `settlement_names` с историческими и казахскими названиями (Усть-Каменогорск / Өскемен, Семипалатинск / Семей). Запрос расширяется вариантами до FTS.
 - Журнал запросов для аналитики (ТЗ §5.8 Д, с. 11): `search_queries(id, occurred_at, query_text, locale, filters jsonb, result_count, source ('catalog'|'site'|'assistant'))` — без IP и идентификаторов посетителя.
+- Счётчики сайта (миграция `20261112000000_analytics_knowledge`, F-126, F-127): `analytics_page_views(day, section, locale, views)` и `analytics_errors(day, kind, path, count)` — по одной строке на день и раздел; ни IP, ни идентификаторов посетителя нет.
+- База знаний помощника (та же миграция): `assistant_knowledge(id, publication_status, links text[], created_by_id, updated_by_id, …)` и `assistant_knowledge_translations(entry_id, locale, question, keywords text[], answer)`. Помощник читает только опубликованные записи.
 - Векторный поиск (D-023): `search_embeddings(entity_type, entity_id, locale, chunk_no, content, embedding vector(N))`, индекс HNSW. Размерность N зависит от выбранной модели эмбеддингов, поэтому таблица создаётся миграцией после выбора модели.
 
 ## 7. История региона, выставки, новости

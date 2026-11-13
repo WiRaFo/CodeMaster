@@ -158,7 +158,16 @@ export async function historyRoutes(app: FastifyInstance, opts: { db: PrismaClie
       JOIN publications p ON p.id = pe.publication_id AND ${PUBLIC_PUBLICATION}
       ${bestTranslation('publication', 't', 'p.id', lang, ['title'])}
       ORDER BY p.published_at DESC, p.slug`;
+    // Сколько открытых для поиска документов каталога относится к каждому году хронологии (ссылка «документы этого года»).
+    const years = [...new Set(rows.map((r) => r.year))];
+    const docs = years.length === 0 ? [] : await db.$queryRaw<Array<{ year: number; count: bigint }>>`
+      SELECT y.year, count(p.id) AS count
+      FROM unnest(${years}::int[]) AS y(year)
+      JOIN public_documents_v p ON p.date_from IS NOT NULL
+        AND extract(year FROM p.date_from) <= y.year AND extract(year FROM coalesce(p.date_to, p.date_from)) >= y.year
+      GROUP BY y.year`;
     return {
+      documentsByYear: Object.fromEntries(docs.map((d) => [String(d.year), Number(d.count)])),
       items: rows.map((r) => ({
         slug: r.slug,
         year: r.year,

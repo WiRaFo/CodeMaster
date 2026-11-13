@@ -1,11 +1,11 @@
 import type { AccessLevel, AntivirusStatus, PrismaClient, PublicationStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
-import { SYNTHETIC_PREFIX, type Tri } from './lib.ts';
+import type { Tri } from './lib.ts';
 
 /**
  * Синтетический каталог для разработки и тестов доступа (docs/database-design.md §10).
- * Номера фондов начинаются с TEST-, заголовки — с «[Синтетика]»; это не реальные архивные шифры.
+ * Номера фондов начинаются с TEST-; это не реальные архивные шифры.
  * Набор покрывает все сочетания, которые проверяют тесты публичных представлений:
  * открытые, ограниченные и закрытые записи на разных уровнях, неопубликованных предков, копии без проверки.
  * Ключ каждой записи хранится в source_system_id (synthetic:фонд/опись/дело/документ).
@@ -63,7 +63,7 @@ const RESTRICTED_CONDITIONS = tri(
 
 /** Синтетические организации-фондообразователи. Не реальные предприятия. */
 const ORGANIZATIONS: Array<{ slug: string; name: Tri<string> }> = [
-  { slug: 'synthetic-creamery', name: tri('Маслозавод (тестовая организация)', 'Май зауыты (сынақ ұйымы)', 'Creamery (test organisation)') },
+  { slug: 'synthetic-creamery', name: tri('Маслозавод', 'Май зауыты', 'Creamery') },
 ];
 
 const FONDS: FondSeed[] = [
@@ -71,7 +71,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-1',
     branch: 'main',
     access: 'open',
-    title: tri('Маслозавод (тестовый фонд)', 'Май зауыты (сынақ қоры)', 'Creamery (test fond)'),
+    title: tri('Маслозавод', 'Май зауыты', 'Creamery'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -87,7 +87,7 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'organization_record',
-            author: 'Тестов Т. Т., секретарь правления (синтетика)',
+            author: 'Тестов Т. Т., секретарь правления',
             organization: 'synthetic-creamery',
             title: tri('Протокол заседания правления маслозавода', 'Май зауыты басқармасы отырысының хаттамасы', 'Minutes of the creamery board meeting'),
             description: tri(
@@ -120,7 +120,7 @@ const FONDS: FondSeed[] = [
             year: 1958,
             settlements: ['ridder'],
             topics: ['military'],
-            author: 'Закрытов З. З. (синтетика)',
+            author: 'Закрытов З. З.',
             organization: 'synthetic-creamery',
             title: tri('Закрытый документ (не должен появляться публично)', 'Жабық құжат (жарияланбауы тиіс)', 'Closed document (must never be public)'),
             description: tri('Служебная переписка о проверке.', 'Тексеру туралы қызметтік хат алмасу.', 'Internal correspondence about an inspection.'),
@@ -139,7 +139,7 @@ const FONDS: FondSeed[] = [
             settlements: ['ust-kamenogorsk'],
             topics: ['industry'],
             type: 'photo',
-            author: 'Фотографов Ф. Ф. (синтетика)',
+            author: 'Фотографов Ф. Ф.',
             title: tri('Фотография коллектива маслозавода', 'Май зауыты ұжымының фотосуреті', 'Photograph of the creamery staff'),
             copy: { antivirus: 'pending' },
           },
@@ -166,7 +166,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-2',
     branch: 'main',
     access: 'restricted',
-    title: tri('Фонд с ограниченным доступом (тестовый)', 'Қолжетімділігі шектеулі қор (сынақ)', 'Restricted fond (test)'),
+    title: tri('Фонд с ограниченным доступом', 'Қолжетімділігі шектеулі қор', 'Restricted fond'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -193,7 +193,7 @@ const FONDS: FondSeed[] = [
     number: 'TEST-3',
     branch: 'main',
     access: 'closed',
-    title: tri('Закрытый фонд (тестовый)', 'Жабық қор (сынақ)', 'Closed fond (test)'),
+    title: tri('Закрытый фонд', 'Жабық қор', 'Closed fond'),
     inventory: { number: '1', access: 'open' },
     cases: [
       {
@@ -227,17 +227,14 @@ const FONDS: FondSeed[] = [
     kind: 'personal',
     branch: 'main',
     access: 'open',
-    title: tri('Личный фонд краеведа (тестовый)', 'Өлкетанушының жеке қоры (сынақ)', 'Personal fond of a local historian (test)'),
+    title: tri('Личный фонд краеведа', 'Өлкетанушының жеке қоры', 'Personal fond of a local historian'),
     inventory: { number: '1', access: 'open' },
     cases: [{ number: '1', access: 'open', sheets: 12, title: tri('Рукописи и заметки', 'Қолжазбалар мен жазбалар', 'Manuscripts and notes'), docs: [] }],
   },
 ];
 
-const prefixed = (t: Tri<string>): Tri<string> => ({
-  ru: `${SYNTHETIC_PREFIX.ru} ${t.ru}`,
-  kk: `${SYNTHETIC_PREFIX.kk} ${t.kk}`,
-  en: `${SYNTHETIC_PREFIX.en} ${t.en}`,
-});
+/** Заголовки без пометок на сайте (решение заказчика 11.11.2026); синтетику выдаёт dataOrigin и шифры TEST-. */
+const prefixed = (t: Tri<string>): Tri<string> => t;
 
 const LOCALES = ['ru', 'kk', 'en'] as const;
 const SYNTHETIC_BUCKET = 'archive-synthetic';
@@ -247,8 +244,8 @@ const PAGE_HEIGHT = 1754;
 const xml = (text: string) => text.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
 /**
- * Изображение синтетической страницы: лист с крупной пометкой «ТЕСТОВЫЕ ДАННЫЕ», шифром и текстом.
- * Нужен, чтобы просмотрщик можно было проверить без настоящих сканов; за архивный скан не выдаётся.
+ * Изображение синтетической страницы: лист с названием, шифром и текстом (без пометок на сайте, решение
+ * заказчика 11.11.2026). Нужен, чтобы просмотрщик можно было проверить без настоящих сканов.
  */
 function syntheticPageSvg(code: string, page: number, pages: number, title: string, text?: string): string {
   const lines = (text ?? 'Текст страницы отсутствует.').match(/.{1,48}(\s|$)/g) ?? [];
@@ -259,8 +256,6 @@ function syntheticPageSvg(code: string, page: number, pages: number, title: stri
 <svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${PAGE_HEIGHT}" viewBox="0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}" font-family="DejaVu Serif, Georgia, serif">
 <rect width="100%" height="100%" fill="#f4ecd8"/>
 <rect x="60" y="60" width="${PAGE_WIDTH - 120}" height="${PAGE_HEIGHT - 120}" fill="none" stroke="#b9a77f" stroke-width="4"/>
-<text x="120" y="190" font-size="56" font-weight="700" fill="#8a1c1c" font-family="DejaVu Sans, Arial, sans-serif">ТЕСТОВЫЕ ДАННЫЕ · TEST DATA</text>
-<text x="120" y="260" font-size="34" fill="#5a4a2a" font-family="DejaVu Sans, Arial, sans-serif">Синтетическая страница, не архивный документ</text>
 <text x="120" y="380" font-size="44" font-weight="700" fill="#2b2b2b"${title.length > 40 ? ` textLength="${PAGE_WIDTH - 240}" lengthAdjust="spacingAndGlyphs"` : ''}>${xml(title)}</text>
 <text x="120" y="450" font-size="34" fill="#5a4a2a">${xml(code)} · Л. ${page}</text>
 ${body}
@@ -453,9 +448,9 @@ export async function seedSynthetic(db: PrismaClient, storage: ObjectStorage): P
                 assetId: asset.id,
                 locale,
                 altText: {
-                  ru: `Синтетическая страница ${page} из ${pageCount}: тестовое изображение с надписью «${d.title.ru}»`,
-                  kk: `${pageCount} беттің ${page}-синтетикалық беті: «${d.title.kk}» жазуы бар сынақ суреті`,
-                  en: `Synthetic page ${page} of ${pageCount}: test image labelled “${d.title.en}”`,
+                  ru: `Страница ${page} из ${pageCount}: «${d.title.ru}»`,
+                  kk: `${pageCount} беттің ${page}-беті: «${d.title.kk}»`,
+                  en: `Page ${page} of ${pageCount}: “${d.title.en}”`,
                 }[locale],
                 translationStatus: statusFor(locale),
               })),

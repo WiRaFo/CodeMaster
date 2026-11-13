@@ -86,6 +86,10 @@ export const newsListSchema = z
   .and(paginationSchema.extend({ pageSize: z.coerce.number().int().min(1).max(50).default(10) }));
 export type NewsListQuery = z.infer<typeof newsListSchema>;
 
+/** Поиск по сайту из шапки (F-007): разделы, новости, публикации, выставки, филиалы, вопросы. Каталог ищется отдельно. */
+export const siteSearchSchema = z.object({ q: shortText(200), lang: langSchema.optional() });
+export type SiteSearchQuery = z.infer<typeof siteSearchSchema>;
+
 /** ЭТАП 8. Онлайн-выставки (ТЗ §5.7, с. 9): фильтр по тематике и историческому периоду. */
 export const exhibitionListSchema = z
   .object({ topic: shortText(100).optional(), period: shortText(100).optional(), lang: langSchema.optional() })

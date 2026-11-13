@@ -3,6 +3,7 @@ import { Suspense, lazy, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { MapPoint } from '../components/branches/BranchMap.tsx';
+import { SchemeMap } from '../components/branches/SchemeMap.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -14,10 +15,9 @@ const BranchMap = lazy(() => import('../components/branches/BranchMap.tsx'));
 export const telHref = (phone: string): string => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
 /** Пометка «сведения уточняются» для записей, не сверенных архивом. */
-export function VerificationBadge({ show }: { show: boolean }) {
-  const { t } = useTranslation();
-  if (!show) return null;
-  return <span className="inline-block rounded border border-warning-text bg-warning-bg px-2 py-0.5 text-sm font-semibold text-warning-text">{t('branches.needsVerification')}</span>;
+/** Пометка «требует уточнения» на сайте не выводится (решение заказчика 11.11.2026); признак остаётся в админке. */
+export function VerificationBadge(_props: { show: boolean }) {
+  return null;
 }
 
 /**
@@ -52,9 +52,9 @@ export function BranchesPage() {
 
   return (
     <>
-      <PageHeading title={t('nav.branches')}>
-        <p className="mt-2 max-w-3xl">{t('branches.listLead')}</p>
-        <p className="mt-2 max-w-3xl text-sm">
+      <PageHeading title={t('nav.branches')} variant="plain">
+        <p className="lead mb-3">{t('branches.listLead')}</p>
+        <p className="muted mb-6 max-w-[860px]">
           {t('branches.basis')}{' '}
           <a href="/files/documents/postanovlenie-142-2026.pdf" type="application/pdf">{t('branches.basisLink')}</a>
         </p>
@@ -63,31 +63,31 @@ export function BranchesPage() {
       <form
         role="search"
         aria-label={t('branches.searchForm')}
-        className="mb-6 flex flex-wrap items-end gap-3"
+        className="card br-filter"
         onSubmit={(e) => {
           e.preventDefault();
           const data = new FormData(e.currentTarget);
           const next = new URLSearchParams();
-          for (const key of ['q', 'type']) {
-            const v = data.get(key);
-            if (typeof v === 'string' && v.trim()) next.set(key, v.trim());
-          }
+          const v = data.get('q');
+          if (typeof v === 'string' && v.trim()) next.set('q', v.trim());
+          if (type) next.set('type', type);
           navigate(`/${lang}/branches${next.size ? `?${next.toString()}` : ''}`);
         }}
       >
-        <label className="flex min-w-0 flex-col gap-1 font-semibold">
-          {t('branches.search')}
-          <input type="search" name="q" defaultValue={q} key={`q-${q}`} maxLength={100} className="input max-w-full font-normal" />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1 font-semibold">
-          {t('branches.type')}
-          <select name="type" defaultValue={type} key={`t-${type}-${types.length}`} className="input max-w-full font-normal">
-            <option value="">{t('branches.any')}</option>
-            {types.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-          </select>
-        </label>
-        <button type="submit" className="btn-primary">{t('branches.apply')}</button>
-        {q || type ? <Link to={`/${lang}/branches`} className="btn-secondary">{t('branches.reset')}</Link> : null}
+        <label htmlFor="br-q" className="label">{t('branches.search')}</label>
+        <div className="br-filter-row">
+          <div className="field-row min-w-0 flex-[1_1_420px]">
+            <input id="br-q" type="search" name="q" defaultValue={q} key={`q-${q}`} maxLength={100} className="field" placeholder={t('branches.searchPlaceholder')} />
+            <button type="submit" className="btn">{t('branches.apply')}</button>
+          </div>
+          <nav className="br-types" aria-label={t('branches.type')}>
+            {[['', t('branches.any')] as const, ...types].map(([code, name]) => (
+              <Link key={code || 'all'} to={`/${lang}/branches?${new URLSearchParams({ ...(q ? { q } : {}), ...(code ? { type: code } : {}) }).toString()}`}
+                className="br-type" aria-current={type === code ? 'true' : undefined}>{name}</Link>
+            ))}
+          </nav>
+        </div>
+        {q || type ? <Link to={`/${lang}/branches`} className="btn line sm mt-4">{t('branches.reset')}</Link> : null}
       </form>
 
       {points.length > 0 ? (
@@ -98,39 +98,44 @@ export function BranchesPage() {
             <BranchMap points={points} label={t('branches.mapTitle')} />
           </Suspense>
         </div>
-      ) : items ? (
-        <p className="mb-6 rounded-md border-2 border-border bg-surface p-3 text-sm" data-testid="map-pending">{t('branches.mapPending')}</p>
+      ) : all.status === 'ready' ? (
+        <section aria-labelledby="br-scheme" className="mb-8">
+          <h2 id="br-scheme" className="h3 mb-1">{t('branchMap.title')}</h2>
+          <p className="muted mb-4">{t('branchMap.lead')}</p>
+          <SchemeMap branches={all.data.items} lang={lang} />
+        </section>
       ) : null}
 
       {items === null ? (
         <LoadStatus status={list.status === 'ready' ? 'loading' : list.status} />
       ) : (
         <>
-          <p role="status" className="mb-3 font-semibold">{t('branches.found', { count: items.length })}</p>
+          <p role="status" className="mb-6 font-bold">{t('branches.found', { count: items.length })}</p>
           {items.length === 0 ? (
-            <p>{t('branches.empty')}</p>
+            <p className="card news-empty">{t('branches.empty')}</p>
           ) : (
-            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-busy={list.status === 'loading'}>
-              {items.map((b) => (
-                <li key={b.slug}>
-                  <article className="flex h-full flex-col gap-2 rounded-md border-2 border-border bg-surface p-4">
-                    <p className="text-sm text-muted">{b.type.name}</p>
-                    <h2 className="text-lg font-semibold">
-                      <Link to={`/${lang}/branches/${b.slug}`}>{b.name ?? b.shortName ?? b.slug}</Link>
-                    </h2>
-                    <div className="flex flex-wrap gap-2">
-                      <VerificationBadge show={b.needsVerification} />
+            <ul className="br-grid" aria-busy={list.status === 'loading'}>
+              {items.map((b, i) => (
+                <li key={b.slug} className="flex">
+                  <article className={b.isMain ? 'br-card main' : 'br-card'}>
+                    <span className="br-tab" aria-hidden="true">{`№ ${i + 1} · ${b.type.name ?? ''}`}</span>
+                    <div className="br-body">
+                      <p className="sr-only">{b.type.name}</p>
+                      <h2 className="br-name">
+                        <Link to={`/${lang}/branches/${b.slug}`}>{b.name ?? b.shortName ?? b.slug}</Link>
+                      </h2>
                       <TranslationNote contentLang={b.contentLang} translationStatus={b.translationStatus} />
+                      {b.address ? (
+                        <p className="br-line"><MapPin aria-hidden="true" className="br-ico" /><span><span className="visually-hidden">{t('branches.address')}: </span>{b.address}</span></p>
+                      ) : null}
+                      {b.phone ? (
+                        <p className="br-line"><Phone aria-hidden="true" className="br-ico" /><span><span className="visually-hidden">{t('branches.phone')}: </span><a href={telHref(b.phone)} className="font-bold">{b.phone}</a></span></p>
+                      ) : null}
+                      {b.email ? (
+                        <p className="br-line"><Mail aria-hidden="true" className="br-ico" /><span className="min-w-0 wrap-anywhere"><span className="visually-hidden">{t('branches.email')}: </span><a href={`mailto:${b.email}`}>{b.email}</a></span></p>
+                      ) : null}
+                      <Link to={`/${lang}/branches/${b.slug}`} className="btn line sm mt-auto self-start" aria-hidden="true" tabIndex={-1}>{t('branches.more')}</Link>
                     </div>
-                    {b.address ? (
-                      <p className="flex gap-2"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span><span className="visually-hidden">{t('branches.address')}: </span>{b.address}</span></p>
-                    ) : null}
-                    {b.phone ? (
-                      <p className="flex gap-2"><Phone aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span><span className="visually-hidden">{t('branches.phone')}: </span><a href={telHref(b.phone)}>{b.phone}</a></span></p>
-                    ) : null}
-                    {b.email ? (
-                      <p className="flex gap-2"><Mail aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span className="min-w-0 wrap-anywhere"><span className="visually-hidden">{t('branches.email')}: </span><a href={`mailto:${b.email}`}>{b.email}</a></span></p>
-                    ) : null}
                   </article>
                 </li>
               ))}

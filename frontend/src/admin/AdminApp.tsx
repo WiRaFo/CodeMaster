@@ -6,6 +6,7 @@ import { adminRequest, configureAdminApi } from './api.ts';
 import { AuditPage } from './AuditPage.tsx';
 import { BranchEditPage, BranchesAdminPage } from './BranchesAdmin.tsx';
 import { FeedbackAdminPage } from './FeedbackAdminPage.tsx';
+import { AnalyticsAdminPage, KnowledgeAdminPage } from './AnalyticsAdmin.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 import { DocumentEditPage } from './DocumentEditPage.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
@@ -61,7 +62,12 @@ export function AdminApp() {
     robots.name = 'robots';
     robots.content = 'noindex, nofollow';
     document.head.append(robots);
-    return () => robots.remove();
+    // Оформление панели в общем стиле сайта (styles/admin.css) включается классом на body.
+    document.body.classList.add('adm');
+    return () => {
+      robots.remove();
+      document.body.classList.remove('adm');
+    };
   }, []);
 
   useEffect(() => {
@@ -152,18 +158,20 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
       >
         Перейти к основному содержимому
       </a>
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <p className="text-lg font-bold">Панель управления ГА ВКО</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm">
-              {me.user.fullName}
-              {me.roles?.length ? <span className="text-muted"> · {me.roles.map((r) => r.name).join(', ')}</span> : null}
-            </span>
-            <button type="button" className="btn-secondary" onClick={() => void logout()}>Выйти</button>
+      <header className="adm-head">
+        <div className="adm-top">
+          <div className="adm-bar mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <p className="adm-brand"><img src="/design/logo-seal-256.png" alt="" width={40} height={41} /><span>Панель управления ГА ВКО</span></p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="adm-user text-sm">
+                {me.user.fullName}
+                {me.roles?.length ? <span className="text-muted"> · {me.roles.map((r) => r.name).join(', ')}</span> : null}
+              </span>
+              <button type="button" className="btn-secondary adm-logout" onClick={() => void logout()}>Выйти</button>
+            </div>
           </div>
         </div>
-        <nav aria-label="Разделы панели" className="mx-auto max-w-7xl px-4 pb-2">
+        <nav aria-label="Разделы панели" className="adm-nav mx-auto max-w-7xl px-4 py-2">
           <ul className="flex flex-wrap gap-1">
             <AdminNavItem to="/admin" end label={unread ? `Обзор (${unread} новых)` : 'Обзор'} />
             {catalog ? <AdminNavItem to="/admin/documents" label="Документы" /> : null}
@@ -175,8 +183,10 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
             {can('pages:edit') ? <AdminNavItem to="/admin/about" label="Об архиве" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/pages" label="Страницы" /> : null}
             {can('pages:edit') ? <AdminNavItem to="/admin/faq" label="Вопросы и ответы" /> : null}
+            {can('pages:edit') ? <AdminNavItem to="/admin/assistant" label="База знаний ИИ" /> : null}
             {can('branches:edit') ? <AdminNavItem to="/admin/branches" label="Филиалы" /> : null}
             {can('feedback:read') ? <AdminNavItem to="/admin/feedback" label="Отзывы" /> : null}
+            {can('stats:read') ? <AdminNavItem to="/admin/analytics" label="Аналитика" /> : null}
             {can('users:manage') ? <AdminNavItem to="/admin/users" label="Сотрудники" /> : null}
             {can('audit:read') ? <AdminNavItem to="/admin/audit" label="Журнал действий" /> : null}
             <li>
@@ -207,6 +217,8 @@ function SignedIn({ me, onSignedOut }: { me: AdminUser; onSignedOut: () => void 
           <Route path="pages" element={can('pages:edit') ? <PagesAdminPage /> : <NoAccess />} />
           <Route path="pages/*" element={can('pages:edit') ? <PageEditPage /> : <NoAccess />} />
           <Route path="faq" element={can('pages:edit') ? <FaqAdminPage /> : <NoAccess />} />
+          <Route path="assistant" element={can('pages:edit') ? <KnowledgeAdminPage /> : <NoAccess />} />
+          <Route path="analytics" element={can('stats:read') ? <AnalyticsAdminPage /> : <NoAccess />} />
           <Route path="branches" element={can('branches:edit') ? <BranchesAdminPage /> : <NoAccess />} />
           <Route path="branches/:id" element={can('branches:edit') ? <BranchEditPage /> : <NoAccess />} />
           <Route path="feedback" element={can('feedback:read') ? <FeedbackAdminPage /> : <NoAccess />} />
@@ -254,7 +266,7 @@ export function AdminHeading({ title, children }: { title: string; children?: Re
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 tabIndex={-1} className="text-3xl font-bold focus:outline-none">{title}</h1>
-      {children}
+      {children ? <div className="flex flex-wrap items-center gap-3">{children}</div> : null}
     </div>
   );
 }

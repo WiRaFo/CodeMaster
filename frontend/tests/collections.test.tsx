@@ -24,7 +24,7 @@ describe('коллекции «Архива памяти» (F-081)', () => {
     const link = await screen.findByRole('link', { name: '[Демо] Маслозавод в документах' });
     expect(link).toHaveAttribute('href', '/ru/history/collections/demo-creamery-records');
     const card = link.closest('article') as HTMLElement;
-    expect(within(card).getByText('Демо')).toBeInTheDocument();
+    expect(within(card).queryByText('Демо')).toBeNull();
     expect(within(card).getByText('3 материала')).toBeInTheDocument();
     expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations.map((v) => v.id)).toEqual([]);
   });

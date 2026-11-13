@@ -1,20 +1,20 @@
 import { createHash } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { ObjectStorage } from '../../src/infrastructure/storage/local-storage.ts';
-import { DEMO_PREFIX, type Tri } from './lib.ts';
+import type { Tri } from './lib.ts';
 
 /**
  * Демонстрационные материалы для показа разделов (docs/database-design.md §10).
- * Все записи data_origin = demo и начинаются с «[Демо]». Тексты объясняют работу сайта
+ * Все записи data_origin = demo; на сайте без пометок (решение заказчика 11.11.2026). Тексты объясняют работу сайта
  * и не содержат исторических утверждений, которые можно принять за архивные факты.
  */
 
 const LOCALES = ['ru', 'kk', 'en'] as const;
 type Loc = (typeof LOCALES)[number];
 const statusFor = (locale: Loc) => (locale === 'ru' ? 'reviewed' : 'machine') as 'reviewed' | 'machine';
-const title = (t: Tri<string>, locale: Loc) => `${DEMO_PREFIX[locale]} ${t[locale]}`;
+const title = (t: Tri<string>, locale: Loc) => t[locale];
 
-const DEMO_SOURCE = 'Демонстрационный материал команды разработки; не является архивной публикацией.';
+const DEMO_SOURCE = 'Материал команды разработки сайта.';
 
 interface TextSeed {
   slug: string;
@@ -64,14 +64,14 @@ const NEWS: Array<TextSeed & { daysAgo: number }> = [
     daysAgo: 1,
     title: { ru: 'Прототип нового сайта архива', kk: 'Мұрағаттың жаңа сайтының прототипі', en: 'Prototype of the new archive website' },
     lead: {
-      ru: 'Демонстрационная новость: так будет выглядеть лента новостей.',
-      kk: 'Демонстрациялық жаңалық: жаңалықтар таспасы осылай көрінеді.',
-      en: 'A demo item showing how the news feed will look.',
+      ru: 'Архив готовит новый сайт: каталог, выставки и цифровая история региона в одном месте.',
+      kk: 'Мұрағат жаңа сайт дайындап жатыр: каталог, көрмелер және өңірдің цифрлық тарихы бір жерде.',
+      en: 'The archive is preparing a new website: the catalogue, exhibitions and the region’s digital history in one place.',
     },
     body: {
-      ru: 'Этот текст создан для показа раздела новостей и будет заменён материалами архива.',
-      kk: 'Бұл мәтін жаңалықтар бөлімін көрсету үшін жасалған және мұрағат материалдарымен ауыстырылады.',
-      en: 'This text exists to demonstrate the news section and will be replaced with archive content.',
+      ru: 'На сайте можно искать документы в электронном каталоге, смотреть виртуальные выставки и узнавать адреса и режим работы архива и филиалов.',
+      kk: 'Сайтта электрондық каталогтан құжат іздеуге, виртуалды көрмелерді көруге және мұрағат пен филиалдардың мекенжайлары мен жұмыс уақытын білуге болады.',
+      en: 'On the website you can search the e-catalogue, view virtual exhibitions and find the addresses and opening hours of the archive and its branches.',
     },
   },
   {
@@ -79,9 +79,9 @@ const NEWS: Array<TextSeed & { daysAgo: number }> = [
     daysAgo: 3,
     title: { ru: 'Поиск по каталогу по шифру и словам', kk: 'Каталогтан шифр және сөз бойынша іздеу', en: 'Catalogue search by code and keywords' },
     lead: {
-      ru: 'Демонстрационная новость о возможностях поиска.',
-      kk: 'Іздеу мүмкіндіктері туралы демонстрациялық жаңалық.',
-      en: 'A demo item about search features.',
+      ru: 'Документы можно найти по словам из названия или по архивному шифру.',
+      kk: 'Құжаттарды атауындағы сөздер немесе мұрағаттық шифр бойынша табуға болады.',
+      en: 'Documents can be found by words from the title or by reference code.',
     },
     body: {
       ru: 'В строку поиска можно ввести шифр, например «Ф. 12. Оп. 3», или слова из названия документа.',
@@ -122,19 +122,11 @@ const FAQ: Array<{ q: Tri<string>; a: Tri<string> }> = [
     },
   },
   {
-    q: { ru: 'Что означают пометки «Демо» и «Тестовые данные»?', kk: '«Демо» және «Сынақ деректері» белгілері нені білдіреді?', en: 'What do the “Demo” and “Test data” labels mean?' },
-    a: {
-      ru: 'Это материалы прототипа, подготовленные командой разработки. Они не являются архивными документами и будут заменены материалами архива.',
-      kk: 'Бұл әзірлеушілер командасы дайындаған прототип материалдары. Олар мұрағат құжаттары емес және мұрағат материалдарымен ауыстырылады.',
-      en: 'These are prototype materials prepared by the development team. They are not archival records and will be replaced with the archive’s materials.',
-    },
-  },
-  {
     q: { ru: 'Как увеличить шрифт или включить высокую контрастность?', kk: 'Қаріпті қалай үлкейтуге немесе жоғары контрастты қалай қосуға болады?', en: 'How do I enlarge the text or switch on high contrast?' },
     a: {
-      ru: 'Нажмите кнопку «Доступность» в шапке сайта. Там можно изменить размер текста, интервалы, контраст и отключить анимацию; настройки сохраняются в браузере.',
-      kk: 'Сайттың жоғарғы жағындағы «Қолжетімділік» батырмасын басыңыз. Онда мәтін өлшемін, аралықтарды, контрастты өзгертуге және анимацияны өшіруге болады; баптаулар браузерде сақталады.',
-      en: 'Press “Accessibility” in the site header. There you can change the text size, spacing and contrast and turn off animation; the settings are kept in your browser.',
+      ru: 'Нажмите кнопку «Версия для слабовидящих» в шапке сайта. Там можно выбрать крупный текст и цветовую схему; выбор сохраняется в браузере. Кнопка «Остановить анимацию» выключает движение на страницах.',
+      kk: 'Сайттың жоғарғы жағындағы «Нашар көретіндерге арналған нұсқа» батырмасын басыңыз. Онда ірі мәтін мен түс схемасын таңдауға болады; таңдау браузерде сақталады. «Анимацияны тоқтату» батырмасы беттердегі қозғалысты өшіреді.',
+      en: 'Press “Low-vision version” in the site header. There you can choose large text and a colour scheme; your choice is kept in the browser. The “Stop animation” button turns off motion on the pages.',
     },
   },
   {
@@ -155,7 +147,7 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
     const data = {
       kind: 'article' as const,
       sourceNote: DEMO_SOURCE,
-      authorship: 'Команда разработки (демо)',
+      authorship: 'Команда разработки',
       publishedAt: new Date(),
       publicationStatus: 'published' as const,
       dataOrigin: 'demo' as const,
@@ -182,8 +174,8 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
 
   // Вопросы без собственного ключа: демо-набор пересоздаётся целиком.
   await db.faqItem.deleteMany({ where: { dataOrigin: 'demo' } });
-  // Темы по порядку вопросов: заявления, шифр, цифровая копия, пометки «Демо», доступность, языки.
-  const faqTopics = ['services', 'catalog', 'access', 'site', 'site', 'site'] as const;
+  // Темы по порядку вопросов: заявления, шифр, цифровая копия, доступность, языки.
+  const faqTopics = ['services', 'catalog', 'access', 'site', 'site'] as const;
   for (const [i, f] of FAQ.entries()) {
     await db.faqItem.create({
       data: {
@@ -223,25 +215,23 @@ export async function seedDemo(db: PrismaClient, storage: ObjectStorage): Promis
 
 const DEMO_BUCKET = 'archive-demo';
 const DEMO_ITEM_SOURCE: Tri<string> = {
-  ru: 'Демонстрационный материал команды разработки; не является архивной публикацией.',
-  kk: 'Әзірлеу тобының демонстрациялық материалы; мұрағаттық жарияланым емес.',
-  en: 'Demo material from the development team; not an archival publication.',
+  ru: 'Материал команды разработки сайта.',
+  kk: 'Сайт әзірлеушілер тобының материалы.',
+  en: 'Material from the website development team.',
 };
 const IMAGE_WIDTH = 1600;
 const IMAGE_HEIGHT = 1000;
 
 const xml = (text: string) => text.replace(/[<>&"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[ch] ?? ch);
 
-/** Условное изображение экспоната: подпись «ДЕМО», без попытки изобразить архивный предмет. */
+/** Условное изображение экспоната без попытки изобразить архивный предмет. */
 function demoImageSvg(heading: string, caption: string, hue: number): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${IMAGE_WIDTH}" height="${IMAGE_HEIGHT}" viewBox="0 0 ${IMAGE_WIDTH} ${IMAGE_HEIGHT}" font-family="DejaVu Sans, Arial, sans-serif">
 <rect width="100%" height="100%" fill="hsl(${hue} 35% 88%)"/>
 <rect x="50" y="50" width="${IMAGE_WIDTH - 100}" height="${IMAGE_HEIGHT - 100}" fill="none" stroke="hsl(${hue} 30% 45%)" stroke-width="6" stroke-dasharray="24 16"/>
-<text x="${IMAGE_WIDTH / 2}" y="330" font-size="96" font-weight="700" text-anchor="middle" fill="#7a1f1f">ДЕМО · DEMO</text>
 <text x="${IMAGE_WIDTH / 2}" y="500" font-size="60" font-weight="700" text-anchor="middle" fill="#222">${xml(heading)}</text>
 <text x="${IMAGE_WIDTH / 2}" y="600" font-size="40" text-anchor="middle" fill="#333">${xml(caption)}</text>
-<text x="${IMAGE_WIDTH / 2}" y="${IMAGE_HEIGHT - 110}" font-size="34" text-anchor="middle" fill="#444">Условное изображение прототипа, не архивный материал</text>
 </svg>
 `;
 }
@@ -277,9 +267,9 @@ const EXHIBITIONS: DemoExhibition[] = [
     title: { ru: 'Пример виртуальной выставки', kk: 'Виртуалды көрме үлгісі', en: 'Sample virtual exhibition' },
     lead: { ru: 'Показывает, как устроена страница выставки.', kk: 'Көрме бетінің құрылымын көрсетеді.', en: 'Shows how an exhibition page is laid out.' },
     description: {
-      ru: 'Выставка состоит из экспонатов, которые идут по порядку. У каждого экспоната есть описание и источник; экспонат может ссылаться на карточку документа в электронном каталоге. Изображения условные.',
-      kk: 'Көрме ретімен орналасқан экспонаттардан тұрады. Әр экспонаттың сипаттамасы мен дереккөзі бар; экспонат электрондық каталогтағы құжат карточкасына сілтеме бере алады. Суреттер шартты.',
-      en: 'An exhibition is a sequence of exhibits. Each exhibit has a description and a source and may link to a document record in the e-catalogue. The images are placeholders.',
+      ru: 'Выставка состоит из экспонатов, которые идут по порядку. У каждого экспоната есть описание и источник; экспонат может ссылаться на карточку документа в электронном каталоге.',
+      kk: 'Көрме ретімен орналасқан экспонаттардан тұрады. Әр экспонаттың сипаттамасы мен дереккөзі бар; экспонат электрондық каталогтағы құжат карточкасына сілтеме бере алады.',
+      en: 'An exhibition is a sequence of exhibits. Each exhibit has a description and a source and may link to a document record in the e-catalogue.',
     },
     items: [
       {
@@ -289,7 +279,7 @@ const EXHIBITIONS: DemoExhibition[] = [
           kk: 'Суретті үлкейтуге болады. Пернетақта көрсеткілері экспонаттарды ауыстырады.',
           en: 'The image can be enlarged. Arrow keys move between exhibits.',
         },
-        alt: { ru: 'Условное изображение с надписью «Демо»', kk: '«Демо» деген жазуы бар шартты сурет', en: 'Placeholder image labelled “Demo”' },
+        alt: { ru: 'Изображение экспоната', kk: 'Экспонат суреті', en: 'Exhibit image' },
         image: { heading: 'Экспонат 1', caption: 'Изображение экспоната', hue: 200 },
       },
       {
@@ -317,7 +307,7 @@ const EXHIBITIONS: DemoExhibition[] = [
           kk: 'Соңғы экспонаттан кейін көрменің басына оралуға болады.',
           en: 'After the last exhibit you can return to the start of the exhibition.',
         },
-        alt: { ru: 'Условное изображение с надписью «Демо»', kk: '«Демо» деген жазуы бар шартты сурет', en: 'Placeholder image labelled “Demo”' },
+        alt: { ru: 'Изображение экспоната', kk: 'Экспонат суреті', en: 'Exhibit image' },
         image: { heading: 'Экспонат 4', caption: 'Изображение экспоната', hue: 30 },
       },
     ],
@@ -331,15 +321,15 @@ const EXHIBITIONS: DemoExhibition[] = [
     title: { ru: 'Пример тематической подборки', kk: 'Тақырыптық іріктеме үлгісі', en: 'Sample themed selection' },
     lead: { ru: 'Вторая выставка нужна, чтобы показать фильтр по тематике и периоду.', kk: 'Екінші көрме тақырып пен кезең бойынша сүзгіні көрсету үшін қажет.', en: 'A second exhibition demonstrates filtering by topic and period.' },
     description: {
-      ru: 'Демонстрационная подборка из двух экспонатов. Содержание будет заменено материалами архива.',
-      kk: 'Екі экспонаттан тұратын демонстрациялық іріктеме. Мазмұны мұрағат материалдарымен ауыстырылады.',
-      en: 'A demo selection of two exhibits. The content will be replaced with archive materials.',
+      ru: 'Подборка из двух экспонатов.',
+      kk: 'Екі экспонаттан тұратын іріктеме.',
+      en: 'A selection of two exhibits.',
     },
     items: [
       {
         title: { ru: 'Первый экспонат подборки', kk: 'Іріктеменің бірінші экспонаты', en: 'First exhibit of the selection' },
         description: { ru: 'Условное изображение.', kk: 'Шартты сурет.', en: 'Placeholder image.' },
-        alt: { ru: 'Условное изображение с надписью «Демо»', kk: '«Демо» деген жазуы бар шартты сурет', en: 'Placeholder image labelled “Demo”' },
+        alt: { ru: 'Изображение экспоната', kk: 'Экспонат суреті', en: 'Exhibit image' },
         image: { heading: 'Подборка', caption: 'Экспонат 1', hue: 120 },
       },
       {
@@ -350,7 +340,7 @@ const EXHIBITIONS: DemoExhibition[] = [
   },
 ];
 
-/** ЭТАП 8: демонстрационные выставки (ТЗ §5.7, с. 9). Изображения условные и помечены «Демо». */
+/** ЭТАП 8: демонстрационные выставки (ТЗ §5.7, с. 9). Изображения условные. */
 async function seedDemoExhibitions(db: PrismaClient, storage: ObjectStorage): Promise<void> {
   for (const ex of EXHIBITIONS) {
     const topic = await db.category.findUnique({ where: { kind_slug: { kind: 'exhibition_topic', slug: ex.topic } } });

@@ -31,7 +31,6 @@ export function NewsItemPage() {
       </PageHeading>
       {n.lead ? <p className="text-lg font-semibold">{n.lead}</p> : null}
       {(n.bodyText ?? '').split(/\n{2,}/).filter(Boolean).map((para, i) => <p key={i}>{para}</p>)}
-      {n.dataOrigin === 'demo' ? <p className="text-sm text-muted">{t('origin.demoNote')}</p> : null}
       <p>
         <Link to={`/${lang}/news`}>{t('news.back')}</Link>
       </p>

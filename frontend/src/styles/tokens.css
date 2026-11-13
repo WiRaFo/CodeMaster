@@ -1,84 +1,54 @@
 /*
- * Дизайн-токены цветов (docs/accessibility.md §2). Единственный источник цветов интерфейса.
+ * Дизайн-токены цветов: палитра «Небо и золото» (дизайн 11.11.2026, design/tokens/sky-gold.css) и три схемы
+ * версии для слабовидящих. Единственный источник цветов интерфейса; дополнительные цвета дизайна
+ * (ink, gold, tint…) — в design.css и тоже меняются в версии для слабовидящих.
  * Каждая пара «текст/фон» проверяется тестом tests/contrast.test.ts:
- * 4.5:1 для текста, 3:1 для границ полей и индикатора фокуса.
- * Темы: light, dark, alt (тёплая схема), высокий контраст для светлой и тёмной.
+ * 4.5:1 для текста, 3:1 для границ полей и индикатора фокуса. Золото #EAD94C — только на тёмно-синем.
  */
+
+/* Шрифты дизайна: Inter для интерфейса, JetBrains Mono для архивных шифров, Marck Script для рукописного письма. */
+:root {
+  --font-ui: 'Inter Variable', 'Inter', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-code: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --font-hand: 'Marck Script', 'Segoe Script', cursive;
+}
 
 :root,
 :root[data-theme='light'] {
-  --color-bg: #f8f7f4;
+  --color-bg: #f6f8fd;
+  --color-edge: #1b2e57;
   --color-surface: #ffffff;
-  --color-surface-2: #eeebe4;
-  --color-text: #1b1e22;
-  --color-text-muted: #4b525a;
-  --color-primary: #0b5361;
-  --color-primary-hover: #073f4a;
+  --color-surface-2: #e9f0fb;
+  --color-text: #1b2e57;
+  --color-text-muted: #525f78;
+  --color-primary: #3566b0;
+  --color-primary-hover: #284f8c;
   --color-on-primary: #ffffff;
-  --color-accent: #8a4a0b;
-  --color-border: #767e87;
-  --color-focus: #b04600;
+  --color-accent: #284f8c;
+  --color-border: #6b7a96;
+  --color-focus: #1b2e57;
   --color-danger: #a1221b;
-  --color-warning-bg: #fff1cc;
-  --color-warning-text: #5c3d00;
+  --color-warning-bg: #fff6b8;
+  --color-warning-text: #3d3300;
   --color-demo-bg: #e6e0f5;
   --color-demo-text: #3e2a73;
   color-scheme: light;
 }
 
-:root[data-theme='dark'] {
-  --color-bg: #15181c;
-  --color-surface: #1d2126;
-  --color-surface-2: #262b31;
-  --color-text: #ebe8e4;
-  --color-text-muted: #b6bcc3;
-  --color-primary: #7fcbd8;
-  --color-primary-hover: #a6dde6;
-  --color-on-primary: #0c1417;
-  --color-accent: #f0b56f;
-  --color-border: #7c858f;
-  --color-focus: #ffcf5c;
-  --color-danger: #ff9b8f;
-  --color-warning-bg: #3a2e10;
-  --color-warning-text: #ffe39a;
-  --color-demo-bg: #2f2747;
-  --color-demo-text: #d9ccff;
-  color-scheme: dark;
-}
-
-:root[data-theme='alt'] {
-  --color-bg: #f5eedb;
-  --color-surface: #fbf6e9;
-  --color-surface-2: #ece2c8;
-  --color-text: #33240f;
-  --color-text-muted: #57452c;
-  --color-primary: #6a3a0c;
-  --color-primary-hover: #4f2a07;
-  --color-on-primary: #fbf6e9;
-  --color-accent: #7a4a10;
-  --color-border: #8a7253;
-  --color-focus: #1f5f6b;
-  --color-danger: #8f1f16;
-  --color-warning-bg: #fbe2a6;
-  --color-warning-text: #4a3000;
-  --color-demo-bg: #e5dbf0;
-  --color-demo-text: #3e2a73;
-  color-scheme: light;
-}
-
-:root[data-contrast='high'][data-theme='light'],
-:root[data-contrast='high'][data-theme='alt'] {
+/* Версия для слабовидящих: «Чёрным по белому» (по умолчанию). */
+:root.a11y {
   --color-bg: #ffffff;
+  --color-edge: #000000;
   --color-surface: #ffffff;
-  --color-surface-2: #f0f0f0;
+  --color-surface-2: #fff6b8;
   --color-text: #000000;
-  --color-text-muted: #1f1f1f;
-  --color-primary: #00354a;
-  --color-primary-hover: #001f2b;
+  --color-text-muted: #1a1a1a;
+  --color-primary: #0a3a8c;
+  --color-primary-hover: #062a66;
   --color-on-primary: #ffffff;
-  --color-accent: #5a2d00;
+  --color-accent: #0a3a8c;
   --color-border: #000000;
-  --color-focus: #c43d00;
+  --color-focus: #000000;
   --color-danger: #7a0000;
   --color-warning-bg: #ffffff;
   --color-warning-text: #000000;
@@ -87,22 +57,46 @@
   color-scheme: light;
 }
 
-:root[data-contrast='high'][data-theme='dark'] {
-  --color-bg: #0a0a0a;
-  --color-surface: #0a0a0a;
-  --color-surface-2: #1a1a1a;
+/* «Белым по чёрному». */
+:root.a11y.a11y-wb {
+  --color-edge: #000000;
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-2: #000000;
   --color-text: #ffffff;
-  --color-text-muted: #f0f0f0;
-  --color-primary: #8be9ff;
-  --color-primary-hover: #c4f4ff;
+  --color-text-muted: #ffffff;
+  --color-primary: #ffe600;
+  --color-primary-hover: #ffffff;
   --color-on-primary: #000000;
-  --color-accent: #ffd28a;
+  --color-accent: #ffe600;
   --color-border: #ffffff;
-  --color-focus: #ffdd00;
+  --color-focus: #ffe600;
   --color-danger: #ffb3a8;
-  --color-warning-bg: #0a0a0a;
+  --color-warning-bg: #000000;
   --color-warning-text: #ffffff;
-  --color-demo-bg: #0a0a0a;
+  --color-demo-bg: #000000;
   --color-demo-text: #ffffff;
   color-scheme: dark;
+}
+
+/* «Синим по голубому». */
+:root.a11y.a11y-blue {
+  --color-edge: #9dd1ff;
+  --color-bg: #9dd1ff;
+  --color-surface: #9dd1ff;
+  --color-surface-2: #9dd1ff;
+  --color-text: #063462;
+  --color-text-muted: #063462;
+  --color-primary: #063462;
+  --color-primary-hover: #000000;
+  --color-on-primary: #9dd1ff;
+  --color-accent: #063462;
+  --color-border: #063462;
+  --color-focus: #063462;
+  --color-danger: #5c0000;
+  --color-warning-bg: #9dd1ff;
+  --color-warning-text: #063462;
+  --color-demo-bg: #9dd1ff;
+  --color-demo-text: #063462;
+  color-scheme: light;
 }

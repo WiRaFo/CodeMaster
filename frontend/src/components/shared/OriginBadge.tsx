@@ -2,17 +2,11 @@ import { useTranslation } from 'react-i18next';
 import type { DataOrigin } from '../../lib/types.ts';
 
 /**
- * Пометка демонстрационных и синтетических записей (бриф, §2: выдуманное не выдаётся за архивное).
- * Для перенесённых и проверенных записей ничего не выводит.
+ * Пометка происхождения записи. По решению заказчика (11.11.2026) на сайте пометки «Демо» и «Тестовые данные»
+ * не выводятся; происхождение хранится в data_origin и видно в админке.
  */
-export function OriginBadge({ origin }: { origin: DataOrigin }) {
-  const { t } = useTranslation();
-  if (origin !== 'demo' && origin !== 'synthetic') return null;
-  return (
-    <span className="inline-block rounded border border-demo-text bg-demo-bg px-2 py-0.5 text-sm font-semibold text-demo-text">
-      {t(`origin.${origin}`)}
-    </span>
-  );
+export function OriginBadge(_props: { origin: DataOrigin }) {
+  return null;
 }
 
 /** Предупреждение, что текст показан на другом языке или переведён машинно. */

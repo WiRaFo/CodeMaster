@@ -46,7 +46,6 @@ export function BranchPage() {
         </div>
       </PageHeading>
 
-      {b.needsVerification ? <p className="mb-6 max-w-3xl rounded-md border-2 border-border bg-surface p-3">{t('branches.needsVerificationNote')}</p> : null}
 
       <section aria-labelledby="branch-contacts" className="mb-8">
         <h2 id="branch-contacts" className="mb-2 text-xl font-semibold">{t('branches.contacts')}</h2>

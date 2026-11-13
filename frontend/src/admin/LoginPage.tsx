@@ -24,7 +24,8 @@ export function LoginPage({ expired, onSignedIn }: { expired: boolean; onSignedI
   };
 
   return (
-    <main id="admin-main" className="mx-auto max-w-md px-4 py-10">
+    <main id="admin-main" className="adm-login mx-auto max-w-md px-4 py-10">
+      <img className="adm-login-seal" src="/design/logo-seal-256.png" alt="" width={72} height={74} />
       <h1 className="mb-2 text-3xl font-bold">Вход в панель управления</h1>
       <p className="mb-6 text-muted">Только для сотрудников Государственного архива ВКО.</p>
       {expired ? <p role="status" className="mb-4 font-semibold">Сессия закончилась из-за долгого бездействия. Войдите снова.</p> : null}

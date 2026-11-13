@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Государственный архив Восточно-Казахстанской области: электронный каталог, цифровая история региона, онлайн-выставки." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#1b2e57" />
     <title>Шығыс Қазақстан облысының мемлекеттік мұрағаты</title>
     <script>
-      // Применяет настройки доступности и язык до первой отрисовки, чтобы не было вспышки темы.
+      // Применяет версию для слабовидящих, паузу анимации и язык до первой отрисовки, чтобы не было вспышки.
       // Логика повторяет src/lib/a11y-prefs.ts (applyPrefs); их совпадение проверяет tests/a11y-prefs.test.ts.
       (function () {
         var root = document.documentElement;
         var p = {};
         try { p = JSON.parse(localStorage.getItem('archive-vko:a11y') || '{}') || {}; } catch (e) { p = {}; }
-        var mq = function (q) { return !!(window.matchMedia && window.matchMedia(q).matches); };
-        var scheme = ['light', 'dark', 'alt'].indexOf(p.scheme) >= 0 ? p.scheme : (mq('(prefers-color-scheme: dark)') ? 'dark' : 'light');
-        root.dataset.theme = scheme;
-        root.dataset.contrast = p.highContrast === true ? 'high' : 'normal';
-        root.dataset.font = p.readableFont === true ? 'readable' : 'default';
-        root.dataset.motion = p.motion === 'reduce' || p.motion === 'full' ? p.motion : (mq('(prefers-reduced-motion: reduce)') ? 'reduce' : 'full');
-        root.dataset.simplified = p.simplified === true ? 'on' : 'off';
-        if ([100, 125, 150, 175, 200].indexOf(p.fontScale) >= 0) root.style.setProperty('--a11y-font-size', p.fontScale + '%');
-        if (p.lineHeight === '1.8' || p.lineHeight === '2') root.style.setProperty('--a11y-line-height', p.lineHeight);
-        if (p.letterSpacing === '0.12' || p.letterSpacing === '0.16') {
-          root.style.setProperty('--a11y-letter-spacing', p.letterSpacing + 'em');
-          root.style.setProperty('--a11y-word-spacing', '0.16em');
-        }
+        var on = p.mode === true;
+        root.classList.toggle('a11y', on);
+        root.classList.toggle('a11y-xl', on && p.size === 'xl');
+        root.classList.toggle('a11y-wb', on && p.scheme === 'wb');
+        root.classList.toggle('a11y-blue', on && p.scheme === 'blue');
+        root.classList.remove('a11y-noimg');
+        root.classList.toggle('txt-l', !on && p.text === 'l');
+        root.classList.toggle('txt-xl', !on && p.text === 'xl');
+        root.classList.toggle('no-motion', p.still === true);
+        root.dataset.theme = 'light';
+        root.dataset.contrast = on ? 'high' : 'normal';
+        root.dataset.motion = on || p.still === true ? 'reduce' : 'full';
         var m = location.pathname.match(/^\/(kk|ru|en)(\/|$)/);
         if (m) root.lang = m[1];
       })();

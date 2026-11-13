@@ -16,13 +16,15 @@ const PORT = 4174;
 const BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
 const PAGES = ['/kk', '/ru', '/en/accessibility', '/ru/catalog?q=протокол', '/kk/catalog?type=photo&settlement=ust-kamenogorsk&hasDigitalCopy=true', '/ru/news', '/en/news/demo-catalog-search', '/kk/nonexistent', '/ru/exhibitions', '/kk/exhibitions/demo-exhibition-example', '/en/exhibitions/demo-exhibition-example/2', '/ru/branches', '/kk/branches/main', '/en/branches/ridder', '/kk/assistant', '/ru/history', '/kk/history/demo-how-to-read-archive-code', '/en/faq', '/ru/feedback', '/kk/visitors', '/ru/about', '/en/about/structure', '/kk/branches/ulan', '/ru/calendar', '/kk/calendar?year=2024', '/kk/anticorruption', '/ru/services', '/kk/services/paid', '/en/legislation', '/ru/reading-room', '/kk/symbols', '/en/links', '/ru/catalog/fonds?kind=personal', '/ru/history/timeline', '/ru/history/persons', '/kk/history/persons/auezov-mukhtar', '/en/history/collections', '/ru/history/collections/demo-creamery-records', '/kk/history/gallery'];
+// Обычная версия и три цветовые схемы версии для слабовидящих (дизайн 11.11.2026).
 const THEMES: Array<[string, Record<string, unknown>]> = [
-  ['light', { scheme: 'light' }],
-  ['dark', { scheme: 'dark' }],
-  ['alt', { scheme: 'alt' }],
-  ['high-contrast light', { scheme: 'light', highContrast: true }],
-  ['high-contrast dark', { scheme: 'dark', highContrast: true }],
+  ['обычная', { mode: false }],
+  ['слабовидящие ч/б', { mode: true, scheme: 'bw' }],
+  ['слабовидящие б/ч', { mode: true, scheme: 'wb', size: 'xl' }],
+  ['слабовидящие синяя', { mode: true, scheme: 'blue' }],
 ];
+/** Интервалы WCAG 1.4.12 и текст 200 % поверх страницы (как пользовательская таблица стилей). */
+const TEXT_SPACING = 'html{font-size:200%!important} *{line-height:2!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}';
 
 /** Учётные записи для сценариев 9–12 берутся из backend/.env (сиды создают их с теми же паролями). */
 function staffCredentials() {
@@ -81,8 +83,17 @@ async function openWithPrefs(page: Page, path: string, prefs: Record<string, unk
 async function axe(page: Page): Promise<string[]> {
   if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE_SOURCE);
   // Контраст проверяется по итоговому виду: ждём конца конечных анимаций (появление диалогов, всплывающих окон).
+  // Анимации, привязанные к прокрутке (появление блоков, animation-timeline: view()), не «заканчиваются» сами —
+  // их не ждём; ожидание ограничено 5 с.
   await page.evaluate(() =>
-    Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))),
+    Promise.race([
+      Promise.all(
+        document.getAnimations()
+          .filter((x) => x.timeline instanceof DocumentTimeline && x.effect?.getComputedTiming().iterations !== Infinity)
+          .map((x) => x.finished.catch(() => undefined)),
+      ),
+      new Promise((r) => setTimeout(r, 5000)),
+    ]),
   );
   return page.evaluate(async () => {
     type Node = { target: string[]; any: Array<{ data?: { messageKey?: string } | null }> };
@@ -151,11 +162,13 @@ async function main() {
 
     {
       const page = await browser.newPage({ viewport: { width: 320, height: 800 } });
-      await openWithPrefs(page, '/kk', { fontScale: 200, lineHeight: '2', letterSpacing: '0.16' });
+      await openWithPrefs(page, '/kk', { mode: true, size: 'xl' });
+      await page.addStyleTag({ content: TEXT_SPACING });
       const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(scroll <= client, `текст 200 % и интервалы 1.4.12 на 320px: прокрутка ${scroll} > ${client}`);
       // Прейскурант: 218 строк в таблицах — тоже без горизонтальной прокрутки при увеличенном тексте.
-      await openWithPrefs(page, '/kk/services/paid', { fontScale: 200 });
+      await openWithPrefs(page, '/kk/services/paid', {});
+      await page.addStyleTag({ content: TEXT_SPACING });
       check((await page.locator('main table').count()) === 8, 'платные услуги: 8 таблиц прейскуранта');
       const [ps, pc] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       check(ps <= pc, `прейскурант, текст 200 % на 320px: прокрутка ${ps} > ${pc}`);
@@ -181,15 +194,18 @@ async function main() {
     {
       const page = await browser.newPage({ viewport: { width: 360, height: 780 } });
       await openWithPrefs(page, '/ru', {});
-      const menuButton = page.getByRole('button', { name: 'Меню' });
+      // Подпись кнопки меняется («Меню» → «Закрыть»), поэтому кнопка берётся по классу.
+      const menuButton = page.locator('button.hdr-burger');
+      check((await menuButton.innerText()).trim() === 'Меню', 'кнопка мобильного меню подписана «Меню»');
       await menuButton.click();
-      const dialog = page.getByRole('dialog', { name: 'Разделы сайта' });
-      check(await dialog.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
-      check((await dialog.getByRole('link').count()) === 11, 'в мобильном меню 11 разделов (10 из ТЗ и госуслуга)');
+      check((await menuButton.getAttribute('aria-expanded')) === 'true', 'кнопка меню сообщает, что меню открыто');
+      const menu = page.getByRole('navigation', { name: 'Разделы сайта' });
+      check(await menu.waitFor({ timeout: 3000 }).then(() => true, () => false), 'мобильное меню открывается');
+      check((await menu.getByRole('link').count()) === 14, 'в мобильном меню 11 разделов (10 из ТЗ и госуслуга) и 3 языка');
       const violations = await axe(page);
       check(violations.length === 0, `axe мобильное меню: ${violations.join('; ')}`);
       await page.keyboard.press('Escape');
-      check(!(await dialog.isVisible()), 'Esc закрывает меню');
+      check((await menuButton.getAttribute('aria-expanded')) === 'false', 'Esc закрывает меню');
       check(await menuButton.evaluate((el: Element) => el === document.activeElement), 'фокус возвращается на кнопку меню');
       await page.close();
     }
@@ -213,7 +229,7 @@ async function main() {
       await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'EN' }).click();
       await page.waitForURL(/\/en\/catalog\/documents\//);
       await page.getByText('Archive reference', { exact: true }).waitFor();
-      check(await page.getByText(/^F\. TEST-1\. Inv\. 1\. File 1\./).first().isVisible(), 'сценарий 13: шифр с английскими сокращениями');
+      check(await page.locator('.document-meta').getByText(/^F\. TEST-1\. Inv\. 1\. File 1\./).first().waitFor({ timeout: 5000 }).then(() => true, () => false), 'сценарий 13: шифр с английскими сокращениями');
       await page.goto(BASE + '/');
       await page.waitForURL(/\/en$/);
       check(new URL(page.url()).pathname === '/en', 'сценарий 13: корень сайта открывает последний выбранный язык');
@@ -244,22 +260,34 @@ async function main() {
     }
 
     {
-      // Сценарий 14: тема сохраняется при переходах, смене языка и перезагрузке (панель доступности убрана 11.11.2026).
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      // Сценарий 14: версия для слабовидящих сохраняется при переходах, смене языка и перезагрузке (дизайн 11.11.2026).
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/kk', {});
-      await page.getByRole('button', { name: 'Қараңғы тақырыпты қосу' }).click();
-      check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'сценарий 14: тёмная тема включается без перезагрузки');
-      check((await page.getByRole('button', { name: 'Қолжетімділік', exact: true }).count()) === 0, 'панели «Доступность» в шапке нет');
-      await page.getByRole('banner').getByRole('link', { name: 'Электрондық каталог' }).first().click();
+      // Меню «Доступность» в шапке: переключатель версии, цвет и размер внутри меню.
+      const menuKk = page.locator('.am-main');
+      await menuKk.getByRole('button', { name: 'Сайттың қолжетімділік параметрлері' }).click();
+      await menuKk.getByRole('button', { name: 'Көру қабілеті нашарлар нұсқасы' }).click();
+      check(await page.evaluate(() => document.documentElement.classList.contains('a11y')), 'сценарий 14: версия для слабовидящих включается без перезагрузки');
+      await menuKk.getByRole('button', { name: /Қара фонда ақ/ }).click();
+      await menuKk.getByRole('button', { name: 'Өте ірі' }).click();
+      await page.keyboard.press('Escape');
+      check(!(await menuKk.locator('.am-panel').count()), 'сценарий 14: меню закрывается по Esc');
+      await page.getByRole('navigation', { name: 'Негізгі бөлімдер' }).getByRole('link', { name: 'Қорлар мен каталог' }).click();
       await page.waitForURL(/\/kk\/catalog/);
-      await page.getByRole('navigation', { name: 'Сайт тілі' }).getByRole('link', { name: 'RU' }).click();
+      await page.getByRole('navigation', { name: 'Сайт тілі' }).first().getByRole('link', { name: 'RU' }).click();
       await page.waitForURL(/\/ru\/catalog/);
       await page.reload();
       await page.locator('h1').waitFor();
-      const state = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, lang: document.documentElement.lang }));
-      check(state.theme === 'dark', `сценарий 14: тема сохранилась после перехода, смены языка и перезагрузки (${state.theme})`);
-      check(state.lang === 'ru', 'сценарий 14: язык сменился, тема осталась');
-      check(await page.getByRole('button', { name: 'Включить светлую тему' }).isVisible(), 'сценарий 14: кнопка темы подписана на новом языке');
+      const state = await page.evaluate(() => ({ cls: document.documentElement.className, lang: document.documentElement.lang }));
+      check(/\ba11y\b/.test(state.cls) && /a11y-wb/.test(state.cls) && /a11y-xl/.test(state.cls), `сценарий 14: режим, цвет и размер сохранились после перехода, смены языка и перезагрузки (${state.cls})`);
+      check(state.lang === 'ru', 'сценарий 14: язык сменился, режим остался');
+      const menuRu = page.locator('.am-main');
+      await menuRu.getByRole('button', { name: 'Настройки доступности сайта' }).click();
+      check((await menuRu.getByRole('button', { name: 'Версия для слабовидящих' }).getAttribute('aria-pressed')) === 'true', 'сценарий 14: переключатель подписан на новом языке и включён');
+      const violations = await axe(page);
+      check(violations.length === 0, `axe версия для слабовидящих б/ч, крупный: ${violations.join('; ')}`);
+      await menuRu.getByRole('button', { name: 'Версия для слабовидящих' }).click();
+      check(!(await page.evaluate(() => document.documentElement.classList.contains('a11y'))), 'сценарий 14: выход возвращает обычную версию');
       await page.close();
     }
 
@@ -314,7 +342,7 @@ async function main() {
       const page = await context.newPage();
       await openWithPrefs(page, '/ru/branches', {});
       await page.getByText('Найдено подразделений: 15').waitFor();
-      check(await page.getByTestId('map-pending').isVisible(), 'сценарий 8: без сверенных координат вместо карты — пояснение');
+      check(await page.getByTestId('scheme-map').isVisible(), 'сценарий 8: без сверенных координат вместо карты — схема области с метками');
       check(!(await page.getByTestId('branch-map').count()), 'сценарий 8: карта не показывается без координат');
       await page.getByRole('searchbox', { name: 'Название или населённый пункт' }).fill('Лениногорск');
       await page.keyboard.press('Enter');
@@ -412,7 +440,7 @@ async function main() {
       await page.getByRole('link', { name: /Как подготовиться к работе в читальном зале/ }).click();
       const story = await page.getByRole('heading', { level: 1, name: /Как подготовиться/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(story, 'сценарий 17: тематика ведёт к публикации');
-      check(await page.getByText('Демонстрационный материал команды разработки', { exact: false }).first().isVisible(), 'сценарий 17: у публикации указан источник');
+      check(!(await page.getByText('Демонстрационный материал', { exact: false }).count()), 'сценарий 17: пометок демо у публикации нет (решение 11.11.2026)');
 
       await openWithPrefs(page, '/ru/feedback', {});
       await page.getByRole('button', { name: 'Отправить' }).click();
@@ -430,10 +458,10 @@ async function main() {
       // Сценарий 1 (docs/development-roadmap.md, ЭТАП 4): с главной только клавиатурой найти документ в каталоге.
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await openWithPrefs(page, '/ru', {});
-      for (const block of ['Электронный каталог', 'История в документах', 'Онлайн-выставки', 'Наши филиалы', 'Новости и события']) {
+      for (const block of ['Электронный каталог', 'Цифровая история региона', 'Онлайн-выставки', 'Филиалы и контакты', 'Новости и события']) {
         check(await page.getByRole('heading', { level: 2, name: block }).isVisible(), `главная: блок «${block}»`);
       }
-      check((await page.getByText('Демо', { exact: true }).count()) > 0, 'главная: демо-записи помечены');
+      check((await page.getByText('Демо', { exact: true }).count()) === 0, 'главная: пометок «Демо» нет (решение 11.11.2026)');
       const input = page.getByRole('searchbox', { name: 'Поиск в электронном каталоге' });
       await input.focus();
       await page.keyboard.type('протокол заседания');
@@ -459,7 +487,7 @@ async function main() {
       await box.press('Enter');
       await page.getByText(/По запросу «маслозавод» найдено/).waitFor();
       const titles = await page.getByRole('article').getByRole('link').allTextContents();
-      check(titles.length >= 2 && titles.every((x) => x.includes('[Синтетика]')), `сценарий 2: выдача по словам (${titles.join(' | ')})`);
+      check(titles.length >= 2 && titles.some((x) => /маслозавод/i.test(x)) && !titles.some((x) => x.includes('[Синтетика]')), `сценарий 2: выдача по словам, без пометок «[Синтетика]» (${titles.join(' | ')})`);
       check(!(await page.getByText('Закрытый документ').count()), 'сценарий 2: закрытый документ не найден');
       await box.fill('Ф. TEST-1, Оп. 1, Д. 1');
       await box.press('Enter');
@@ -526,7 +554,7 @@ async function main() {
       const h1 = page.getByRole('heading', { level: 1, name: /Протокол заседания/ });
       const opened = await h1.waitFor({ timeout: 5000 }).then(() => true, () => false);
       check(opened, `сценарий 4: открыта карточка (${await page.getByRole('heading', { level: 1 }).first().textContent()})`);
-      check(await page.getByText('Тестовые данные').first().isVisible(), 'сценарий 4: синтетический документ помечен');
+      check(!(await page.getByText('Тестовые данные').count()), 'сценарий 4: пометки «Тестовые данные» нет (решение 11.11.2026)');
       await page.getByRole('button', { name: 'Скопировать шифр' }).click();
       await page.getByTestId('copy-notice').waitFor();
       const clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -575,7 +603,7 @@ async function main() {
       await openWithPrefs(page, `/ru/catalog/documents/${restrictedDoc.id}`, {});
       await page.getByTestId('restricted-notice').waitFor();
       check(await page.getByRole('heading', { name: 'Доступ ограничен' }).isVisible(), 'сценарий 18: виден блок «Доступ ограничен»');
-      check((await page.locator('.document-viewer, img').count()) === 0, 'сценарий 18: нет просмотрщика и изображений');
+      check((await page.locator('main .document-viewer, main img:not(.seal)').count()) === 0, 'сценарий 18: нет просмотрщика и изображений в содержимом страницы');
       check(!requests.some((u) => u.includes('/pages')), 'сценарий 18: страница не запрашивает список страниц');
       const direct = await page.evaluate(async (id) => [(await fetch(`/api/v1/catalog/documents/${id}/pages`)).status, (await fetch(`/api/v1/catalog/documents/${id}/pages/1/image`)).status], restrictedDoc.id);
       check(direct[0] === 404 && direct[1] === 404, `сценарий 18: прямые запросы страниц и изображения дают 404 (${direct.join(', ')})`);
@@ -803,7 +831,7 @@ async function memoryAdminScenario(browser: Browser) {
 
   const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await site.goto(`${BASE}/ru/history/timeline`);
-  check(await site.getByRole('region', { name: '1990-е' }).getByRole('heading', { name: title }).waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: событие из панели в хронологии');
+  check(await site.locator('.tl-list').getByText(title).first().waitFor({ timeout: 5000 }).then(() => true, () => false), 'архив памяти: событие из панели в списке хронологии');
   await site.close();
 
   await page.getByRole('button', { name: `Удалить: ${title}` }).click();
@@ -1071,7 +1099,7 @@ async function adminScenarios(browser: Browser) {
   await site.waitForLoadState('networkidle');
   check((await site.locator('h1').textContent()) === title, `сценарий 11: после публикации документ на сайте (${await site.locator('h1').textContent()})`);
   check(await site.getByTestId('restricted-notice').getByText('Только в читальном зале.').isVisible(), 'сценарий 11: на сайте условия доступа');
-  check(await site.getByText('Демо', { exact: true }).first().isVisible(), 'сценарий 11: демо-запись помечена на сайте');
+  check(!(await site.getByText('Демо', { exact: true }).count()), 'сценарий 11: пометки «Демо» на сайте нет (решение 11.11.2026)');
 
   // Сценарий 12: без прав действие недоступно и в интерфейсе, и на сервере.
   await a.reload();

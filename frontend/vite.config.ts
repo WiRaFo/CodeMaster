@@ -24,7 +24,8 @@ export default defineConfig({
   },
   // Заголовки, которые нельзя задать через <meta>: их же нужно включить на боевом веб-сервере (docs/deployment.md).
   preview: { host: '127.0.0.1', port: 4173, proxy: apiProxy, headers: PREVIEW_HEADERS },
-  build: { sourcemap: true },
+  // Шрифты не встраиваются в CSS как data: — CSP сайта разрешает шрифты только со своего адреса.
+  build: { sourcemap: true, assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined) },
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.{ts,tsx}'],

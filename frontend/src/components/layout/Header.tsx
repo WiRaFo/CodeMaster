@@ -1,100 +1,182 @@
-import * as Dialog from '@radix-ui/react-dialog';
-import { Archive, BookOpen, Menu, Moon, Search, Sun, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { Menu, Phone, Search, X } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, useNavigate, useParams } from 'react-router';
-import { useA11y } from '../../app/A11yProvider.tsx';
-import { SECTIONS, sectionHref } from '../../lib/sections.ts';
+import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router';
+import { cleanCipher } from '../../lib/cipher-input.ts';
+import { telHref, useMainBranch } from '../../lib/main-branch.ts';
+import { CipherSearchInput } from '../catalog/CipherSearchInput.tsx';
+import { SECTIONS, sectionHref, type SectionKey } from '../../lib/sections.ts';
+import { AccessMenu } from './AccessMenu.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
 
+/** Короткие подписи пунктов меню (дизайн 11.11.2026): полное название остаётся в title. */
+const SHORT: ReadonlySet<SectionKey> = new Set(['catalog', 'history', 'exhibitions', 'news', 'faq']);
+
+type BarMode = 'top' | 'up' | 'hidden';
+
 /**
- * Шапка по ТЗ §4, с. 3: логотип и официальное наименование, переключатель языков, переключатель темы,
- * поисковая строка, кнопка перехода к электронному каталогу. Панель настроек доступности убрана 11.11.2026:
- * размер текста, контраст и другие режимы будут отдельными вариантами дизайна, которые переключаются кнопкой.
+ * Шапка по ТЗ §4, с. 3 в дизайне 11.11.2026 (Header.dc.html): тёмная строка (режим работы, пауза анимации, телефон),
+ * орнамент, герб и наименование, поиск, «Версия для слабовидящих», KZ/RU/EN, меню разделов.
+ * При прокрутке вверх появляется компактная панель; пока она скрыта, её ссылки убраны из обхода с клавиатуры.
  */
 export function Header() {
   const { t } = useTranslation();
   const { lang = 'kk' } = useParams();
-  const { theme, update } = useA11y();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
+  const contacts = useMainBranch(lang);
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const isDark = theme === 'dark';
+  const [dropOpen, setDropOpen] = useState(false);
+  const [bar, setBar] = useState<BarMode>('top');
+  const lastY = useRef(0);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setDropOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    lastY.current = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 260) {
+        lastY.current = y;
+        setBar('top');
+        return;
+      }
+      const delta = y - lastY.current;
+      if (Math.abs(delta) < 8) return;
+      lastY.current = y;
+      setBar(delta > 0 ? 'hidden' : 'up');
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (bar !== 'up') setDropOpen(false);
+  }, [bar]);
+
+  // Esc закрывает мобильное меню и возвращает фокус на кнопку.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMenuOpen(false);
+      menuButton.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
-    const q = query.trim();
+    const q = cleanCipher(query);
     navigate(q ? `/${lang}/search?q=${encodeURIComponent(q)}` : `/${lang}/search`);
   };
 
-  const navLinks = (onClick?: () => void) =>
-    SECTIONS.map((s) => (
-      <li key={s.key}>
-        <NavLink to={sectionHref(lang, s.path)} end={s.path === ''} className="nav-link" onClick={onClick}>
-          {t(`nav.${s.key}`)}
+  const branch = contacts.status === 'ready' ? contacts.branch : null;
+  const barShown = bar === 'up';
+  const barTab = barShown ? 0 : -1;
+
+  const links = (variant: 'nav' | 'menu' | 'drop') =>
+    SECTIONS.map((s) => {
+      const full = t(`nav.${s.key}`);
+      return (
+        <NavLink
+          key={s.key}
+          to={sectionHref(lang, s.path)}
+          end={s.path === ''}
+          className="hdr-link"
+          title={variant === 'nav' && SHORT.has(s.key) ? full : undefined}
+          tabIndex={variant === 'drop' ? barTab : undefined}
+        >
+          {variant === 'nav' && SHORT.has(s.key) ? t(`navShort.${s.key}`) : full}
         </NavLink>
-      </li>
-    ));
+      );
+    });
 
   return (
-    <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <Link to={`/${lang}`} className="flex min-w-0 items-center gap-3 text-text no-underline" aria-label={t('site.homeLink')}>
-          <Archive aria-hidden="true" className="size-10 shrink-0 text-primary" />
-          <span className="flex min-w-0 flex-col">
-            <span className="text-base font-bold leading-tight sm:text-lg">{t('site.name')}</span>
-            <span className="text-sm text-muted">{t('site.tagline')}</span>
-          </span>
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <LanguageSwitcher />
-          <button type="button" className="btn-icon" onClick={() => update({ scheme: isDark ? 'light' : 'dark' })}
-            aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}>
-            {isDark ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}
+    <>
+      <header className="hdr">
+        <div className="hdr-top">
+          <div className="wrap d-row hdr-top-in">
+            <span className="hdr-official">{t('header.official')}</span>
+            <span className="d-row hdr-top-end">
+              {branch?.scheduleText ? <span className="hdr-hours">{branch.scheduleText}</span> : null}
+              <AccessMenu variant="top" />
+              {branch?.phone ? (
+                <a href={telHref(branch.phone)} className="hdr-phone">
+                  <Phone aria-hidden="true" className="bell size-[18px] text-[var(--gold)]" />{branch.phone}
+                </a>
+              ) : null}
+            </span>
+          </div>
+        </div>
+        <div className="hdr-orn" aria-hidden="true"><div className="orn-band drift" /></div>
+
+        <div className="wrap hdr-main">
+          <Link to={`/${lang}`} className="hdr-brand" aria-label={t('site.homeLink')}>
+            <img className="seal" src="/design/logo-seal-256.png" alt="" width={64} height={65} />
+            <span className="d-col hdr-brand-text">
+              <span className="hdr-name">{t('site.name')}</span>
+              <span className="hdr-tag">{t('site.tagline')}</span>
+            </span>
+          </Link>
+          <form className="hdr-search" role="search" aria-label={t('header.searchFull')} onSubmit={onSearch}>
+            <label htmlFor="site-search" className="sr-only">{t('header.searchLabel')}</label>
+            <CipherSearchInput id="site-search" name="q" value={query} onValue={setQuery}
+              placeholder={t('header.searchPlaceholder')} maxLength={200} className="field" />
+            <button type="submit" className="btn">
+              <Search aria-hidden="true" className="size-5" />{t('header.searchSubmit')}
+            </button>
+          </form>
+          <AccessMenu variant="main" />
+          <LanguageSwitcher className="hide-m" />
+          <button ref={menuButton} type="button" className="btn dark sm hdr-burger" aria-expanded={menuOpen} aria-controls="hdr-menu"
+            onClick={() => setMenuOpen((open) => !open)}>
+            {menuOpen ? <X aria-hidden="true" className="size-[22px]" /> : <Menu aria-hidden="true" className="size-[22px]" />}
+            {t(menuOpen ? 'header.close' : 'header.menuOpen')}
           </button>
         </div>
-      </div>
 
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 pb-3">
-        <form role="search" aria-label={t('header.searchLabel')} onSubmit={onSearch} className="flex min-w-0 flex-1 basis-64 gap-2">
-          <label htmlFor="site-search" className="visually-hidden">{t('header.searchLabel')}</label>
-          <input id="site-search" type="search" name="q" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('header.searchPlaceholder')} maxLength={200} className="input min-w-0 flex-1" />
-          <button type="submit" className="btn-primary">
-            <Search aria-hidden="true" className="size-5" />
-            <span>{t('header.searchSubmit')}</span>
+        <nav id="hdr-menu" className={menuOpen ? 'hdr-menu open' : 'hdr-menu'} aria-label={t('header.menuTitle')}>
+          {menuOpen ? (
+            <>
+              {links('menu')}
+              <LanguageSwitcher className="hdr-menu-lang" />
+            </>
+          ) : null}
+        </nav>
+
+        <nav className="wrap hdr-nav" aria-label={t('nav.label')}>{links('nav')}</nav>
+      </header>
+
+      <div className={barShown ? 'hdr-bar show' : 'hdr-bar'} aria-hidden={!barShown}>
+        <div className="wrap hdr-bar-in">
+          <Link to={`/${lang}`} className="hdr-brand" aria-label={t('site.homeLink')} tabIndex={barTab}>
+            <img className="seal" src="/design/logo-seal-256.png" alt="" width={44} height={45} />
+            <span className="hdr-bar-name">{t('site.shortName')}</span>
+          </Link>
+          <button type="button" className="btn ghost sm" aria-expanded={dropOpen && barShown} aria-controls="hdr-drop"
+            tabIndex={barTab} onClick={() => setDropOpen((open) => !open)}>
+            {dropOpen ? <X aria-hidden="true" className="size-5" /> : <Menu aria-hidden="true" className="size-5" />}
+            {t('header.sections')}
           </button>
-        </form>
-        <Link to={`/${lang}/catalog`} className="btn-secondary no-underline">
-          <BookOpen aria-hidden="true" className="size-5" />
-          <span>{t('header.catalogButton')}</span>
-        </Link>
-        <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-          <Dialog.Trigger className="btn-secondary lg:hidden">
-            <Menu aria-hidden="true" className="size-5" />
-            <span>{t('header.menuOpen')}</span>
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-            <Dialog.Content className="fixed inset-y-0 left-0 z-40 flex w-full max-w-sm flex-col gap-4 overflow-y-auto bg-surface p-5 text-text">
-              <div className="flex items-center justify-between">
-                <Dialog.Title className="text-xl font-bold">{t('header.menuTitle')}</Dialog.Title>
-                <Dialog.Close className="btn-icon" aria-label={t('header.close')}>
-                  <X aria-hidden="true" className="size-5" />
-                </Dialog.Close>
-              </div>
-              <Dialog.Description className="visually-hidden">{t('nav.label')}</Dialog.Description>
-              <nav aria-label={t('nav.label')}>
-                <ul className="flex flex-col gap-1">{navLinks(() => setMenuOpen(false))}</ul>
-              </nav>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+          <Link to={`/${lang}/catalog`} className="btn sm hide-m" tabIndex={barTab}>
+            <Search aria-hidden="true" className="size-5" />{t('header.catalogSearch')}
+          </Link>
+          <AccessMenu variant="bar" tabIndex={barTab} />
+          {branch?.phone ? (
+            <a href={telHref(branch.phone)} className="hdr-bar-phone hide-m" tabIndex={barTab}>{branch.phone}</a>
+          ) : null}
+        </div>
+        <nav id="hdr-drop" className={dropOpen && barShown ? 'wrap hdr-drop open' : 'wrap hdr-drop'} aria-label={t('header.sectionsBar')}>
+          {dropOpen && barShown ? links('drop') : null}
+        </nav>
       </div>
-
-      <nav aria-label={t('nav.label')} className="hidden border-t border-border lg:block">
-        <ul className="mx-auto flex max-w-7xl flex-wrap gap-x-1 px-4 py-1">{navLinks()}</ul>
-      </nav>
-    </header>
+    </>
   );
 }

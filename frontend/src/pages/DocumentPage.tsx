@@ -1,4 +1,4 @@
-import { Copy, Share2 } from 'lucide-react';
+import { Check, Copy, Share2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -6,7 +6,7 @@ import { Breadcrumbs } from '../components/layout/Breadcrumbs.tsx';
 import { useAnnounce } from '../app/Announcer.tsx';
 import { DocumentViewer } from '../components/document/DocumentViewer.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
-import { OriginBadge, TranslationNote } from '../components/shared/OriginBadge.tsx';
+import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
 import { formatDate, formatYears } from '../lib/format.ts';
 import type { DocumentCard, DocumentPageItem, OpenDocumentCard } from '../lib/types.ts';
@@ -29,59 +29,61 @@ export function DocumentPage() {
 
   return (
     <article>
-      <Breadcrumbs
-        items={[
-          { label: t('nav.catalog'), to: `/${lang}/catalog` },
-          { label: `${t('document.fond')} ${d.hierarchy.fond.number}`, to: `/${lang}/catalog/fonds/${d.hierarchy.fond.id}` },
-          { label: `${t('document.inventory')} ${d.hierarchy.inventory.number}`, to: `/${lang}/catalog/inventories/${d.hierarchy.inventory.id}` },
-          { label: `${t('document.case')} ${d.hierarchy.case.number}`, to: `/${lang}/catalog/cases/${d.hierarchy.case.id}` },
-          { label: d.title ?? d.archiveCode.formatted },
-        ]}
-      />
+      <Breadcrumbs items={[{ label: t('nav.catalog'), to: `/${lang}/catalog` }, { label: d.title ?? d.archiveCode.formatted }]} />
 
-      <PageHeading title={d.title ?? d.archiveCode.formatted}>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <OriginBadge origin={d.dataOrigin} />
-          {d.access === 'restricted' ? <span className="badge-warning">{t('catalog.restricted')}</span> : null}
+      {/* Вложенные папки: фонд → опись → дело (Document.dc.html) */}
+      <nav aria-label={t('document.hierarchyLabel')} className="folder-crumbs">
+        <Link className="fcrumb f0" to={`/${lang}/catalog/fonds/${d.hierarchy.fond.id}`}>
+          <span className="fcrumb-tab">{t('document.fond')} {d.hierarchy.fond.number}</span>{d.hierarchy.fond.title ?? `${t('document.fond')} ${d.hierarchy.fond.number}`}
+        </Link>
+        <Link className="fcrumb f1" to={`/${lang}/catalog/inventories/${d.hierarchy.inventory.id}`}>
+          <span className="fcrumb-tab">{t('document.inventory')} {d.hierarchy.inventory.number}</span>{d.hierarchy.inventory.title ?? `${t('document.inventory')} ${d.hierarchy.inventory.number}`}
+        </Link>
+        <Link className="fcrumb f2" to={`/${lang}/catalog/cases/${d.hierarchy.case.id}`}>
+          <span className="fcrumb-tab">{t('document.case')} {d.hierarchy.case.number}</span>{d.hierarchy.case.title ?? `${t('document.case')} ${d.hierarchy.case.number}`}
+        </Link>
+      </nav>
+
+      <PageHeading variant="plain" title={d.title ?? d.archiveCode.formatted}>
+        <div className="flex flex-wrap items-center gap-2">
+          {d.access === 'restricted'
+            ? <span className="chip d">{t('catalog.restricted')}</span>
+            : <span className="chip b"><Check aria-hidden="true" className="size-[18px]" />{t('catalog.accessValue.open')}</span>}
           <TranslationNote contentLang={d.contentLang} translationStatus={d.translationStatus} />
         </div>
       </PageHeading>
 
       <CodeActions code={d.archiveCode.formatted} title={d.title ?? d.archiveCode.formatted} />
 
-      {d.dataOrigin === 'synthetic' || d.dataOrigin === 'demo' ? (
-        // Пометка на языке интерфейса; sourceNote из базы пишется на одном языке и не переводится.
-        <p className="mb-6 max-w-3xl rounded border border-demo-text bg-demo-bg p-3 text-demo-text" data-testid="origin-note">
-          {t(`document.originNote.${d.dataOrigin}`)}
-        </p>
-      ) : d.sourceNote ? (
-        <p className="mb-6 max-w-3xl text-sm text-muted">{d.sourceNote}</p>
+      {/* Пометки «демо» и «синтетика» на сайте не выводятся (решение заказчика 11.11.2026). */}
+      {d.dataOrigin !== 'synthetic' && d.dataOrigin !== 'demo' && d.sourceNote ? (
+        <p className="doc-note">{d.sourceNote}</p>
       ) : null}
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="doc-layout">
         <div className="min-w-0">
           {d.description ? (
-            <section aria-labelledby="doc-description" className="mb-6 max-w-[75ch]">
-              <h2 id="doc-description" className="mb-2 text-2xl font-bold">{t('document.description')}</h2>
+            <section aria-labelledby="doc-description" className="doc-sec max-w-[75ch]">
+              <h2 id="doc-description" className="cat-h2 mb-2.5">{t('document.description')}</h2>
               <p>{d.description}</p>
               {d.historicalNote ? <p className="mt-3">{d.historicalNote}</p> : null}
             </section>
           ) : null}
 
           {d.access === 'restricted' ? (
-            <section aria-labelledby="doc-access" className="mb-6 max-w-[75ch] rounded border-2 border-warning-text bg-warning-bg p-4 text-warning-text" data-testid="restricted-notice">
-              <h2 id="doc-access" className="mb-2 text-2xl font-bold">{t('document.restrictedTitle')}</h2>
+            <section aria-labelledby="doc-access" className="doc-sec doc-restricted" data-testid="restricted-notice">
+              <h2 id="doc-access" className="cat-h2 mb-2.5">{t('document.restrictedTitle')}</h2>
               {d.accessConditions ? <p className="mb-2">{d.accessConditions}</p> : null}
               <p className="mb-2">{t('document.restrictedNoCopy')}</p>
-              <Link to={`/${lang}/visitors`} className="font-semibold text-warning-text">{t('document.readingRoomLink')}</Link>
+              <Link to={`/${lang}/visitors`} className="font-bold">{t('document.readingRoomLink')}</Link>
             </section>
           ) : (
             <OpenContent card={d} lang={lang} />
           )}
         </div>
 
-        <aside aria-labelledby="doc-meta">
-          <h2 id="doc-meta" className="mb-3 text-2xl font-bold">{t('document.metadata')}</h2>
+        <aside aria-labelledby="doc-meta" className="doc-aside">
+          <h2 id="doc-meta" className="cat-h2 mb-2">{t('document.metadata')}</h2>
           <dl className="document-meta">
             <Meta label={t('document.archiveCode')}>{d.archiveCode.formatted}</Meta>
             <Meta label={t('document.number')}>{d.documentNumber}</Meta>
@@ -105,6 +107,7 @@ export function DocumentPage() {
             <Meta label={t('document.access')}>{t(`catalog.accessValue.${d.access}`)}</Meta>
             <Meta label={t('document.updated')}>{formatDate(d.updatedAt, lang)}</Meta>
           </dl>
+          <Link to={`/${lang}/visitors`} className="doc-aside-link">{t('document.readingRoomLink')}</Link>
         </aside>
       </div>
     </article>
@@ -117,8 +120,8 @@ function OpenContent({ card, lang }: { card: OpenDocumentCard; lang: string }) {
   const pages = useApi<{ items: DocumentPageItem[] }>(card.digitalCopy.availableOnline ? `/catalog/documents/${card.id}/pages?lang=${lang}` : null);
   return (
     <>
-      <section aria-labelledby="doc-copy" className="mb-6">
-        <h2 id="doc-copy" className="mb-2 text-2xl font-bold">{t('document.digitalCopy')}</h2>
+      <section aria-labelledby="doc-copy" className="doc-sec">
+        <h2 id="doc-copy" className="cat-h2 mb-3.5">{t('document.digitalCopy')}</h2>
         {!card.digitalCopy.availableOnline ? (
           <p>{t('document.noCopy')}</p>
         ) : pages.status === 'ready' && pages.data.items.length > 0 ? (
@@ -130,9 +133,9 @@ function OpenContent({ card, lang }: { card: OpenDocumentCard; lang: string }) {
         )}
       </section>
       {card.transcription ? (
-        <section aria-labelledby="doc-transcription" className="mb-6 max-w-[75ch]">
-          <h2 id="doc-transcription" className="mb-2 text-2xl font-bold">{t('document.transcription')}</h2>
-          <p className="whitespace-pre-line" {...(card.contentLang ? { lang: card.contentLang } : {})}>{card.transcription}</p>
+        <section aria-labelledby="doc-transcription" className="doc-sec">
+          <h2 id="doc-transcription" className="cat-h2 mb-2.5">{t('document.transcription')}</h2>
+          <p className="doc-transcript whitespace-pre-line" {...(card.contentLang ? { lang: card.contentLang } : {})}>{card.transcription}</p>
         </section>
       ) : null}
     </>
@@ -196,13 +199,13 @@ function CodeActions({ code, title }: { code: string; title: string }) {
   };
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3">
-      <p className="text-xl font-semibold" data-testid="archive-code">{code}</p>
-      <button type="button" className="btn-secondary" onClick={() => void copy(code, t('document.codeCopied', { code }))}>
+    <div className="mb-5 flex flex-wrap items-center gap-3">
+      <p className="doc-code mono" data-testid="archive-code">{code}</p>
+      <button type="button" className="doc-act" onClick={() => void copy(code, t('document.codeCopied', { code }))}>
         <Copy aria-hidden="true" className="size-5" />
         <span>{t('document.copyCode')}</span>
       </button>
-      <button type="button" className="btn-secondary" onClick={() => void share()}>
+      <button type="button" className="doc-act" onClick={() => void share()}>
         <Share2 aria-hidden="true" className="size-5" />
         <span>{t('document.share')}</span>
       </button>

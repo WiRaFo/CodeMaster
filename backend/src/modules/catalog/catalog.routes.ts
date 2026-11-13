@@ -15,6 +15,7 @@ import {
 import { ApiError, notFound } from '../../http/errors.ts';
 import { resolveLang } from '../../http/lang.ts';
 import { pageOf } from '../../http/pagination.ts';
+import { logSearchQuery } from '../analytics/analytics.ts';
 import type { EmbeddingProvider } from '../ai/embeddings.ts';
 import { semanticSearch } from '../ai/semantic.ts';
 import { LoginLimiter } from '../auth/login-limiter.ts';
@@ -82,6 +83,10 @@ export async function catalogRoutes(app: FastifyInstance, opts: CatalogOptions):
     const query = documentSearchSchema.parse(request.query);
     const lang = resolveLang(request, reply, query.lang);
     const { rows, total, plan } = await repo.searchDocuments(query, lang);
+    // Запрос посетителя попадает в журнал качества поиска (F-127); вызовы помощника пишет сам помощник.
+    if (query.q && query.page === 1 && request.headers['x-archive-internal'] !== 'assistant') {
+      await logSearchQuery(opts.db, request, { text: query.q, locale: lang, source: 'catalog', resultCount: total });
+    }
     return {
       ...pageOf(
         rows.map((r) => documentSummaryDto(r, lang)),

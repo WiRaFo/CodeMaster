@@ -188,6 +188,8 @@ model User {
   notifications Notification[]
 
   @@map("users")
+  assistantKnowledgeCreated AssistantKnowledge[] @relation("AssistantKnowledgeCreatedBy")
+  assistantKnowledgeUpdated AssistantKnowledge[] @relation("AssistantKnowledgeUpdatedBy")
 }
 
 model Role {
@@ -1807,4 +1809,56 @@ model DocumentEmbedding {
 
   @@id([documentId, locale, model])
   @@map("document_embeddings")
+}
+
+/// Просмотры разделов по дням (F-126, S-032): без IP, идентификаторов и cookies
+model AnalyticsPageView {
+  day     DateTime @db.Date
+  section String
+  locale  Locale
+  views   Int      @default(0)
+
+  @@id([day, section, locale])
+  @@map("analytics_page_views")
+}
+
+/// Ошибки по дням: страница не найдена, сбой загрузки (F-126)
+model AnalyticsError {
+  day   DateTime @db.Date
+  kind  String
+  path  String
+  count Int      @default(0)
+
+  @@id([day, kind, path])
+  @@map("analytics_errors")
+}
+
+/// База знаний ИИ-помощника (ТЗ §5.8 А): вопросы и ответы, которые ведут сотрудники
+model AssistantKnowledge {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  links             String[]          @default([])
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?           @map("created_by_id") @db.Uuid
+  updatedById       String?           @map("updated_by_id") @db.Uuid
+
+  createdBy    User?                           @relation("AssistantKnowledgeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?                           @relation("AssistantKnowledgeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  translations AssistantKnowledgeTranslation[]
+
+  @@map("assistant_knowledge")
+}
+
+model AssistantKnowledgeTranslation {
+  entryId  String   @map("entry_id") @db.Uuid
+  locale   Locale
+  question String
+  keywords String[] @default([])
+  answer   String
+
+  entry AssistantKnowledge @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, locale])
+  @@map("assistant_knowledge_translations")
 }

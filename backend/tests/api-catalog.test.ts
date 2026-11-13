@@ -138,7 +138,7 @@ describe('фасеты каталога (ЭТАП 5, F-031)', () => {
     const orgs = facets.body['organizations'] as Array<{ value: string; name: string; count: number }>;
     // Закрытый TEST-1/1/1/3 той же организации в счётчик не входит: открытый и ограниченный.
     expect(orgs).toHaveLength(1);
-    expect(orgs[0]).toMatchObject({ name: '[Синтетика] Маслозавод (тестовая организация)', count: 2 });
+    expect(orgs[0]).toMatchObject({ name: 'Маслозавод', count: 2 });
     const byOrg = await t.get(`/api/v1/catalog/documents?organization=${orgs[0]?.value ?? ''}`);
     expect(byOrg.body['total']).toBe(2);
     // Счётчик организаций не учитывает собственный фильтр, но учитывает остальные.

@@ -1,5 +1,7 @@
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
+import { LanguageSwitcher } from '../components/layout/LanguageSwitcher.tsx';
 import { LoadStatus } from '../components/shared/LoadStatus.tsx';
 import { TranslationNote } from '../components/shared/OriginBadge.tsx';
 import { PageHeading } from '../components/shared/PageHeading.tsx';
@@ -17,6 +19,11 @@ interface FaqItem {
 }
 
 const TOPICS = ['services', 'catalog', 'access', 'visit', 'site'] as const;
+
+/** Раздел по теме вопроса: ссылка показывается под каждым ответом этой темы. */
+const TOPIC_LINK: Record<string, string> = { services: 'services', catalog: 'catalog', access: 'catalog', visit: 'visitors', site: 'accessibility' };
+/** Разделы, на которые можно сослаться из ответа (название раздела в тексте ответа даёт ссылку). */
+const LINKABLE = ['about', 'catalog', 'visitors', 'services', 'history', 'exhibitions', 'news', 'branches', 'assistant', 'feedback', 'accessibility'] as const;
 
 /** Группы в порядке, который задаёт сервер; неизвестная тема попадает в «Работа сайта». */
 function groupByTopic(items: FaqItem[]): Array<[string, FaqItem[]]> {
@@ -37,36 +44,59 @@ export function FaqPage() {
   const { lang = 'kk' } = useParams();
   const faq = useApi<{ items: FaqItem[] }>(`/faq?lang=${lang}`);
   return (
-    <>
-      <PageHeading title={t('nav.faq')}>
-        <p className="mt-2 max-w-3xl">{t('faq.lead')}</p>
+    <div className="faq-page">
+      <PageHeading title={t('nav.faq')} variant="plain">
+        <p className="lead mb-6">{t('faq.lead')}</p>
       </PageHeading>
       {faq.status !== 'ready' ? (
         <LoadStatus status={faq.status} />
       ) : (
-        <>
-          {faq.data.items.some((f) => f.dataOrigin === 'demo') ? <p className="mb-4 max-w-3xl text-sm text-muted">{t('faq.demoNote')}</p> : null}
-          {groupByTopic(faq.data.items).map(([topic, items]) => (
-            <section key={topic} aria-labelledby={`faq-${topic}`} className="mb-8 max-w-3xl">
-              <h2 id={`faq-${topic}`} className="mb-3 text-xl font-semibold">{t(`faq.topic.${topic}`)}</h2>
-              <div className="flex flex-col gap-2">
-                {items.map((f) => (
-                  <details key={f.id} className="rounded-md border-2 border-border bg-surface p-3 open:border-primary">
-                    <summary className="min-h-11 cursor-pointer py-2 font-semibold">{f.question}</summary>
-                    <p className="mt-2">{f.answer}</p>
+        groupByTopic(faq.data.items).map(([topic, items], i) => (
+          <section key={topic} aria-labelledby={`faq-${topic}`} className={`faq-group fg${i % 4}`}>
+            <h2 id={`faq-${topic}`} className="faq-tab">{t(`faq.topic.${topic}`)}</h2>
+            <div className="faq-box">
+              {items.map((f) => (
+                <details key={f.id} className="faq-q">
+                  <summary>
+                    <span>{f.question}</span>
+                    <span className="faq-chev" aria-hidden="true"><ChevronDown className="size-5" /></span>
+                  </summary>
+                  <div className="faq-a">
+                    <p className="m-0">{f.answer}</p>
+                    <AnswerLinks topic={topic} answer={f.answer} />
                     <TranslationNote contentLang={f.contentLang} translationStatus={f.translationStatus} />
-                  </details>
-                ))}
-              </div>
-            </section>
-          ))}
-        </>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        ))
       )}
-      <p className="max-w-3xl">
+      <p className="faq-more">
         {t('faq.more')} <Link to={`/${lang}/assistant`}>{t('nav.assistant')}</Link>
         {' · '}
         <Link to={`/${lang}/feedback`}>{t('nav.feedback')}</Link>
       </p>
-    </>
+    </div>
+  );
+}
+
+/** Ссылки на разделы под ответом: раздел темы и разделы, названные в тексте ответа. */
+function AnswerLinks({ topic, answer }: { topic: string; answer: string }) {
+  const { t } = useTranslation();
+  const { lang = 'kk' } = useParams();
+  const text = answer.toLowerCase();
+  const keys = LINKABLE.filter((key) => key === TOPIC_LINK[topic] || text.includes(t(`nav.${key}`).toLowerCase()));
+  // Ответ о языках сайта — сразу с переключателем KZ / RU / EN.
+  const aboutLangs = /казахск|қазақ|kazakh/u.test(text);
+  // Там нужен только переключатель языка, без кнопок разделов.
+  if (aboutLangs) return <LanguageSwitcher className="faq-lang" label={t('faq.langSwitch')} />;
+  if (keys.length === 0) return null;
+  return (
+    <ul className="faq-links" aria-label={t('faq.linksLabel')}>
+      {keys.map((key) => (
+        <li key={key}><Link to={`/${lang}/${key}`} className="btn ghost sm">{t(`nav.${key}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link></li>
+      ))}
+    </ul>
   );
 }

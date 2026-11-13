@@ -15,48 +15,50 @@ async function axeViolations(container: HTMLElement) {
 }
 
 describe('главная (ТЗ §5.1)', () => {
-  it('баннер с названием, четырьмя быстрыми переходами и ссылкой на выставки', async () => {
+  it('первый экран с девизом и действиями, четыре быстрых перехода (дизайн 11.11.2026)', async () => {
     renderAt('/ru');
-    const banner = (await screen.findByRole('heading', { level: 1 })).closest('section');
-    expect(banner).not.toBeNull();
-    const b = within(banner as HTMLElement);
-    expect(b.getByRole('link', { name: 'Найти архивный документ' })).toHaveAttribute('href', '/ru/catalog');
-    expect(b.getByRole('link', { name: 'Как получить архивную справку' })).toHaveAttribute('href', '/ru/services');
-    expect(b.getByRole('link', { name: 'Посетить читальный зал' })).toHaveAttribute('href', '/ru/reading-room');
-    expect(b.getByRole('link', { name: 'Найти филиал' })).toHaveAttribute('href', '/ru/branches');
-    expect(b.getByRole('link', { name: /онлайн-выставки/i })).toHaveAttribute('href', '/ru/exhibitions');
+    const hero = within((await screen.findByRole('heading', { level: 1, name: 'Цифровая память Восточного Казахстана' })).closest('section') as HTMLElement);
+    expect(hero.getByText('Государственный архив Восточно-Казахстанской области')).toBeInTheDocument();
+    expect(hero.getByRole('link', { name: 'Найти архивный документ' })).toHaveAttribute('href', '/ru/catalog');
+    expect(hero.getByRole('link', { name: 'Смотреть онлайн-выставки' })).toHaveAttribute('href', '/ru/exhibitions');
+    expect(document.title).toBe('Государственный архив Восточно-Казахстанской области — Госархив ВКО');
+    const b = within(screen.getByRole('heading', { level: 2, name: 'Быстрые переходы' }).closest('section') as HTMLElement);
+    expect(b.getByRole('link', { name: /Найти архивный документ/ })).toHaveAttribute('href', '/ru/catalog');
+    expect(b.getByRole('link', { name: /Как получить архивную справку/ })).toHaveAttribute('href', '/ru/services');
+    expect(b.getByRole('link', { name: /Посетить читальный зал/ })).toHaveAttribute('href', '/ru/reading-room');
+    expect(b.getByRole('link', { name: /Найти филиал/ })).toHaveAttribute('href', '/ru/branches');
   });
 
   it('«Полезная информация»: четыре перехода на рабочие страницы (F-016)', async () => {
     renderAt('/ru');
     const block = within((await screen.findByRole('heading', { level: 2, name: 'Полезная информация' })).closest('section') as HTMLElement);
-    expect(block.getByRole('link', { name: 'Как пользоваться каталогом' })).toHaveAttribute('href', '/ru/faq');
-    expect(block.getByRole('link', { name: 'Как устроены фонды и описи' })).toHaveAttribute('href', '/ru/catalog/fonds');
-    expect(block.getByRole('link', { name: 'Что опубликовано' })).toHaveAttribute('href', '/ru/catalog?hasDigitalCopy=true');
-    expect(block.getByRole('link', { name: 'Сведения о филиалах' })).toHaveAttribute('href', '/ru/branches');
+    expect(block.getByRole('link', { name: /^Как пользоваться каталогом/ })).toHaveAttribute('href', '/ru/faq');
+    expect(block.getByRole('link', { name: /^Как устроены фонды и описи/ })).toHaveAttribute('href', '/ru/catalog/fonds');
+    expect(block.getByRole('link', { name: /^Что опубликовано/ })).toHaveAttribute('href', '/ru/catalog?hasDigitalCopy=true');
+    expect(block.getByRole('link', { name: /^Сведения о филиалах/ })).toHaveAttribute('href', '/ru/branches');
   });
 
-  it('блоки из API: история в документах, выставки, филиалы, новости; демо и тестовые данные помечены', async () => {
+  it('блоки из API: история в документах, выставки, филиалы, новости; без пометок «демо» и «тестовые данные»', async () => {
     renderAt('/ru');
-    const history = (await screen.findByRole('heading', { level: 2, name: 'История в документах' })).closest('section') as HTMLElement;
+    const history = (await screen.findByRole('heading', { level: 2, name: 'Цифровая история региона' })).closest('section') as HTMLElement;
     const h = within(history);
-    expect(h.getByRole('link', { name: '[Синтетика] Протокол заседания правления маслозавода' })).toHaveAttribute(
+    expect(h.getByRole('link', { name: /Протокол заседания правления маслозавода/ })).toHaveAttribute(
       'href',
       '/ru/catalog/documents/6b8741a3-8fc6-40af-9408-21b6f9709b6f',
     );
     expect(h.getByText('Ф. TEST-1. Оп. 1. Д. 1.')).toBeInTheDocument();
-    expect(h.getByText('Тестовые данные')).toBeInTheDocument();
-    expect(h.getByRole('link', { name: 'История семьи и поколений' })).toHaveAttribute('href', '/ru/history?topic=family');
+    expect(h.queryByText('Тестовые данные')).toBeNull();
+    expect(h.getByRole('link', { name: /^История семьи и поколений/ })).toHaveAttribute('href', '/ru/history?topic=family');
 
     const news = screen.getByRole('heading', { level: 2, name: 'Новости и события' }).closest('section') as HTMLElement;
-    expect(within(news).getByRole('link', { name: '[Демо] Прототип нового сайта архива' })).toHaveAttribute('href', '/ru/news/demo-new-site-prototype');
-    expect(within(news).getByText('Демо')).toBeInTheDocument();
+    expect(within(news).getByRole('link', { name: /\[Демо\] Прототип нового сайта архива/ })).toHaveAttribute('href', '/ru/news/demo-new-site-prototype');
+    expect(within(news).queryAllByText('Демо')).toHaveLength(0);
     expect(within(news).getByText('8 ноября 2026 г.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { level: 2, name: 'Онлайн-выставки' })).toBeInTheDocument();
-    const branches = screen.getByRole('heading', { level: 2, name: 'Наши филиалы' }).closest('section') as HTMLElement;
-    expect(await within(branches).findByText('г. Усть-Каменогорск, ул. Головкова, 26/1')).toBeInTheDocument();
-    expect(within(branches).getByText(/уточняются/)).toBeInTheDocument();
+    const contacts = screen.getByRole('heading', { level: 2, name: 'Филиалы и контакты' }).parentElement as HTMLElement;
+    expect(await within(contacts).findByText(/подразделени/)).toBeInTheDocument();
+    expect(within(contacts).getByRole('link', { name: 'Найти филиал' })).toHaveAttribute('href', '/ru/branches');
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/home?lang=ru', expect.anything());
   });
 
@@ -72,10 +74,10 @@ describe('главная (ТЗ §5.1)', () => {
   it('без данных пустые блоки не показываются, при ошибке — понятное сообщение', async () => {
     fetchMock.mockImplementation(apiMock({ '/api/v1/home?': { news: [], exhibitions: [], history: { topics: [], publications: [], documents: [] } } }));
     renderAt('/ru');
-    await screen.findByRole('heading', { level: 2, name: 'Наши филиалы' });
+    await screen.findByRole('heading', { level: 2, name: 'Филиалы и контакты' });
     await waitFor(() => expect(document.querySelector('[data-load-state="loading"]')).toBeNull());
     expect(screen.queryByRole('heading', { name: 'Новости и события' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'История в документах' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Онлайн-выставки' })).toBeNull();
   });
 
   it('сообщает об ошибке загрузки', async () => {
@@ -99,7 +101,7 @@ describe('главная (ТЗ §5.1)', () => {
   it('нет нарушений axe на главной в трёх языках', async () => {
     for (const lang of ['kk', 'ru', 'en']) {
       const { container, unmount } = renderAt(`/${lang}`);
-      await screen.findByRole('heading', { level: 2, name: { kk: 'Құжаттардағы тарих', ru: 'История в документах', en: 'History in documents' }[lang] });
+      await screen.findByRole('heading', { level: 2, name: { kk: 'Өңірдің цифрлық тарихы', ru: 'Цифровая история региона', en: 'Digital history of the region' }[lang] });
       await waitFor(() => expect(container.querySelectorAll('[data-load-state="loading"]').length).toBe(0));
       expect(await axeViolations(container)).toEqual([]);
       unmount();

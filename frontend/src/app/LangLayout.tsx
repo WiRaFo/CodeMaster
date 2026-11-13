@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import { isLocale } from '../i18n/index.ts';
+import { reportView } from '../lib/analytics.ts';
 import { setLanguageLinks } from '../lib/head.ts';
 import { writeStorage } from '../lib/storage.ts';
 import { preferredLocale, LANG_STORAGE_KEY } from './preferred-locale.ts';
@@ -26,8 +27,10 @@ export function LangLayout() {
   const { pathname, search } = useLocation();
   const { i18n } = useTranslation();
   const firstRender = useRef(true);
+  const lastRest = useRef(pathname.replace(/^\/[^/]+/, ''));
 
   const valid = isLocale(lang);
+  const isHome = /^\/[^/]+\/?$/.test(pathname);
 
   useEffect(() => {
     if (!valid) return;
@@ -40,11 +43,21 @@ export function LangLayout() {
     if (valid) setLanguageLinks(window.location.origin, pathname);
   }, [valid, pathname]);
 
+  // Просмотр страницы для обезличенной статистики разделов (F-126).
+  useEffect(() => {
+    if (valid) reportView(pathname);
+  }, [valid, pathname]);
+
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
+    // Переключение языка на той же странице: остаёмся на месте, фокус и прокрутку не трогаем.
+    const rest = pathname.replace(/^\/[^/]+/, '');
+    const onlyLang = lastRest.current === rest;
+    lastRest.current = rest;
+    if (onlyLang) return;
     const h1 = document.querySelector<HTMLElement>('#main h1');
     h1?.focus();
   }, [pathname]);
@@ -59,15 +72,20 @@ export function LangLayout() {
   if (!valid) return <Navigate to={`/${preferredLocale()}${pathname}${search}`} replace />;
 
   return (
-    <>
+    <div className="site">
       <SkipLink />
       <Header />
       {/* min-h-screen: пока страница загружает данные, подвал уже ниже первого экрана и не «прыгает» (CLS, ЭТАП 14). */}
-      <main id="main" tabIndex={-1} className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 focus:outline-none">
-        <SectionBreadcrumbs />
-        <Outlet />
+      <main id="main" tabIndex={-1} className="min-h-screen w-full focus:outline-none">
+        {/* Главная собрана из секций во всю ширину (дизайн 11.11.2026), остальные страницы — в контейнере. */}
+        {isHome ? <Outlet /> : (
+          <div className="wrap py-8">
+            <SectionBreadcrumbs />
+            <Outlet />
+          </div>
+        )}
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

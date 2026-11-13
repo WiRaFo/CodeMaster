@@ -42,9 +42,16 @@ const CONTROL: Array<[string, string, string]> = [
   ['ru', 'Что значит архивный шифр?', 'term'],
   ['kk', 'Қор деген не?', 'term'],
   ['en', 'What is a restricted document?', 'term'],
+  ['ru', 'что такое архив', 'term'],
+  ['kk', 'Мұрағат деген не?', 'term'],
+  ['ru', 'Что такое путеводитель?', 'term'],
+  ['en', 'What are personnel records?', 'term'],
+  ['ru', 'Что такое квазар?', 'unknown'],
   ['ru', 'Адрес филиала в Риддере', 'branch'],
-  ['ru', 'Режим работы читального зала', 'branch'],
+  ['ru', 'Режим работы читального зала', 'knowledge'],
   ['kk', 'Өскемендегі мұрағаттың мекенжайы', 'branch'],
+  ['kk', 'Мұрағаттың жұмыс уақыты қандай?', 'knowledge'],
+  ['en', 'What can I do on this website?', 'knowledge'],
   ['en', 'Phone number of the Zaisan branch', 'branch'],
   ['ru', 'Где посмотреть онлайн-выставки?', 'navigation'],
   ['en', 'Latest news', 'navigation'],
@@ -66,7 +73,7 @@ describe('пример ТЗ §5.8 Б (F-123)', () => {
       ['type', 'photo', 'Фотографии'],
     ]);
     expect(a.catalogQuery).toBe('type=photo&settlement=ust-kamenogorsk&yearFrom=1960&yearTo=1969');
-    expect(a.documents?.map((d) => d.title)).toEqual(['[Синтетика] Фотография коллектива маслозавода']);
+    expect(a.documents?.map((d) => d.title)).toEqual(['Фотография коллектива маслозавода']);
     expect(a['suggestions']).toEqual(expect.arrayContaining([expect.objectContaining({ reason: 'prevDecade' }), expect.objectContaining({ reason: 'allTypes' })]));
   });
 
@@ -110,7 +117,7 @@ describe('ссылки и доступ (F-125, S-021)', () => {
 
   it('филиалы берутся из публичного реестра', async () => {
     expect((await ask('Адрес филиала в Риддере')).branches?.map((b) => b.slug)).toEqual(['ridder']);
-    expect((await ask('Режим работы читального зала')).branches?.map((b) => b.slug)).toEqual(['main', 'main-krylova']);
+    expect((await ask('Телефон читального зала')).branches?.map((b) => b.slug)).toEqual(['main', 'main-krylova']);
   });
 });
 

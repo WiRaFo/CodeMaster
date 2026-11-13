@@ -31,6 +31,9 @@
   },
   "dependencies": {
     "@archive-vko/shared": "0.1.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/marck-script": "^5.3.0",
     "@radix-ui/react-dialog": "1.1.14",
     "i18next": "25.2.1",
     "leaflet": "^1.9.4",
