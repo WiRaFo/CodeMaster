@@ -212,7 +212,7 @@ html{scroll-padding-top:96px}
 .site main [style*="gap: 40px"]{gap:24px!important}
 .card{border-radius:18px}
 .topic{min-height:56px;padding:10px 14px}
-.cat-layout{grid-template-columns:1fr!important}
+.cat-layout{grid-template-columns:minmax(0,1fr)!important}
 .two-col{grid-template-columns:1fr!important}
 }
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.sr,.sr-l,.sr-r,.sr-z,.in{opacity:1!important;translate:none!important;scale:none!important}.typing{width:22ch}}
@@ -430,3 +430,38 @@ html.a11y.a11y-wb .page-head,html.a11y.a11y-blue .page-head{--color-text:inherit
 .cipher-wrap>input{flex:1 1 auto;width:100%;min-width:0}
 .cipher-ghost{position:absolute;inset:0;display:flex;align-items:center;margin:0;background:transparent!important;border-color:transparent!important;box-shadow:none!important;color:var(--muted);white-space:pre;overflow:hidden;pointer-events:none}
 .cipher-typed{color:transparent}
+
+/* ---------- телефоны (13.11.2026): шапка, панель при прокрутке, «Как читать шифр» ---------- */
+@media (max-width:720px){
+.hdr-search .btn{padding:0 14px;white-space:nowrap}
+/* длинные слова в заголовках переносятся по слогам, а не обрезаются краем плашки */
+.site main :is(h1,h2,h3){hyphens:auto;-webkit-hyphens:auto}
+/* название в шапке не растёт выше 16 px, чтобы «Государственный» помещался целиком рядом с кнопкой «Меню» */
+.hdr .hdr-name{font-size:min(calc(15px * var(--fs,1)),16px)!important}
+.site a[href^="tel:"]{white-space:nowrap}
+.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html.a11y .quick-grid,html.txt-xl .quick-grid{grid-template-columns:minmax(0,1fr)!important}
+.site .year-card{flex-direction:column;gap:8px;padding:18px}
+.u{max-width:100%}
+.site .contact-dl{grid-template-columns:minmax(0,1fr);gap:2px}
+.site .contact-dl dd{margin-bottom:10px}
+.site .contact-phone{white-space:normal}
+/* компактная панель: печать, короткое имя, «Разделы» и значок доступности в одну строку */
+.hdr-bar{background:#fff}
+.hdr-bar .hdr-brand{flex:0 1 auto;gap:8px}
+.hdr-bar .seal{width:36px;height:37px}
+.hdr-bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(16px * var(--fs,1))}
+.hdr-bar-in{gap:8px}
+.hdr-bar-in>.btn{margin-left:auto;flex:none;padding:0 12px}
+.am-bar{flex:none}
+.am-bar .a11y-btn{padding:0 6px;gap:0;font-size:0}
+.am-bar .a11y-btn .a11y-ico{width:34px;height:34px}
+/* ящики шифра: высота по содержимому, без 3D-граней */
+.drawer{height:auto!important}
+.drawer-top,.drawer-side,.drawer-knob{display:none!important}
+.cabinet .drawer-face{position:relative;inset:auto;padding:12px;gap:12px;align-items:flex-start}
+.cabinet .drawer-code{min-width:64px;width:auto;padding:6px 8px;font-size:calc(17px * var(--fs,1))}
+.cabinet.cabinet{width:100%}
+.cab-scene{padding-top:0!important;padding-bottom:0!important}
+}
+@media (max-width:380px){.hdr-bar-name{display:none}}
